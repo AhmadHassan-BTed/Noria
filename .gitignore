@@ -1,2 +1,5 @@
 node_modules/
 .env
+.wwebjs_auth/
+data/
+*.log
