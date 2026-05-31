@@ -1,0 +1,65 @@
+{
+	"name": "modern-tar",
+	"version": "0.7.6",
+	"description": "Zero dependency streaming tar parser and writer for JavaScript.",
+	"author": "Ayuhito <hello@ayuhito.com>",
+	"license": "MIT",
+	"type": "module",
+	"sideEffects": false,
+	"main": "./dist/web/index.js",
+	"module": "./dist/web/index.js",
+	"types": "./dist/web/index.d.ts",
+	"exports": {
+		"./package.json": "./package.json",
+		".": "./dist/web/index.js",
+		"./fs": "./dist/fs/index.js"
+	},
+	"typesVersions": {
+		"*": {
+			"fs": [
+				"dist/fs/index.d.ts"
+			],
+			"*": [
+				"dist/web/index.d.ts"
+			]
+		}
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.7",
+		"@types/node": "^25.5.0",
+		"@vitest/browser-playwright": "4.1.0",
+		"@vitest/coverage-v8": "4.1.0",
+		"miniflare": "^4.20260312.0",
+		"tsdown": "^0.21.3",
+		"typescript": "^5.9.3",
+		"vitest": "4.1.0"
+	},
+	"scripts": {
+		"build": "tsdown",
+		"dev": "tsdown --watch",
+		"test": "vitest",
+		"test:workers": "tsdown && vitest --config vitest.workers.config.ts --run",
+		"coverage": "vitest run --coverage",
+		"check": "biome check --write",
+		"typecheck": "tsc --noEmit",
+		"test:browser": "vitest --config=vitest.browser.config.ts --browser"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"homepage": "https://github.com/ayuhito/modern-tar",
+	"bugs": {
+		"url": "https://github.com/ayuhito/modern-tar/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ayuhito/modern-tar.git"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	}
+}

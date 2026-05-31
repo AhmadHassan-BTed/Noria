@@ -1,0 +1,39 @@
+{
+  "name": "fluent-ffmpeg",
+  "version": "2.1.3",
+  "description": "A fluent API to FFMPEG (http://www.ffmpeg.org)",
+  "keywords": [
+    "ffmpeg"
+  ],
+  "author": "Stefan Schaermeli <schaermu@gmail.com>",
+  "contributors": [
+    {
+      "name": "Felix Fichte",
+      "email": "spruce@space-ships.de"
+    }
+  ],
+  "license": "MIT",
+  "bugs": {
+    "mail": "schaermu@gmail.com",
+    "url": "http://github.com/fluent-ffmpeg/node-fluent-ffmpeg/issues"
+  },
+  "repository": "git://github.com/fluent-ffmpeg/node-fluent-ffmpeg.git",
+  "devDependencies": {
+    "jsdoc": "^4.0.0",
+    "mocha": "^10.0.0",
+    "nyc": "^15.1.0",
+    "should": "^13.0.0"
+  },
+  "dependencies": {
+    "async": "^0.2.9",
+    "which": "^1.1.1"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "index",
+  "scripts": {
+    "test": "NODE_ENV=test nyc mocha --require should --reporter spec",
+    "coverage": "nyc report --reporter=lcov"
+  }
+}
