@@ -1,0 +1,2 @@
+require('dotenv').config();
+fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + process.env.GEMINI_API_KEY).then(res => res.json()).then(data => { if(data.error) return console.error('API Error:', data.error); const supported = data.models.filter(m => m.supportedGenerationMethods.includes('generateContent')).map(m => m.name.replace('models/', '')); console.log('\n? YOUR API KEY STRICTLY SUPPORTS THESE MODELS:\n', supported.filter(m => m.includes('gemini'))); });
