@@ -1,7 +1,0 @@
-{
-  "ansible.python.interpreterPath": "/usr/bin/python",
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "[javascript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
-}

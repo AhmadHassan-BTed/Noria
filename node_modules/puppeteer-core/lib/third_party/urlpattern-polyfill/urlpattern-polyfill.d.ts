@@ -1,1 +1,0 @@
-export * from 'urlpattern-polyfill';
