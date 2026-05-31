@@ -124,7 +124,7 @@ function initGeminiAnalyzer(broker) {
   // `systemInstruction` is evaluated server-side before every prompt —
   // it cannot be overridden by user-turn content.
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.5-flash',
     systemInstruction: SYSTEM_INSTRUCTION,
     generationConfig: {
       // Force structured JSON output — the model cannot respond in free text
