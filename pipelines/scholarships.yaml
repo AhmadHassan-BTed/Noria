@@ -1,0 +1,41 @@
+name: Scholarships Pipeline
+version: '1.0'
+description: 'Listen for scholarship URLs, scrape, evaluate, and notify'
+provider: scholarships
+
+stages:
+  listen:
+    plugin: whatsapp-listener
+    config:
+      phoneNumber: '${NOTIFICATION_TARGET}'
+
+  extract:
+    - plugin: url-extractor
+    - plugin: deduplicator
+
+  scrape:
+    primary: jina-scraper
+    fallback: puppeteer-scraper
+    config:
+      timeout: 45000
+
+  analyze:
+    plugin: gemini-analyzer
+    provider: scholarships
+    config:
+      model: gemini-2.5-flash
+      temperature: 0.1
+
+  notify:
+    plugin: whatsapp-notifier
+    provider: scholarships
+    config:
+      phoneNumber: '${NOTIFICATION_TARGET}'
+
+resilience:
+  maxRetries: 3
+  backoffMs: 1000
+  cacheTtlMs: 86400000
+  healthCheckIntervalMs: 60000
+  queueScanIntervalMs: 300000
+  enableQueueRetry: true

@@ -118,14 +118,14 @@ src/services/
 
 ## 📝 Modified Files (6 files)
 
-| File | Changes |
-|------|---------|
-| `src/services/scraper/puppeteer.js` | Added retry logic, fallback extraction, metrics |
-| `src/services/analyzer/gemini.js` | Added retry logic, validation, metrics |
-| `src/services/listener/whatsapp.js` | Added validation, retry send, connection manager |
-| `src/services/notifier/dispatcher.js` | Added match_score validation |
-| `src/index.js` | Initialized queue, metrics, deduplicator |
-| `.env.example` | Added 7 new optional config vars |
+| File                                  | Changes                                          |
+| ------------------------------------- | ------------------------------------------------ |
+| `src/services/scraper/puppeteer.js`   | Added retry logic, fallback extraction, metrics  |
+| `src/services/analyzer/gemini.js`     | Added retry logic, validation, metrics           |
+| `src/services/listener/whatsapp.js`   | Added validation, retry send, connection manager |
+| `src/services/notifier/dispatcher.js` | Added match_score validation                     |
+| `src/index.js`                        | Initialized queue, metrics, deduplicator         |
+| `.env.example`                        | Added 7 new optional config vars                 |
 
 ---
 
@@ -148,16 +148,16 @@ All are **optional** — sensible defaults provided.
 
 ## 🔄 Robustness Improvements
 
-| Scenario | Before | After |
-|----------|--------|-------|
-| **Transient Jina failure** | Pipeline stops | Retries 3x, falls back to Puppeteer |
-| **Browser launch failure** | Pipeline stops | Retries 2x, graceful error handling |
-| **Gemini API timeout** | Pipeline stops | Retries 3x with exponential backoff |
-| **WhatsApp disconnection** | Manual restart needed | Auto-reconnect with 5 attempts |
-| **Message send failure** | Lost notification | Retries 2x with backoff |
-| **Duplicate URLs** | Wasted quota, duplicate processing | Cached 24h, skipped automatically |
-| **Malformed URL** | Silent failure or crash | Validated before processing |
-| **Invalid analyzer response** | Only match_score checked | Full 11-field schema validated |
+| Scenario                      | Before                             | After                               |
+| ----------------------------- | ---------------------------------- | ----------------------------------- |
+| **Transient Jina failure**    | Pipeline stops                     | Retries 3x, falls back to Puppeteer |
+| **Browser launch failure**    | Pipeline stops                     | Retries 2x, graceful error handling |
+| **Gemini API timeout**        | Pipeline stops                     | Retries 3x with exponential backoff |
+| **WhatsApp disconnection**    | Manual restart needed              | Auto-reconnect with 5 attempts      |
+| **Message send failure**      | Lost notification                  | Retries 2x with backoff             |
+| **Duplicate URLs**            | Wasted quota, duplicate processing | Cached 24h, skipped automatically   |
+| **Malformed URL**             | Silent failure or crash            | Validated before processing         |
+| **Invalid analyzer response** | Only match_score checked           | Full 11-field schema validated      |
 
 ---
 
