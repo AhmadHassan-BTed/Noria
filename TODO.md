@@ -1,0 +1,4 @@
+- [x] Update .gitignore to ignore additional runtime/artifact folders and common temp files.
+- [x] Ensure no tracked files are accidentally removed from git history.
+- [x] Verify with `git status` and `git check-ignore -v` (if available).
+- [ ] Commit changes and push to origin.
