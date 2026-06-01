@@ -63,9 +63,17 @@ const SCHOLARSHIP_RESPONSE_SCHEMA = {
     },
   },
   required: [
-    'match_score', 'uni_country', 'scholarship_name', 'program_name',
-    'deadline', 'fully_funded', 'english_taught', 'post_study_visa',
-    'verdict', 'apply_link', 'official_link',
+    'match_score',
+    'uni_country',
+    'scholarship_name',
+    'program_name',
+    'deadline',
+    'fully_funded',
+    'english_taught',
+    'post_study_visa',
+    'verdict',
+    'apply_link',
+    'official_link',
   ],
 };
 

@@ -2,7 +2,6 @@
 
 require('dotenv').config();
 
-const os = require('os');
 const broker = require('./queue/broker');
 const { config } = require('./config');
 const { PipelineOrchestrator } = require('./core/pipeline');
@@ -15,7 +14,9 @@ function displayBootBanner() {
   const bar = '─'.repeat(70);
   console.log(`\n${bar}`);
   console.log('  NORIA v2 — Modern Event-Driven Pipeline Architecture');
-  console.log(`  ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}  (Asia/Karachi)`);
+  console.log(
+    `  ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}  (Asia/Karachi)`
+  );
   console.log(`${bar}\n`);
 }
 
@@ -120,7 +121,6 @@ async function boot() {
       pipelines: orchestrator.getAllPipelines(),
       pluginsLoaded: orchestrator.getAllPipelines().length,
     });
-
   } catch (err) {
     console.error('[Boot] Fatal error:', err.message);
     if (process.env.NODE_ENV !== 'production') {

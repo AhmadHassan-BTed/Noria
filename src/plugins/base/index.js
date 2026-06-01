@@ -10,11 +10,11 @@ class BaseListener {
     throw new Error(`${this.name}#initialize() not implemented`);
   }
 
-  async send(target, message) {
+  async send(_target, _message) {
     throw new Error(`${this.name}#send() not implemented`);
   }
 
-  on(eventName, callback) {
+  on(_eventName, _callback) {
     throw new Error(`${this.name}#on() not implemented`);
   }
 
@@ -29,7 +29,7 @@ class BaseScraper {
     this.name = this.constructor.name;
   }
 
-  async scrape(url, options = {}) {
+  async scrape(url, _options = {}) {
     throw new Error(`${this.name}#scrape() not implemented`);
   }
 }
@@ -40,7 +40,7 @@ class BaseAnalyzer {
     this.name = this.constructor.name;
   }
 
-  async analyze(content, context = {}) {
+  async analyze(content, _context = {}) {
     throw new Error(`${this.name}#analyze() not implemented`);
   }
 }
@@ -51,7 +51,7 @@ class BaseNotifier {
     this.name = this.constructor.name;
   }
 
-  format(data) {
+  format(_data) {
     throw new Error(`${this.name}#format() not implemented`);
   }
 }

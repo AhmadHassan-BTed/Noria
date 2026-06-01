@@ -7,7 +7,8 @@ const SCHOLARSHIP_CRITERIA = {
   },
   program_flexibility: {
     points: 20,
-    description: 'MS/MSc/Postgraduate or MS/PhD combined. PhD-only: +15 if accepts Bachelor entry, +10 if single-track.',
+    description:
+      'MS/MSc/Postgraduate or MS/PhD combined. PhD-only: +15 if accepts Bachelor entry, +10 if single-track.',
   },
   field_alignment: {
     points: 20,

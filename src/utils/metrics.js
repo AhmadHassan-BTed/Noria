@@ -9,26 +9,60 @@ class Metrics {
     this.startTime = Date.now();
   }
 
-  recordScraperAttempt() { this.scraper.attempts++; }
-  recordScraperSuccess() { this.scraper.successes++; }
-  recordScraperFailure() { this.scraper.failures++; }
-  recordScraperRetry() { this.scraper.retries++; }
+  recordScraperAttempt() {
+    this.scraper.attempts++;
+  }
+  recordScraperSuccess() {
+    this.scraper.successes++;
+  }
+  recordScraperFailure() {
+    this.scraper.failures++;
+  }
+  recordScraperRetry() {
+    this.scraper.retries++;
+  }
 
-  recordAnalyzerAttempt() { this.analyzer.attempts++; }
-  recordAnalyzerMatch() { this.analyzer.matches++; }
-  recordAnalyzerReject() { this.analyzer.rejects++; }
-  recordAnalyzerFailure() { this.analyzer.failures++; }
-  recordAnalyzerRetry() { this.analyzer.retries++; }
+  recordAnalyzerAttempt() {
+    this.analyzer.attempts++;
+  }
+  recordAnalyzerMatch() {
+    this.analyzer.matches++;
+  }
+  recordAnalyzerReject() {
+    this.analyzer.rejects++;
+  }
+  recordAnalyzerFailure() {
+    this.analyzer.failures++;
+  }
+  recordAnalyzerRetry() {
+    this.analyzer.retries++;
+  }
 
-  recordWhatsAppSend() { this.whatsapp.sends++; }
-  recordWhatsAppFailure() { this.whatsapp.failures++; }
-  recordWhatsAppRetry() { this.whatsapp.retries++; }
-  recordWhatsAppDisconnect() { this.whatsapp.disconnects++; }
-  recordWhatsAppReconnect() { this.whatsapp.reconnects++; }
+  recordWhatsAppSend() {
+    this.whatsapp.sends++;
+  }
+  recordWhatsAppFailure() {
+    this.whatsapp.failures++;
+  }
+  recordWhatsAppRetry() {
+    this.whatsapp.retries++;
+  }
+  recordWhatsAppDisconnect() {
+    this.whatsapp.disconnects++;
+  }
+  recordWhatsAppReconnect() {
+    this.whatsapp.reconnects++;
+  }
 
-  recordGeminiTokens(count) { this.gemini.tokens += count; }
-  recordGeminiRequest() { this.gemini.requests++; }
-  recordGeminiError() { this.gemini.errors++; }
+  recordGeminiTokens(count) {
+    this.gemini.tokens += count;
+  }
+  recordGeminiRequest() {
+    this.gemini.requests++;
+  }
+  recordGeminiError() {
+    this.gemini.errors++;
+  }
 
   getUptimeMs() {
     return Date.now() - this.startTime;

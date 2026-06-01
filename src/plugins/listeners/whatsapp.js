@@ -8,7 +8,8 @@ const { withRetry } = require('../../utils/retry');
 const { metrics } = require('../../utils/metrics');
 const { initConnectionManager } = require('./connection-manager');
 
-const URL_REGEX = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)/gi;
+const URL_REGEX =
+  /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)/gi;
 
 class WhatsAppListener extends BaseListener {
   constructor(config = {}) {
@@ -41,10 +42,14 @@ class WhatsAppListener extends BaseListener {
 
       this.client.on('message', (msg) => {
         const body = msg.body;
-        if (!body || typeof body !== 'string') return;
+        if (!body || typeof body !== 'string') {
+          return;
+        }
 
         const matches = body.match(URL_REGEX);
-        if (!matches) return;
+        if (!matches) {
+          return;
+        }
 
         const url = matches[0];
         try {
@@ -75,7 +80,7 @@ class WhatsAppListener extends BaseListener {
             console.warn(`[WhatsApp] Send retry ${attempt}/2 after ${delay}ms`);
             metrics.recordWhatsAppRetry();
           },
-        },
+        }
       );
 
       console.log('[WhatsApp] Message delivered');

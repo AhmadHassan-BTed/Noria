@@ -26,7 +26,9 @@ class Config {
       QUEUE_SCAN_INTERVAL_MS: parseInt(process.env.QUEUE_SCAN_INTERVAL_MS || '300000'),
       ENABLE_QUEUE_RETRY: process.env.ENABLE_QUEUE_RETRY !== 'false',
 
-      ACTIVE_PIPELINES: (process.env.ACTIVE_PIPELINES || 'scholarships').split(',').map(p => p.trim()),
+      ACTIVE_PIPELINES: (process.env.ACTIVE_PIPELINES || 'scholarships')
+        .split(',')
+        .map((p) => p.trim()),
     };
 
     this.system = {

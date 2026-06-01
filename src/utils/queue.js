@@ -26,7 +26,9 @@ class DeadLetterQueue {
   }
 
   recordRetry(id, attempt) {
-    if (!this.queue.has(id)) return;
+    if (!this.queue.has(id)) {
+      return;
+    }
 
     const entry = this.queue.get(id);
     entry.retries = attempt;
@@ -52,7 +54,9 @@ class DeadLetterQueue {
   }
 
   discard(id, reason = 'Max retries exceeded') {
-    if (!this.queue.has(id)) return;
+    if (!this.queue.has(id)) {
+      return;
+    }
 
     const entry = this.queue.get(id);
     this._logDeadLetter({ ...entry, reason, discardedAt: new Date().toISOString() });
@@ -74,7 +78,9 @@ class DeadLetterQueue {
   }
 
   start(onRetry) {
-    if (this.scanInterval) return;
+    if (this.scanInterval) {
+      return;
+    }
 
     this.scanInterval = setInterval(() => {
       const retryable = this.getRetryable();
@@ -117,7 +123,7 @@ class DeadLetterQueue {
 
 const dlq = new DeadLetterQueue(
   parseInt(process.env.MAX_RETRIES || '3'),
-  parseInt(process.env.QUEUE_SCAN_INTERVAL_MS || '300000'),
+  parseInt(process.env.QUEUE_SCAN_INTERVAL_MS || '300000')
 );
 
 module.exports = { DeadLetterQueue, dlq };

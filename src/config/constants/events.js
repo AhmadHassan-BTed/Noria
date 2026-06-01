@@ -11,7 +11,6 @@ function deepFreeze(obj) {
 }
 
 const EVENTS = deepFreeze({
-
   SYSTEM: {
     BOOTED: 'system.booted',
     ERROR: 'system.error',

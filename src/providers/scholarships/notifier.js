@@ -2,8 +2,8 @@
 
 const { BaseNotifier } = require('../../plugins/base');
 
-const boolIcon = (val) => val === true ? '✅' : (val === false ? '❌' : '⚠️');
-const formatLink = (link) => (link && link !== 'Not found') ? link : 'Not specified';
+const boolIcon = (val) => (val === true ? '✅' : val === false ? '❌' : '⚠️');
+const formatLink = (link) => (link && link !== 'Not found' ? link : 'Not specified');
 
 class ScholarshipNotifier extends BaseNotifier {
   constructor(config = {}) {

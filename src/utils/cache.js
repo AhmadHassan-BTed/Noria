@@ -27,7 +27,9 @@ class LRUCache {
   }
 
   get(key) {
-    if (!this.cache.has(key)) return undefined;
+    if (!this.cache.has(key)) {
+      return undefined;
+    }
 
     const entry = this.cache.get(key);
     const now = Date.now();
@@ -59,7 +61,7 @@ class LRUCache {
 
 const urlCache = new LRUCache(
   parseInt(process.env.CACHE_MAX_SIZE || '500'),
-  parseInt(process.env.CACHE_TTL_MS || '86400000'),
+  parseInt(process.env.CACHE_TTL_MS || '86400000')
 );
 
 module.exports = { LRUCache, urlCache };

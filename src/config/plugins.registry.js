@@ -2,11 +2,11 @@
 
 const { registry } = require('../core/registry');
 
-const { WhatsAppListener } = require('./listeners/whatsapp');
-const { GeminiAnalyzer } = require('./analyzers/gemini');
-const { initPuppeteerScraper } = require('./scrapers/puppeteer-plugin');
-const { initJinaScraper } = require('./scrapers/jina-plugin');
-const { initWhatsAppNotifier } = require('./notifiers/whatsapp-plugin');
+const { WhatsAppListener } = require('../plugins/listeners/whatsapp');
+const { GeminiAnalyzer } = require('../plugins/analyzers/gemini');
+const { PuppeteerScraper } = require('../plugins/scrapers/puppeteer');
+const { JinaScraper } = require('../plugins/scrapers/jina');
+const { WhatsAppNotifier } = require('../plugins/notifiers/whatsapp');
 const { ScholarshipsProvider } = require('../providers/scholarships');
 
 function registerBuiltInPlugins() {
@@ -14,10 +14,10 @@ function registerBuiltInPlugins() {
 
   registry.registerPlugin('analyzer', 'gemini-analyzer', GeminiAnalyzer);
 
-  registry.registerPlugin('scraper', 'puppeteer-scraper', initPuppeteerScraper);
-  registry.registerPlugin('scraper', 'jina-scraper', initJinaScraper);
+  registry.registerPlugin('scraper', 'puppeteer-scraper', PuppeteerScraper);
+  registry.registerPlugin('scraper', 'jina-scraper', JinaScraper);
 
-  registry.registerPlugin('notifier', 'whatsapp-notifier', initWhatsAppNotifier);
+  registry.registerPlugin('notifier', 'whatsapp-notifier', WhatsAppNotifier);
 
   console.log('[Registry] Built-in plugins registered');
 }

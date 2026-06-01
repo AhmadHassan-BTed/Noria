@@ -61,7 +61,7 @@ class GeminiAnalyzer extends BaseAnalyzer {
             console.warn(`[Gemini] Retry ${attempt}/3 after ${delay}ms: ${error}`);
             metrics.recordAnalyzerRetry();
           },
-        },
+        }
       );
     } catch (retryErr) {
       throw new Error(`[Gemini] Failed after retries: ${retryErr.message}`);
@@ -71,7 +71,10 @@ class GeminiAnalyzer extends BaseAnalyzer {
 
     let aiData;
     try {
-      const cleaned = rawResponse.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+      const cleaned = rawResponse
+        .replace(/^```json\s*/i, '')
+        .replace(/```\s*$/, '')
+        .trim();
       aiData = JSON.parse(cleaned);
     } catch (parseErr) {
       throw new Error(`[Gemini] Malformed JSON: ${parseErr.message}`);

@@ -1,15 +1,21 @@
 'use strict';
 
 function isRetryableError(err) {
-  if (!err) return false;
+  if (!err) {
+    return false;
+  }
 
   const message = (err.message || '').toLowerCase();
   const statusCode = err.status || err.statusCode;
 
   // Network/timeout errors
-  if (message.includes('timeout') || message.includes('econnrefused') ||
-      message.includes('econnreset') || message.includes('etimedout') ||
-      message.includes('network')) {
+  if (
+    message.includes('timeout') ||
+    message.includes('econnrefused') ||
+    message.includes('econnreset') ||
+    message.includes('etimedout') ||
+    message.includes('network')
+  ) {
     return true;
   }
 
@@ -55,7 +61,7 @@ async function withRetry(fn, options = {}) {
         });
       }
 
-      await new Promise(r => setTimeout(r, delay));
+      await new Promise((r) => setTimeout(r, delay));
     }
   }
 

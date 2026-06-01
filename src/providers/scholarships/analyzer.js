@@ -49,7 +49,7 @@ class ScholarshipAnalyzer extends BaseAnalyzer {
     this.provider = provider;
   }
 
-  async analyze(content, context = {}) {
+  async analyze(content, _context = {}) {
     if (!this.provider) {
       throw new Error('ScholarshipAnalyzer: Provider not set');
     }

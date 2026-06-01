@@ -40,22 +40,30 @@ function validateScraperPayload(payload) {
   if (textLength < MIN_CONTENT_LENGTH) {
     throw new Error(
       `Scraped content too short (${textLength} chars < ${MIN_CONTENT_LENGTH} minimum). ` +
-      `Likely blocked by CAPTCHA or content not found.`,
+        'Likely blocked by CAPTCHA or content not found.'
     );
   }
 
   return { url: url.trim(), text: text.trim() };
 }
 
-function validateAnalyzerResponse(response, url) {
+function validateAnalyzerResponse(response, _url) {
   if (!response || typeof response !== 'object') {
     throw new Error(`Analyzer response invalid: expected object, got ${typeof response}`);
   }
 
   const required = [
-    'match_score', 'uni_country', 'scholarship_name', 'program_name',
-    'deadline', 'fully_funded', 'english_taught', 'post_study_visa',
-    'verdict', 'apply_link', 'official_link',
+    'match_score',
+    'uni_country',
+    'scholarship_name',
+    'program_name',
+    'deadline',
+    'fully_funded',
+    'english_taught',
+    'post_study_visa',
+    'verdict',
+    'apply_link',
+    'official_link',
   ];
 
   for (const field of required) {
@@ -70,32 +78,28 @@ function validateAnalyzerResponse(response, url) {
   }
 
   if (typeof response.match_score !== 'number') {
-    throw new Error(
-      `Analyzer 'match_score' must be a number, got: ${typeof response.match_score}`,
-    );
+    throw new Error(`Analyzer 'match_score' must be a number, got: ${typeof response.match_score}`);
   }
 
   if (response.match_score < 0 || response.match_score > 100) {
-    throw new Error(
-      `Analyzer 'match_score' out of range (0-100): ${response.match_score}`,
-    );
+    throw new Error(`Analyzer 'match_score' out of range (0-100): ${response.match_score}`);
   }
 
   if (typeof response.fully_funded !== 'boolean') {
     throw new Error(
-      `Analyzer 'fully_funded' must be boolean, got: ${typeof response.fully_funded}`,
+      `Analyzer 'fully_funded' must be boolean, got: ${typeof response.fully_funded}`
     );
   }
 
   if (typeof response.english_taught !== 'boolean') {
     throw new Error(
-      `Analyzer 'english_taught' must be boolean, got: ${typeof response.english_taught}`,
+      `Analyzer 'english_taught' must be boolean, got: ${typeof response.english_taught}`
     );
   }
 
   if (typeof response.post_study_visa !== 'boolean') {
     throw new Error(
-      `Analyzer 'post_study_visa' must be boolean, got: ${typeof response.post_study_visa}`,
+      `Analyzer 'post_study_visa' must be boolean, got: ${typeof response.post_study_visa}`
     );
   }
 
