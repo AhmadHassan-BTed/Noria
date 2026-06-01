@@ -11,7 +11,8 @@
     "lint:fix": "eslint \"src/**/*.js\" --fix",
     "format:check": "prettier --check \"src/**/*.js\"",
     "format": "prettier --write \"src/**/*.js\"",
-    "build": "node scripts/build.js"
+    "build": "node scripts/build.js",
+    "prepare": "echo 'Ready'"
   },
   "keywords": [
     "pipeline",

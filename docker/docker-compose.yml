@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  noria:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: noria
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    env_file:
+      - ../.env
+    volumes:
+      - ../.wwebjs_auth:/app/.wwebjs_auth
+      - ../logs:/app/logs
+    ports:
+      - "3000:3000"
+    networks:
+      - noria
+
+  noria-dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    container_name: noria-dev
+    environment:
+      NODE_ENV: development
+    env_file:
+      - ../.env
+    volumes:
+      - ..:/app
+      - /app/node_modules
+      - ../.wwebjs_auth:/app/.wwebjs_auth
+    ports:
+      - "3001:3000"
+    networks:
+      - noria
+    profiles:
+      - dev
+
+networks:
+  noria:
+    driver: bridge
