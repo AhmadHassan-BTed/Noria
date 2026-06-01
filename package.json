@@ -1,10 +1,9 @@
 {
   "name": "noria",
   "version": "2.0.0",
-  "main": "src/index-v2.js",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node src/index-v2.js",
-    "start:legacy": "node src/index.js",
+    "start": "node src/index.js",
     "test": "jest",
     "test:coverage": "jest --coverage",
     "lint": "eslint \"src/**/*.js\"",

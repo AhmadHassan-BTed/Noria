@@ -1,0 +1,22 @@
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Enforce LF (Unix) line endings for JavaScript and shell scripts
+*.js text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+
+# Enforce CRLF (Windows) for Batch scripts
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Denote binary files (prevent git from modifying them)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

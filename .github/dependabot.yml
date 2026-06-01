@@ -4,16 +4,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
-      time: "03:00"
     open-pull-requests-limit: 5
-    pull-request-branch-name:
-      separator: "/"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
-    reviewers:
-      - "AhmadHassan-BTed"
-    allow:
-      - dependency-type: "production"
-      - dependency-type: "development"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 2
