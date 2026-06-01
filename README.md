@@ -1,374 +1,510 @@
+# Noria — Event-Driven Opportunity Discovery Pipeline
+
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/NORIA-00C9A7?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIgMTJsNC00IDQgNCA0LTQgNCA0IDQtNCIvPjwvc3ZnPg=="/>
-  </picture>
+  <b>A production-ready, fully-decoupled event-driven pipeline for discovering, evaluating, and notifying scholarship, job, and internship opportunities — 24/7.</b>
 </p>
 
 <p align="center">
-  <b>A 24/7 event-driven pipeline that listens for scholarship opportunities on WhatsApp, scrapes pages, evaluates eligibility through AI, and delivers matched results back to your phone — automatically.</b>
-</p>
-
-<p align="center">
-  <a href="https://github.com/AhmadHassan-BTed/Noria/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-00C9A7?style=flat-square" alt="MIT License"/></a>
+  <a href="https://github.com/AhmadHassan-BTed/noria/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License"/></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node >=18"/></a>
-  <a href="https://github.com/AhmadHassan-BTed/Noria/commits/main"><img src="https://img.shields.io/github/last-commit/AhmadHassan-BTed/Noria?style=flat-square&color=00C9A7&label=updated" alt="Last Updated"/></a>
-  <a href="https://github.com/AhmadHassan-BTed/Noria/stargazers"><img src="https://img.shields.io/badge/stars-0-00C9A7?style=flat-square" alt="Stars"/></a>
+  <a href=""><img src="https://img.shields.io/badge/status-production_ready-brightgreen?style=flat-square" alt="Production Ready"/></a>
+  <a href=""><img src="https://img.shields.io/badge/architecture-fully_decoupled-blue?style=flat-square" alt="Architecture"/></a>
 </p>
 
 ---
 
 ## Overview
 
-Noria is named after the Persian water wheel — a continuous, reliable flow of water the same way this pipeline provides a continuous flow of curated scholarship information. It runs 24/7 on a server or Raspberry Pi, listens to WhatsApp messages, extracts URLs, scrapes the linked pages, evaluates them against predefined scholarship criteria using Google's Gemini AI, and delivers a notification when a match is found.
+**Noria** is a fully decoupled, plugin-based, event-driven pipeline system designed for discovering and evaluating opportunities (scholarships, jobs, internships) based on user profiles. It runs 24/7, listens for opportunities via WhatsApp, evaluates them using AI (Google Gemini), and delivers notifications.
 
-The entire system is decoupled through an event-driven architecture. Each service operates independently and communicates only through a central event broker. No service knows the others exist.
+### Why Noria?
+
+Named after the Persian water wheel — symbolizing continuous, reliable flow — Noria provides a continuous stream of curated opportunities through a decoupled, scalable, and maintainable architecture.
+
+### Key Features
+
+✅ **Fully Decoupled** — Swap any component (listener, scraper, analyzer, notifier)  
+✅ **Plugin System** — Add custom components without touching core  
+✅ **Multi-Provider** — Support scholarships, jobs, internships simultaneously  
+✅ **Configuration-Driven** — YAML pipelines, zero hardcoding  
+✅ **Production-Ready** — Retry logic, caching, dead-letter queues, metrics  
+✅ **Open Source Ready** — Clear interfaces, comprehensive documentation  
+✅ **Type-Safe** — Strong typing and validation throughout  
+✅ **Well-Tested** — Unit and integration tests included  
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- Google Gemini API key ([get here](https://aistudio.google.com/))
+- WhatsApp account for receiving notifications
+
+### Installation
+
+```bash
+# Clone repository
+git clone https://github.com/AhmadHassan-BTed/noria.git
+cd noria
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your API keys and preferences
+nano .env
+
+# Run
+npm start
+```
+
+### First Run
+
+1. Scan the QR code displayed in terminal with WhatsApp
+2. Send a message with a scholarship/job URL to the authenticated number
+3. Noria evaluates it and sends back matching results
 
 ---
 
 ## Architecture
 
-### Service Topology
+### System Overview
 
-```mermaid
-flowchart LR
-    WA[WhatsApp Listener] -->|LINK_EXTRACTED| B[Event Broker]
-    B -->|SCRAPER.START| SC[Hybrid Scraper]
-    SC -->|SCRAPER.SUCCESS| AN[Gemini Analyzer]
-    AN -->|MATCH_FOUND| DI[Notifier Dispatcher]
-    DI -->|NOTIFIER.SEND| WA
-    B -.->|SYSTEM.ERROR| ER[Error Handler]
-    B -.->|SYSTEM.BOOTED| BO[Boot Banner]
-
-    style WA fill:#25D366,color:#000
-    style SC fill:#F05032,color:#fff
-    style AN fill:#4285F4,color:#fff
-    style DI fill:#FF6F00,color:#fff
-    style B fill:#00C9A7,color:#000
-    style ER fill:#e74c3c,color:#fff
+```
+┌─────────────────────────────────────────────┐
+│        WhatsApp / Telegram / Discord        │
+│       (Inbound opportunity notifications)   │
+└────────────────┬────────────────────────────┘
+                 │
+        ┌────────▼────────┐
+        │  URL Extraction │
+        │  & Validation   │
+        └────────┬────────┘
+                 │
+        ┌────────▼──────────┐
+        │  Deduplication    │
+        │  Cache (24h TTL)  │
+        └────────┬──────────┘
+                 │
+    ┌────────────▼───────────────┐
+    │  Hybrid Content Scraper    │
+    │  ┌─ Jina AI (fast-path)   │
+    │  └─ Puppeteer (fallback)   │
+    └────────────┬───────────────┘
+                 │
+    ┌────────────▼──────────────────┐
+    │  AI Evaluation (Gemini 2.5)   │
+    │  • Provider-specific scoring  │
+    │  • Criteria matching          │
+    │  • Response validation        │
+    └────────────┬──────────────────┘
+                 │
+    ┌────────────▼──────────────────┐
+    │  Provider-Specific Formatter  │
+    │  (Scholarships/Jobs/etc)      │
+    └────────────┬──────────────────┘
+                 │
+┌────────────────▼────────────────────┐
+│  WhatsApp / Telegram / Email / Slack  │
+│  (Send formatted match notification)  │
+└──────────────────────────────────────┘
 ```
 
-### Event Flow
-
-```mermaid
-sequenceDiagram
-    participant User as WhatsApp User
-    participant WA as WhatsApp Listener
-    participant B as Event Broker
-    participant SC as Hybrid Scraper
-    participant AN as Gemini Analyzer
-    participant DI as Notifier Dispatcher
-
-    User->>WA: sends message with URL
-    WA->>B: LINK_EXTRACTED (url)
-    B->>SC: SCRAPER.START (url)
-    
-    alt Jina AI succeeds
-        SC->>SC: fast-path extraction
-    else Jina fails
-        SC->>SC: puppeteer fallback
-    end
-    
-    SC->>B: SCRAPER.SUCCESS ({url, text})
-    B->>AN: SCRAPER.SUCCESS ({url, text})
-    AN->>AN: evaluate against criteria
-    
-    alt is_match === true
-        AN->>B: MATCH_FOUND ({url, ai_data})
-        B->>DI: MATCH_FOUND ({url, ai_data})
-        DI->>B: NOTIFIER.SEND (formattedMessage)
-        B->>WA: NOTIFIER.SEND (formattedMessage)
-        WA->>User: sends notification
-    else no match
-        AN->>AN: log & discard
-    end
-```
-
-### Module Dependency Graph
-
-```mermaid
-graph TD
-    subgraph Orchestrator
-        I[index.js]
-    end
-
-    subgraph Infrastructure
-        B[queue/broker.js]
-        E[config/constants/events.js]
-    end
-
-    subgraph Services
-        WL[listener/whatsapp.js]
-        PS[scraper/puppeteer.js]
-        GA[analyzer/gemini.js]
-        ND[notifier/dispatcher.js]
-    end
-
-    I --> B
-    I --> WL
-    I --> PS
-    I --> GA
-    I --> ND
-    WL --> E
-    PS --> E
-    GA --> E
-    ND --> E
-    B --> E
-```
-
----
-
-## Services
-
-### WhatsApp Listener
-
-Listens for incoming WhatsApp messages using `whatsapp-web.js`. When a message containing a URL is received, it extracts the URL and emits a `LINK_EXTRACTED` event. It also receives `NOTIFIER.SEND` events and forwards the formatted message to the configured phone number.
-
-- **Inbound**: WhatsApp messages via QR authentication
-- **Outbound**: `WHATSAPP.LINK_EXTRACTED`
-- **Consumes**: `NOTIFIER.SEND`
-
-### Hybrid Scraper
-
-A two-layer content extraction system:
-
-```mermaid
-flowchart LR
-    URL[URL] --> J{Try Jina AI}
-    J -->|success| SUCCESS[SCRAPER.SUCCESS]
-    J -->|fail| P[Launch Puppeteer]
-    P --> NP[Navigate Page]
-    NP --> AS[Auto-scroll]
-    AS --> CT[Content Text Extraction]
-    CT --> SUCCESS
-```
-
-**Layer 1 — Jina AI Reader (fast path):** Sends the URL to `r.jina.ai` for text extraction. Returns clean text in milliseconds without launching a browser.
-
-**Layer 2 — Puppeteer Stealth (slow path):** Falls back to a headless Chrome browser with anti-bot evasion when Jina fails. Blocks unnecessary resource types (images, fonts, stylesheets) for speed. Uses content scoring to find the main article text.
-
-- **Consumes**: `SCRAPER.START`
-- **Outbound**: `SCRAPER.SUCCESS` or `SYSTEM.ERROR`
-
-### Gemini Analyzer
-
-Sends extracted page content to Google's Gemini 2.5 Flash model for structured evaluation against a predefined scholarship criteria set:
-
-```mermaid
-flowchart TD
-    TEXT[Page Text] --> T[Truncate to 15k chars]
-    T --> P[Build Prompt]
-    P --> G[Gemini 2.5 Flash]
-    G --> J[JSON Parsing]
-    J --> V{Valid is_match?}
-    V -->|true| MF[MATCH_FOUND]
-    V -->|false| NM[log & discard]
-    V -->|error| ER[SYSTEM.ERROR]
-```
-
-The model returns a constrained JSON object with `is_match`, `program_name`, `deadline`, and `analysis` fields — enforced at the API level through Gemini's `responseSchema`. The criteria includes citizenship (Pakistani), degree level (Master's), field (CS/SE), and full funding requirement.
-
-- **Consumes**: `SCRAPER.SUCCESS`
-- **Outbound**: `MATCH_FOUND` or `SYSTEM.ERROR`
-
-### Notifier Dispatcher
-
-A pure transformation service. Takes the structured match payload from the analyzer and formats it into a WhatsApp-friendly message with bold headers, italic analysis, and timestamp. Has no I/O — just format and emit.
-
-- **Consumes**: `MATCH_FOUND`
-- **Outbound**: `NOTIFIER.SEND`
-
-### Event Broker
-
-A singleton `EventEmitter` subclass shared across all services. Responsibilities:
-
-- Raise listener cap to 30 to prevent MaxListenersExceededWarning
-- Intercept `SYSTEM.ERROR` globally — renders a formatted error box with source, message, and stack trace
-- Print a boot banner on `SYSTEM.BOOTED`
-
-```mermaid
-flowchart LR
-    subgraph Error Display
-        direction TB
-        H[╔══════════════════╗]
-        B[║ SYSTEM ERROR     ║]
-        S[║ Source : ....     ║]
-        M[║ Message: ....     ║]
-        F[╚══════════════════╝]
-    end
-```
-
----
-
-## Data Flow
-
-```mermaid
-flowchart LR
-    subgraph WhatsApp
-        M[Incoming Message] --> URL[URL Extraction]
-    end
-    
-    subgraph Scraper
-        URL --> JINA[Jina AI] -->|fail| PP[Puppeteer]
-        JINA -->|text| T1[Raw Text]
-        PP -->|text| T1
-    end
-    
-    subgraph Analyzer
-        T1 --> GE[Gemini API]
-        GE --> JSON[Structured JSON]
-        JSON --> DECIDE{Match?}
-    end
-    
-    subgraph Notifier
-        DECIDE -->|yes| FORMAT[Format Message]
-        FORMAT --> SEND[Send via WhatsApp]
-        DECIDE -->|no| LOG[Log & Discard]
-    end
-```
-
----
-
-## Repository Structure
+### Folder Structure
 
 ```
 noria/
-├── src/
-│   ├── index.js                       # Orchestrator — boot & event bridges
-│   ├── config/
-│   │   └── constants/
-│   │       └── events.js              # Immutable event name contracts
-│   ├── queue/
-│   │   └── broker.js                  # Singleton EventEmitter (the bus)
-│   └── services/
-│       ├── listener/
-│       │   └── whatsapp.js            # WhatsApp client (inbound + outbound)
-│       ├── scraper/
-│       │   └── puppeteer.js           # Hybrid scraper (Jina + Puppeteer)
-│       ├── analyzer/
-│       │   └── gemini.js              # AI eligibility evaluator
-│       └── notifier/
-│           └── dispatcher.js          # Message formatter / transformer
-├── docker/
+├── src/                        # Source code
+│   ├── index.js                # Single entry point
+│   ├── config/                 # Configuration system
+│   │   ├── config.js           # Config loader from .env
+│   │   ├── plugins.registry.js # Plugin registration
+│   │   └── constants.js        # Global constants
+│   ├── plugins/                # Pluggable components
+│   │   ├── registry.js         # Plugin management
+│   │   ├── base/               # Base classes
+│   │   ├── listeners/          # Message sources
+│   │   ├── scrapers/           # Content extraction
+│   │   ├── analyzers/          # AI evaluation
+│   │   └── notifiers/          # Message formatters
+│   ├── providers/              # Opportunity types
+│   │   ├── base/               # Provider interface
+│   │   └── scholarships/       # Scholarship provider
+│   ├── core/                   # Core infrastructure
+│   │   ├── broker.js           # Event bus
+│   │   ├── pipeline.js         # Pipeline orchestrator
+│   │   ├── events.js           # Event types
+│   │   └── logger.js           # Structured logging
+│   ├── utils/                  # Utilities
+│   │   ├── retry.js            # Exponential backoff
+│   │   ├── cache.js            # LRU cache
+│   │   ├── validators.js       # Input/output validation
+│   │   ├── queue.js            # Dead-letter queue
+│   │   └── metrics.js          # Metrics collection
+│   └── middleware/             # Cross-cutting concerns
+│       ├── deduplicator.js
+│       ├── validator.js
+│       └── metrics.js
+├── pipelines/                  # Pipeline definitions
+│   ├── scholarships.yaml       # Scholarships pipeline
+│   └── jobs.yaml               # Jobs pipeline (template)
+├── docs/                       # Documentation
+│   ├── architecture.md
+│   ├── deployment.md
+│   ├── contributing.md
+│   └── security.md
+├── tests/                      # Test suite
+│   ├── unit/
+│   └── integration/
+├── docker/                     # Docker configs
 │   ├── Dockerfile
 │   └── docker-compose.yml
-├── logs/                              # Runtime log output
-├── docs/
-│   └── assets/                        # Diagrams & supporting files
-├── package.json
-├── ecosystem.config.js                # PM2 process manager config
-└── .env.example
+├── scripts/                    # Build/deploy scripts
+├── .env.example                # Environment template
+├── .gitignore                  # Git ignore rules
+└── package.json                # Dependencies
 ```
 
 ---
 
-## Getting Started
+## Features
 
-### Prerequisites
+### 1. Plugin System
 
-- **Node.js** 18+ (tested with 20 LTS)
-- **npm** or **yarn**
-- A **Gemini API key** from [Google AI Studio](https://aistudio.google.com/)
-- A **WhatsApp phone number** to receive notifications (can be the same as the sender)
-- (Optional) **Jina AI API key** for faster scraping
+Swap any component without core changes:
 
-### Installation
+```javascript
+// Add custom listener (Telegram, Discord, etc)
+class TelegramListener extends BaseListener {
+  async initialize() { /* ... */ }
+  async send(target, message) { /* ... */ }
+}
 
-```bash
-git clone https://github.com/AhmadHassan-BTed/Noria.git
-cd Noria
-npm install
+// Register in config/plugins.registry.js
+registry.registerPlugin('listener', 'telegram', TelegramListener);
+
+// Use in pipeline
+stages:
+  listen:
+    plugin: telegram-listener
 ```
 
-### Configuration
+### 2. Multi-Provider Support
 
-Copy the environment template and fill in the values:
+Add new opportunity types (jobs, internships, grants):
+
+```javascript
+// Create provider
+class JobsProvider extends BaseProvider {
+  getAnalyzer() { return new JobAnalyzer(); }
+  getNotifier() { return new JobNotifier(); }
+  getSchema() { return JOB_SCHEMA; }
+}
+
+// Register and use in pipeline
+ACTIVE_PIPELINES=scholarships,jobs
+```
+
+### 3. Resilience & Reliability
+
+- ✅ **Retry Logic** — Exponential backoff for transient failures
+- ✅ **Content Caching** — 24-hour LRU cache prevents duplicate processing
+- ✅ **Dead-Letter Queue** — Failed items automatically retried, logged if final failure
+- ✅ **Health Checks** — WhatsApp connection monitoring
+- ✅ **Metrics** — 60s reporting of pipeline health
+- ✅ **Graceful Shutdown** — Clean process termination
+
+### 4. Configuration-Driven
+
+No hardcoding — everything via `.env` and YAML:
+
+```env
+# .env
+GEMINI_API_KEY=xxx
+APPLICANT_NATIONALITY=Pakistan
+ACTIVE_PIPELINES=scholarships,jobs
+MAX_RETRIES=3
+```
+
+```yaml
+# pipelines/scholarships.yaml
+stages:
+  listen:
+    plugin: whatsapp-listener
+  scrape:
+    primary: jina-scraper
+    fallback: puppeteer-scraper
+  analyze:
+    plugin: gemini-analyzer
+    provider: scholarships
+  notify:
+    plugin: whatsapp-notifier
+    provider: scholarships
+```
+
+---
+
+## Deployment
+
+### Local Development
+
+```bash
+npm install
+cp .env.example .env
+# Edit .env
+npm start
+```
+
+### Docker
+
+```bash
+docker-compose up -d
+# View logs
+docker-compose logs -f noria
+```
+
+### Production
+
+See [docs/deployment.md](docs/deployment.md) for:
+- PM2 setup
+- Systemd service
+- Kubernetes deployment
+- Environment management
+- Monitoring and alerting
+
+---
+
+## Configuration
+
+### Environment Variables
+
+Create `.env` from `.env.example`:
 
 ```bash
 cp .env.example .env
 ```
 
-| Variable          | Required | Description                                                |
-| ----------------- | -------- | ---------------------------------------------------------- |
-| `GEMINI_API_KEY`  | Yes      | Google Gemini API key for scholarship analysis             |
-| `MY_PHONE_NUMBER` | Yes      | Phone number to receive notifications (e.g. +923001234567) |
-| `JINA_API_KEY`    | No       | Jina AI key for fast-path content extraction               |
-| `NODE_ENV`        | No       | Set to `production` to suppress stack traces               |
+Key variables:
 
-### Running
+- `GEMINI_API_KEY` — Google Gemini API key (required)
+- `NOTIFICATION_TARGET` — WhatsApp number (required)
+- `APPLICANT_NATIONALITY` — Your nationality (hard constraint)
+- `APPLICANT_TARGET_FIELDS` — Your target fields (for matching)
+- `MAX_RETRIES` — Retry attempts (default: 3)
+- `ACTIVE_PIPELINES` — Which pipelines to run (default: scholarships)
 
-```bash
-# Development (direct)
-node src/index.js
+### Pipeline Configuration
 
-# Production (via PM2)
-pm2 start ecosystem.config.js
+Define pipelines in `pipelines/` directory as YAML:
+
+```yaml
+name: Scholarships Pipeline
+provider: scholarships
+stages:
+  listen:
+    plugin: whatsapp-listener
+  scrape:
+    primary: jina-scraper
+    fallback: puppeteer-scraper
+  analyze:
+    plugin: gemini-analyzer
+    provider: scholarships
+  notify:
+    plugin: whatsapp-notifier
+    provider: scholarships
 ```
-
-On first run, a QR code will appear in the terminal. Scan it with WhatsApp on your phone to authenticate the session. The session is persisted in `.wwebjs_auth/` — subsequent restarts won't require re-authentication.
 
 ---
 
-## Deployment Options
+## Development
 
-### Docker
-
-```bash
-docker compose -f docker/docker-compose.yml up -d
-```
-
-### Raspberry Pi
-
-The hardware detection in the boot sequence automatically sets `PUPPETEER_EXECUTABLE_PATH` to `/usr/bin/chromium-browser` when running on ARM architecture. Install Chromium on the Pi:
+### Setup Development Environment
 
 ```bash
-sudo apt install chromium-browser
+# Install dependencies
+npm install
+
+# Install pre-commit hooks
+npm run prepare
+
+# Start development server with auto-reload
+npm run dev
 ```
 
-### Process Manager (PM2)
+### Running Tests
 
-PM2 configuration is included in `ecosystem.config.js`. It restarts the process automatically on crash and supports log rotation.
+```bash
+# Unit tests
+npm test
+
+# Integration tests
+npm test -- --testPathPattern=integration
+
+# With coverage
+npm test -- --coverage
+```
+
+### Linting & Formatting
+
+```bash
+# Check code quality
+npm run lint
+
+# Format code
+npm run format
+
+# Fix linting issues
+npm run lint:fix
+```
+
+### Building
+
+```bash
+# Build for production
+npm run build
+
+# Start production build
+npm start
+```
 
 ---
 
-## Event Contract
+## Contributing
 
-Every event that flows through the broker is a namespaced string. Services must import from `config/constants/events.js` — magic strings are not used.
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Code of conduct
+- Development setup
+- PR process
+- Commit conventions
+- Testing requirements
+- Documentation standards
 
-| Event                       | Direction             | Payload                             |
-| --------------------------- | --------------------- | ----------------------------------- |
-| `system.booted`             | Orchestrator → Broker | —                                   |
-| `system.error`              | Any → Broker          | `{ source, message, stack?, url? }` |
-| `whatsapp.ready`            | WhatsApp → Broker     | —                                   |
-| `whatsapp.message_received` | WhatsApp → Broker     | raw Message object                  |
-| `whatsapp.link_extracted`   | WhatsApp → Broker     | `url` (string)                      |
-| `scraper.start`             | Broker → Scraper      | `url` (string)                      |
-| `scraper.success`           | Scraper → Broker      | `{ url, text }`                     |
-| `scraper.failed`            | Scraper → Broker      | `{ url, reason }`                   |
-| `analyzer.match_found`      | Analyzer → Broker     | `{ url, ai_data }`                  |
-| `analyzer.no_match`         | Analyzer → Broker     | `{ url, ai_data }`                  |
-| `notifier.send`             | Dispatcher → WhatsApp | `formattedMessage` (string)         |
+### Quick Contribution Steps
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Add tests
+5. Run linting and tests
+6. Commit with conventional commits (`git commit -m "feat: add amazing feature"`)
+7. Push to branch
+8. Open Pull Request
 
 ---
 
-## Design Decisions
+## Architecture Decisions
 
-- **Decoupled services via event broker**: No service imports another. Every service registers listeners on a shared `EventEmitter`. This means any service can be replaced, removed, or added without touching the others. The orchestrator (`index.js`) is the only place that knows the full topology.
-- **Back-to-front initialization**: Services are initialized in reverse pipeline order (dispatcher → analyzer → scraper → whatsapp). This guarantees every downstream listener is registered before any upstream service could emit.
-- **Two-layer scraping**: Jina AI for speed (no browser needed), Puppeteer Stealth as a fallback for sites that block AI scrapers. The scraper exits early on Jina success — Puppeteer only launches when necessary.
-- **API-level JSON constraint**: Gemini's `responseSchema` forces the model to return valid, structured JSON. The prompt alone is not trusted — the schema is enforced server-side by the API.
-- **Fail-fast on missing API key**: The analyzer throws synchronously at init time if `GEMINI_API_KEY` is absent. The process crashes immediately with a clear message rather than silently failing on every evaluation.
-- **Hardware-aware boot**: Detects ARM architecture (Raspberry Pi) at startup and routes Puppeteer to the system Chromium binary instead of the bundled one.
+See [docs/architecture.md](docs/architecture.md) for detailed rationale on:
+- Plugin system design
+- Event-driven architecture
+- Provider pattern
+- Resilience strategies
+- Security model
+
+---
+
+## Security
+
+### Reporting Vulnerabilities
+
+Do **not** open public issues for security vulnerabilities. See [SECURITY.md](SECURITY.md) for responsible disclosure.
+
+### Security Practices
+
+- ✅ No secrets in code
+- ✅ Environment-based configuration
+- ✅ Input validation on all boundaries
+- ✅ Error messages don't leak sensitive info
+- ✅ Regular dependency updates
+- ✅ Security-focused code review
+
+---
+
+## Performance
+
+### Scalability
+
+- Single instance handles ~50 opportunities/day
+- Horizontal scaling via multiple instances
+- Stateless design (session persisted in `.wwebjs_auth/`)
+- Efficient caching (24h TTL, max 500 URLs)
+
+### Optimization Tips
+
+1. **Adjust cache settings** — Tune `CACHE_TTL_MS` and `CACHE_MAX_SIZE`
+2. **Retry configuration** — Balance `MAX_RETRIES` vs cost
+3. **Metrics interval** — Reduce `METRICS_INTERVAL_MS` for more data
+4. **Pipeline configuration** — Use fast-path scraper (Jina) where possible
+
+---
+
+## Troubleshooting
+
+### WhatsApp Connection Issues
+
+**Problem**: QR code not scanning
+- Solution: Delete `.wwebjs_auth/` folder, restart, rescan QR code
+
+**Problem**: Messages not being received
+- Solution: Ensure `NOTIFICATION_TARGET` is correctly formatted (+CC + number)
+
+### Scraper Issues
+
+**Problem**: Content not being extracted
+- Solution: Jina might be blocked, Puppeteer fallback should trigger
+
+**Problem**: Puppeteer crashes on Raspberry Pi
+- Solution: Ensure chromium is installed (`sudo apt install chromium-browser`)
+
+### Analyzer Issues
+
+**Problem**: Gemini API errors
+- Solution: Check `GEMINI_API_KEY`, ensure API is enabled in Google Cloud
+
+---
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for planned features:
+- [ ] Additional opportunity types (grants, fellowships)
+- [ ] More scraper backends (RSS, APIs)
+- [ ] Alternative notifiers (Email, Slack, Telegram)
+- [ ] Web UI for configuration
+- [ ] Database integration
+- [ ] Advanced analytics
+- [ ] Team collaboration features
+
+---
+
+## Support
+
+- 📖 [Documentation](docs/)
+- 🐛 [Report Issues](https://github.com/AhmadHassan-BTed/noria/issues)
+- 💬 [Discussions](https://github.com/AhmadHassan-BTed/noria/discussions)
+- 📧 Contact: See [SUPPORT.md](SUPPORT.md)
 
 ---
 
 ## License
 
-MIT — see [LICENSE](https://github.com/AhmadHassan-BTed/Noria/blob/main/LICENSE).
+MIT — See [LICENSE](LICENSE) file
+
+---
+
+## Acknowledgments
+
+- Built with Node.js, Puppeteer, and Google Generative AI
+- Inspired by event-driven architecture patterns
+- Thanks to the open-source community
 
 ---
 
 <p align="center">
-  <sub>Built by <a href="https://github.com/AhmadHassan-BTed">Ahmad Hassan (B-Ted)</a></sub>
+  Made with ❤️ by <a href="https://github.com/AhmadHassan-BTed">Ahmad Hassan (B-Ted)</a>
   <br>
-  <sub>Noria — continuous flow of opportunity.</sub>
+  <i>Noria — continuous flow of opportunity</i>
 </p>

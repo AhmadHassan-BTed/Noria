@@ -262,17 +262,17 @@ stages:
 
 ## 📈 Comparison: Before vs After
 
-| Aspect | Before (v1) | After (v2) |
-|--------|------------|-----------|
-| Hardcoding | Heavy (analyzerConfig.js) | Zero (YAML + .env) |
-| Plugin System | None | Full registry system |
-| Extensibility | Manual code changes | YAML + plugins |
-| Multi-Provider | Impossible | Native support |
-| Configuration | Code-based | YAML-based |
-| Clarity | Mixed concerns | Clear separation |
-| Open Source Ready | No | Yes |
-| Entry Point | Complex index.js | Simple index-v2.js |
-| Future Addition | Requires refactor | Add provider + YAML |
+| Aspect            | Before (v1)               | After (v2)           |
+| ----------------- | ------------------------- | -------------------- |
+| Hardcoding        | Heavy (analyzerConfig.js) | Zero (YAML + .env)   |
+| Plugin System     | None                      | Full registry system |
+| Extensibility     | Manual code changes       | YAML + plugins       |
+| Multi-Provider    | Impossible                | Native support       |
+| Configuration     | Code-based                | YAML-based           |
+| Clarity           | Mixed concerns            | Clear separation     |
+| Open Source Ready | No                        | Yes                  |
+| Entry Point       | Complex index.js          | Simple index-v2.js   |
+| Future Addition   | Requires refactor         | Add provider + YAML  |
 
 ---
 

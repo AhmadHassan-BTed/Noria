@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint & Format
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+
+  test:
+    runs-on: ubuntu-latest
+    name: Test
+
+    strategy:
+      matrix:
+        node-version: [18, 20]
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm test -- --coverage
+      
+      - uses: codecov/codecov-action@v3
+        if: matrix.node-version == '18'
+        with:
+          files: ./coverage/lcov.info
+
+  security:
+    runs-on: ubuntu-latest
+    name: Security Audit
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm audit --audit-level=moderate || true
+
+  build:
+    runs-on: ubuntu-latest
+    name: Build
+    needs: [lint, test]
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: dist/

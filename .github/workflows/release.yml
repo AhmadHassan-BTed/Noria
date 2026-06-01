@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (major.minor.patch)'
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    name: Create Release
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Configure Git
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+
+      - name: Update version
+        run: npm version ${{ github.event.inputs.version }} --no-git-tag-version
+
+      - name: Update CHANGELOG
+        run: |
+          echo "## [${{ github.event.inputs.version }}] - $(date -u +%Y-%m-%d)" >> CHANGELOG.md.tmp
+          echo "" >> CHANGELOG.md.tmp
+          echo "### Added" >> CHANGELOG.md.tmp
+          echo "- Release notes placeholder" >> CHANGELOG.md.tmp
+          echo "" >> CHANGELOG.md.tmp
+          cat CHANGELOG.md >> CHANGELOG.md.tmp
+          mv CHANGELOG.md.tmp CHANGELOG.md
+
+      - name: Commit and tag
+        run: |
+          git add package.json CHANGELOG.md
+          git commit -m "chore: release v${{ github.event.inputs.version }}"
+          git tag -a v${{ github.event.inputs.version }} -m "Release version ${{ github.event.inputs.version }}"
+
+      - name: Push
+        run: git push origin main && git push origin v${{ github.event.inputs.version }}
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          body: "See [CHANGELOG.md](CHANGELOG.md) for details"
+          files: |
+            package.json
+            README.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

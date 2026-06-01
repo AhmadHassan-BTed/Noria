@@ -1,13 +1,13 @@
 name: Scholarships Pipeline
-version: '1.0'
-description: 'Listen for scholarship URLs, scrape, evaluate, and notify'
+version: "1.0"
+description: "Listen for scholarship URLs, scrape, evaluate, and notify"
 provider: scholarships
 
 stages:
   listen:
     plugin: whatsapp-listener
     config:
-      phoneNumber: '${NOTIFICATION_TARGET}'
+      phoneNumber: "${NOTIFICATION_TARGET}"
 
   extract:
     - plugin: url-extractor
@@ -30,7 +30,7 @@ stages:
     plugin: whatsapp-notifier
     provider: scholarships
     config:
-      phoneNumber: '${NOTIFICATION_TARGET}'
+      phoneNumber: "${NOTIFICATION_TARGET}"
 
 resilience:
   maxRetries: 3

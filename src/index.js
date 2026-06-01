@@ -4,70 +4,51 @@ require('dotenv').config();
 
 const os = require('os');
 const broker = require('./queue/broker');
-const EVENTS = require('./config/constants/events');
-const { initWhatsAppListener }   = require('./services/listener/whatsapp');
-const { initPuppeteerScraper }   = require('./services/scraper/puppeteer');
-const { initDeduplicator }       = require('./services/scraper/deduplicator');
-const { initGeminiAnalyzer }     = require('./services/analyzer/gemini');
-const { initNotifierDispatcher } = require('./services/notifier/dispatcher');
-const { dlq }                    = require('./utils/queue');
-const { metrics }                = require('./utils/metrics');
+const { config } = require('./config');
+const { PipelineOrchestrator } = require('./core/pipeline');
+const { initialize: initializeRegistry } = require('./config/plugins.registry');
+const { metrics } = require('./utils/metrics');
+const { dlq } = require('./utils/queue');
+const { EventTypes } = require('./core/events');
 
-function detectAndConfigureHardware() {
-  const platform = os.platform();
-  const arch     = os.arch();
-  const cpus     = os.cpus();
-  const model    = cpus.length > 0 ? cpus[0].model : 'unknown CPU';
-
-  console.log(`[Boot] Host  : ${os.hostname()}`);
-  console.log(`[Boot] CPU   : ${model} (${os.cpus().length} core(s), ${arch})`);
-  console.log(`[Boot] RAM   : ${(os.totalmem() / 1024 ** 3).toFixed(1)} GB total`);
-  console.log(`[Boot] OS    : ${platform} ${os.release()}`);
-
-  if (platform === 'linux' && arch.includes('arm')) {
-    process.env.PUPPETEER_EXECUTABLE_PATH = '/usr/bin/chromium-browser';
-    console.log('[Boot] Raspberry Pi detected — Puppeteer → /usr/bin/chromium-browser');
-  } else {
-    console.log('[Boot] Non-ARM host — Puppeteer will use its bundled Chromium.');
-  }
+function displayBootBanner() {
+  const bar = '─'.repeat(70);
+  console.log(`\n${bar}`);
+  console.log('  NORIA v2 — Modern Event-Driven Pipeline Architecture');
+  console.log(`  ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}  (Asia/Karachi)`);
+  console.log(`${bar}\n`);
 }
 
-function wireEventBridges() {
-  broker.on(EVENTS.WHATSAPP.LINK_EXTRACTED, (url) => {
-    console.log(`[Bridge] LINK_EXTRACTED → SCRAPER.START  (${url})`);
-    broker.emit(EVENTS.SCRAPER.START, url);
-  });
-
-  broker.on(EVENTS.SCRAPER.FAILED, ({ url, reason }) => {
-    console.log(`[Bridge] SCRAPER.FAILED → QUEUE.ADD (${url})`);
-    dlq.add({ url, reason });
-  });
-
-  console.log('[Boot] Event bridges wired.');
+function displaySystemInfo() {
+  const system = config.getSystem();
+  console.log('[Boot] System Information:');
+  console.log(`  Host     : ${system.hostname}`);
+  console.log(`  CPU      : ${system.cpus} cores (${system.arch})`);
+  console.log(`  RAM      : ${system.totalMemory} GB`);
+  console.log(`  Platform : ${system.platform}`);
+  console.log('');
 }
 
-function registerProcessSafetyNets() {
+function registerProcessHandlers() {
   process.on('uncaughtException', (err) => {
-    broker.emit(EVENTS.SYSTEM.ERROR, {
-      source:  'process:uncaughtException',
+    broker.emit(EventTypes.SYSTEM.ERROR, {
+      source: 'process:uncaughtException',
       message: err.message,
-      stack:   err.stack,
+      stack: err.stack,
     });
     process.exit(1);
   });
 
   process.on('unhandledRejection', (reason) => {
     const isError = reason instanceof Error;
-    broker.emit(EVENTS.SYSTEM.ERROR, {
-      source:  'process:unhandledRejection',
+    broker.emit(EventTypes.SYSTEM.ERROR, {
+      source: 'process:unhandledRejection',
       message: isError ? reason.message : String(reason),
-      stack:   isError ? reason.stack   : undefined,
+      stack: isError ? reason.stack : undefined,
     });
     process.exit(1);
   });
-}
 
-function registerShutdownHandlers() {
   const onShutdown = (signal) => {
     console.log(`\n[Noria] ${signal} received — shutting down gracefully...`);
     dlq.stop();
@@ -75,7 +56,7 @@ function registerShutdownHandlers() {
     process.exit(0);
   };
 
-  process.on('SIGINT',  () => onShutdown('SIGINT'));
+  process.on('SIGINT', () => onShutdown('SIGINT'));
   process.on('SIGTERM', () => onShutdown('SIGTERM'));
 }
 
@@ -83,56 +64,68 @@ function startMetricsReporter() {
   setInterval(() => {
     console.log(metrics.getReport());
   }, 60000);
-  console.log('[Boot] Metrics reporter started (every 60s).');
+  console.log('[Boot] Metrics reporter started (every 60s)\n');
 }
 
-function boot() {
-  const bar = '─'.repeat(54);
-  console.log(`\n${bar}`);
-  console.log('  NORIA — 24/7 Event-Driven Telemetry Pipeline');
-  console.log(`  ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}  (Asia/Karachi)`);
-  console.log(`${bar}\n`);
-
-  detectAndConfigureHardware();
-  console.log('');
-
+async function boot() {
   try {
-    registerProcessSafetyNets();
-    registerShutdownHandlers();
-    console.log('[Boot] Process safety nets registered.');
+    displayBootBanner();
+    displaySystemInfo();
 
-    initNotifierDispatcher(broker);
-    initGeminiAnalyzer(broker);
-    initPuppeteerScraper(broker);
+    config.validate();
+    registerProcessHandlers();
+
+    console.log('[Boot] Initializing plugin registry...');
+    initializeRegistry();
     console.log('');
 
-    wireEventBridges();
+    const orchestrator = new PipelineOrchestrator(broker);
+
+    console.log('[Boot] Loading pipeline configurations...');
+    const activePipelines = config.get('ACTIVE_PIPELINES', ['scholarships']);
+
+    for (const pipelineName of activePipelines) {
+      const pipelinePath = `./pipelines/${pipelineName}.yaml`;
+      try {
+        orchestrator.loadPipelineFromYAML(pipelinePath);
+      } catch (err) {
+        console.warn(`[Boot] Failed to load pipeline ${pipelineName}:`, err.message);
+      }
+    }
     console.log('');
 
-    initDeduplicator(broker);
+    console.log('[Boot] Initializing pipelines...');
+    for (const pipelineName of orchestrator.getAllPipelines()) {
+      await orchestrator.initializePipeline(pipelineName);
+    }
     console.log('');
 
-    if (process.env.ENABLE_QUEUE_RETRY !== 'false') {
+    console.log('[Boot] Wiring pipeline events...');
+    for (const pipelineName of orchestrator.getAllPipelines()) {
+      orchestrator.wirePipelineEvents(pipelineName);
+    }
+    console.log('');
+
+    if (config.get('ENABLE_QUEUE_RETRY', true)) {
       dlq.start((url, attempt) => {
         console.log(`[Queue] Retrying failed URL (attempt ${attempt}): ${url}`);
-        broker.emit(EVENTS.SCRAPER.START, url);
+        broker.emit(EventTypes.SCRAPER.START, { url });
       });
+      console.log('');
     }
 
     startMetricsReporter();
-    console.log('');
 
-    initWhatsAppListener(broker);
-    console.log('');
-
-    broker.emit(EVENTS.SYSTEM.BOOTED);
+    broker.emit(EventTypes.SYSTEM.BOOTED, {
+      pipelines: orchestrator.getAllPipelines(),
+      pluginsLoaded: orchestrator.getAllPipelines().length,
+    });
 
   } catch (err) {
-    broker.emit(EVENTS.SYSTEM.ERROR, {
-      source:  'Orchestrator:boot',
-      message: err.message,
-      stack:   err.stack,
-    });
+    console.error('[Boot] Fatal error:', err.message);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(err.stack);
+    }
     process.exit(1);
   }
 }
