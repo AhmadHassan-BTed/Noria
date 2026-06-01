@@ -1,47 +1,12 @@
-# Dependencies
 node_modules/
-yarn.lock
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# Runtime
 dist/
-build/
+.env
 *.log
 logs/
-
-# OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-.project
-.classpath
-.c9/
-*.sublime-workspace
-
-# Testing
 coverage/
-.nyc_output/
-
-# Docker
-.dockerignore
-
-# Misc
 .wwebjs_auth/
-.claude/
 *.tmp
 .cache/

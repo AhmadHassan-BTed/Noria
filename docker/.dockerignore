@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.DS_Store
+.vscode
+.idea
+coverage
+dist
+build
+*.tmp
+.wwebjs_auth
+.claude

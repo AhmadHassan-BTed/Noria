@@ -101,6 +101,6 @@ If any signature is missing, the registration fast-fails during boot to avoid ru
 3. Define `schema.js`, `analyzer.js`, `notifier.js`, and `config.js` with your specific prompt scoring parameters.
 4. Register the new provider class inside `src/config/plugins.registry.js` using `registry.registerProvider('realestate', RealEstateProvider)`.
 5. Create a declarative config pipeline under `pipelines/realestate.yaml` mapping the crawl listener, scrape technology, and notifications channel.
-6. Enable the pipeline by appending `realestate` to the `ACTIVE_PIPELINES` variable in your `.env` file!
+6. Enable the pipeline by appending `realestate` to the `ACTIVE_PIPELINES` variable in your `.env` file.
 
-With this intuitive decoupled architecture, **no core engine files are touched**, and the new opportunity is fully operational!
+With this intuitive decoupled architecture, **no core engine files are touched**, and the new opportunity is fully operational.
