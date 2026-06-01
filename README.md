@@ -9,10 +9,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/AhmadHassan-BTed/Noria/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AhmadHassan-BTed/Noria?style=flat-square&color=00C9A7" alt="License"/></a>
-  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node"/></a>
-  <a href="https://github.com/AhmadHassan-BTed/Noria"><img src="https://img.shields.io/github/last-commit/AhmadHassan-BTed/Noria?style=flat-square&color=00C9A7" alt="Last Commit"/></a>
-  <a href="https://github.com/AhmadHassan-BTed/Noria/stargazers"><img src="https://img.shields.io/github/stars/AhmadHassan-BTed/Noria?style=flat-square&color=00C9A7" alt="Stars"/></a>
+  <a href="https://github.com/AhmadHassan-BTed/Noria/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-00C9A7?style=flat-square" alt="MIT License"/></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node >=18"/></a>
+  <a href="https://github.com/AhmadHassan-BTed/Noria/commits/main"><img src="https://img.shields.io/github/last-commit/AhmadHassan-BTed/Noria?style=flat-square&color=00C9A7&label=updated" alt="Last Updated"/></a>
+  <a href="https://github.com/AhmadHassan-BTed/Noria/stargazers"><img src="https://img.shields.io/badge/stars-0-00C9A7?style=flat-square" alt="Stars"/></a>
 </p>
 
 ---
