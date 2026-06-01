@@ -11,6 +11,30 @@ class PluginRegistry {
     if (this.plugins.has(key)) {
       throw new Error(`Plugin already registered: ${key}`);
     }
+
+    // Dynamic Interface Verification
+    const prototype = pluginClass.prototype;
+    if (!prototype) {
+      throw new Error(`Plugin registry error: ${key} is not a valid constructor class`);
+    }
+
+    const requiredMethods = {
+      listener: ['initialize', 'on', 'close'],
+      scraper: ['scrape'],
+      analyzer: ['analyze', 'setProvider'],
+      notifier: ['send', 'setProvider', 'format'],
+    }[type];
+
+    if (requiredMethods) {
+      for (const method of requiredMethods) {
+        if (typeof prototype[method] !== 'function') {
+          throw new Error(
+            `Plugin interface violation: Plugin class '${pluginClass.name}' registered as type '${type}' must implement method '${method}()'`
+          );
+        }
+      }
+    }
+
     this.plugins.set(key, pluginClass);
     console.log(`[Registry] Plugin registered: ${key}`);
   }
@@ -19,6 +43,24 @@ class PluginRegistry {
     if (this.providers.has(name)) {
       throw new Error(`Provider already registered: ${name}`);
     }
+
+    // Dynamic Interface Verification
+    const prototype = providerClass.prototype;
+    if (!prototype) {
+      throw new Error(
+        `Provider registry error: Provider '${name}' is not a valid constructor class`
+      );
+    }
+
+    const requiredMethods = ['getAnalyzer', 'getNotifier', 'getSchema', 'getMetadata'];
+    for (const method of requiredMethods) {
+      if (typeof prototype[method] !== 'function') {
+        throw new Error(
+          `Provider interface violation: Provider class '${providerClass.name}' must implement method '${method}()' to abide by the BaseProvider interface`
+        );
+      }
+    }
+
     this.providers.set(name, providerClass);
     console.log(`[Registry] Provider registered: ${name}`);
   }
