@@ -18,7 +18,7 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - run: npm ci
+      - run: npm install
       - run: npm run lint
       - run: npm run format:check
 
@@ -37,7 +37,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
-      - run: npm ci
+      - run: npm install
       - run: npm test -- --coverage
       
       - uses: codecov/codecov-action@v3
@@ -56,7 +56,7 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - run: npm ci
+      - run: npm install
       - run: npm audit --audit-level=moderate || true
 
   build:
@@ -71,7 +71,7 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - run: npm ci
+      - run: npm install
       - run: npm run build
       - uses: actions/upload-artifact@v4
         with:
