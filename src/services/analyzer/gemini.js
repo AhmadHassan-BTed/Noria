@@ -3,7 +3,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const EVENTS = require('../../config/constants/events');
 const {
-  buildSystemInstruction,
+  SYSTEM_INSTRUCTION,
   SCHOLARSHIP_RESPONSE_SCHEMA,
 } = require('../../config/analyzerConfig');
 
@@ -22,7 +22,7 @@ function initGeminiAnalyzer(broker) {
 
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
-    systemInstruction: buildSystemInstruction(),
+    systemInstruction: SYSTEM_INSTRUCTION,
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: SCHOLARSHIP_RESPONSE_SCHEMA,

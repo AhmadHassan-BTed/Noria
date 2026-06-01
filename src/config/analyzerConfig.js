@@ -10,7 +10,7 @@ const WEIGHTED_SCORING_RULES = {
   language_barriers:    { points: 10, detail: 'Program is verified as English-taught with no external local language fluency components.' },
   career_runway:        { points:  5, detail: 'Country allows explicit post-study stay-back job search options.' },
   penalties: [
-    { deduction: 'match_score forced to 0', condition: 'Citizens of the applicant\'s nationality are explicitly excluded from the eligibility matrix.' },
+    { deduction: 'match_score forced to 0', condition: 'Excludes citizens of the applicant nationality from the eligibility matrix.' },
     { deduction: 'match_score forced to 0', condition: 'Program is exclusively an undergraduate/Bachelor\'s degree framework.' },
   ],
 };
@@ -82,12 +82,12 @@ const SCHOLARSHIP_RESPONSE_SCHEMA = {
   ],
 };
 
-function buildSystemInstruction() {
-  const nationality = process.env.APPLICANT_NATIONALITY || 'Unknown';
-  const name        = process.env.APPLICANT_NAME        || 'Unknown';
-  const degree      = process.env.APPLICANT_DEGREE_TIER || 'Unknown';
-  const fields      = process.env.APPLICANT_TARGET_FIELDS || 'Unknown';
-  const research    = process.env.APPLICANT_RESEARCH_FOCUS || 'Unknown';
+const SYSTEM_INSTRUCTION = (() => {
+  const nationality = process.env.APPLICANT_NATIONALITY     || 'Unknown';
+  const name        = process.env.APPLICANT_NAME             || 'Unknown';
+  const degree      = process.env.APPLICANT_DEGREE_TIER      || 'Unknown';
+  const fields      = process.env.APPLICANT_TARGET_FIELDS    || 'Computer Science/Software Engineering fields';
+  const research    = process.env.APPLICANT_RESEARCH_FOCUS   || 'Unknown';
 
   return `
 You are an advanced academic scoring engine running on telemetry.
@@ -110,13 +110,13 @@ WEIGHTED SCORING MATRIX (0 - 100 PTS)
   
   +30 pts : Funding tier — Allocation for fully funded options (covers both tuition + stable living stipend). Partial funding receives only +10.
   +20 pts : Program flexibility — Maximum points if the track covers an MS, MSc, Postgraduate framework, or a combined MS/PhD pathway. If strictly a PhD track but accepts direct Bachelor's entry with an integrated master's exit, allocate +15. Strictly single-track PhD options with no master's baseline pathways receive +10.
-  +20 pts : Field alignment — Target covers the applicant's fields: ${fields}.
+  +20 pts : Field alignment — Target covers ${fields}.
   +15 pts : Financial logistics — Block account constraints do not apply, or the scholarship explicitly waives/bypasses the financial deposit block.
   +10 pts : Language barriers — Program is verified as English-taught, requiring no external local language fluency components.
   +5  pts : Career runway — Country allows explicit post-study stay-back job search options.
 
   CRITICAL PENALTIES & HARD FILTERS:
-  - If ${nationality} citizens are explicitly excluded from the eligibility matrix, force total match_score to 0.
+  - Excludes citizens of ${nationality} from the eligibility matrix, force total match_score to 0.
   - If the program is exclusively an undergraduate/Bachelor's degree framework, force total match_score to 0.
 
 ════════════════════════════════════════════
@@ -126,10 +126,10 @@ URL EXTRACTION RULES
   - Assign direct registration/portal endpoints to 'apply_link'.
   - Assign core homepage documentation or university overview paths to 'official_link'.
 `.trim();
-}
+})();
 
 module.exports = {
-  buildSystemInstruction,
+  SYSTEM_INSTRUCTION,
   SCHOLARSHIP_RESPONSE_SCHEMA,
   WEIGHTED_SCORING_RULES,
 };
