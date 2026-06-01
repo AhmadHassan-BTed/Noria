@@ -1,62 +1,31 @@
 'use strict';
 
 const EVENTS = require('../../config/constants/events');
-
-const DIVIDER = '─'.repeat(33);
-
-function formatNotification(url, ai_data) {
-  const timestamp = new Date().toLocaleString('en-PK', {
-    timeZone: 'Asia/Karachi',
-    dateStyle: 'full',
-    timeStyle: 'short',
-  });
-
-  const programName = ai_data.program_name?.trim() || 'Unknown Program';
-  const deadline    = ai_data.deadline?.trim()     || 'Not specified';
-  const analysis    = ai_data.analysis?.trim()     || 'No analysis provided.';
-
-  const lines = [
-    ` *SCHOLARSHIP MATCH FOUND* `,
-    ``,
-    ` *Program:*`,
-    `${programName}`,
-    ``,
-    ` *Application Deadline:*`,
-    `${deadline}`,
-    ``,
-    ` *AI Analysis:*`,
-    `_${analysis}_`,
-    ``,
-    ` *Source Link:*`,
-    `${url}`,
-    ``,
-    DIVIDER,
-    ` *Detected:* ${timestamp}`,
-    `_Powered by Noria Pipeline_ `,
-  ];
-
-  return lines.join('\n');
-}
+const { formatNotification } = require('./template');
 
 function initNotifierDispatcher(broker) {
 
-  broker.on(EVENTS.ANALYZER.MATCH_FOUND, ({ url, ai_data }) => {
+  broker.on(EVENTS.ANALYZER.MATCH_FOUND, (payload) => {
     try {
-      if (!url || typeof url !== 'string') {
+      // Defensive structural check to protect event routing
+      if (!payload || typeof payload !== 'object') {
+        throw new Error(`MATCH_FOUND received an invalid or completely empty payload.`);
+      }
+      
+      if (!payload.url || typeof payload.url !== 'string') {
         throw new Error(
-          `MATCH_FOUND payload is missing a valid 'url'. Received: ${JSON.stringify(url)}`,
+          `MATCH_FOUND payload is missing a valid source 'url'. Received: ${JSON.stringify(payload.url)}`,
         );
       }
-      if (!ai_data || typeof ai_data !== 'object') {
-        throw new Error(
-          `MATCH_FOUND payload is missing 'ai_data'. Received: ${JSON.stringify(ai_data)}`,
-        );
-      }
 
-      console.log(`[Dispatcher] Formatting notification for: "${ai_data.program_name}"`);
+      // Safe fallback logging to guarantee no undefined interpolation
+      const programLabel = payload.program_name || payload.scholarship_name || 'Unknown Program';
+      console.log(`[Dispatcher] Formatting notification for: "${programLabel}"`);
 
-      const formattedMessage = formatNotification(url, ai_data);
+      // Compile data map through your template engine
+      const formattedMessage = formatNotification(payload);
 
+      // Ship telemetry string directly out to the WhatsApp client interface
       broker.emit(EVENTS.NOTIFIER.SEND, formattedMessage);
       console.log('[Dispatcher] NOTIFIER.SEND emitted — message queued for delivery.');
 
@@ -64,7 +33,7 @@ function initNotifierDispatcher(broker) {
       console.error('[Dispatcher] Failed to dispatch notification →', err.message);
       broker.emit(EVENTS.SYSTEM.ERROR, {
         source: 'NotifierDispatcher',
-        url:     url ?? 'unknown',
+        url:     payload?.url ?? 'unknown',
         message: err.message,
         stack:   err.stack,
       });

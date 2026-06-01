@@ -63,12 +63,12 @@ function initWhatsAppListener(broker) {
 
   broker.on(EVENTS.NOTIFIER.SEND, async (formattedMessage) => {
     try {
-      const rawNumber = process.env.MY_PHONE_NUMBER;
-      if (!rawNumber) {
-        throw new Error('Environment variable MY_PHONE_NUMBER is not set.');
+      const target = process.env.NOTIFICATION_TARGET;
+      if (!target) {
+        throw new Error('Environment variable NOTIFICATION_TARGET is not set.');
       }
 
-      const chatId = formatChatId(rawNumber);
+      const chatId = formatChatId(target);
       console.log(`[WhatsApp] Sending notification to ${chatId}...`);
       await client.sendMessage(chatId, formattedMessage);
       console.log('[WhatsApp] Notification delivered successfully.');
