@@ -36,21 +36,16 @@ async function autoScroll(page) {
   });
 }
 
-/**
- * FAST PATH: Jina AI Reader
- */
 async function fetchWithJina(url) {
   const jinaUrl = `https://r.jina.ai/${url}`;
-  const headers = {
-    'X-Return-Format': 'text' // Ask Jina for clean text, not HTML
-  };
-  
+  const headers = { 'X-Return-Format': 'text' };
+
   if (process.env.JINA_API_KEY) {
     headers['Authorization'] = `Bearer ${process.env.JINA_API_KEY}`;
   }
 
   const response = await fetch(jinaUrl, { headers });
-  
+
   if (!response.ok) {
     throw new Error(`Jina API rejected request with status: ${response.status}`);
   }
@@ -65,27 +60,21 @@ async function fetchWithJina(url) {
 
 function initPuppeteerScraper(broker) {
   broker.on(EVENTS.SCRAPER.START, async (url) => {
-    console.log(`[Scraper]   Scrape started → ${url}`);
+    console.log(`[Scraper] Scrape started → ${url}`);
 
-    // ==========================================
-    // LAYER 1: THE FAST PATH (JINA AI)
-    // ==========================================
     try {
-      console.log(`[Scraper]  ⚡ Attempting Fast-Path extraction via Jina AI...`);
+      console.log(`[Scraper] Attempting Fast-Path extraction via Jina AI...`);
       const jinaText = await fetchWithJina(url);
-      
-      console.log(`[Scraper]  ✅ JINA SUCCESS: Extracted ${jinaText.length.toLocaleString()} characters.`);
+
+      console.log(`[Scraper] JINA SUCCESS: Extracted ${jinaText.length.toLocaleString()} characters.`);
       broker.emit(EVENTS.SCRAPER.SUCCESS, { url, text: jinaText });
-      return; // EXIT EARLY! We don't need Chrome.
+      return;
 
     } catch (jinaError) {
-      console.warn(`[Scraper]  ⚠️ Jina Fast-Path failed: ${jinaError.message}`);
-      console.log(`[Scraper]  🛡️ Deploying Heavy Artillery (Puppeteer Stealth)...`);
+      console.warn(`[Scraper] Jina Fast-Path failed: ${jinaError.message}`);
+      console.log(`[Scraper] Deploying Heavy Artillery (Puppeteer Stealth)...`);
     }
 
-    // ==========================================
-    // LAYER 2: THE SLOW PATH (PUPPETEER)
-    // ==========================================
     let browser = null;
     try {
       browser = await puppeteer.launch({ headless: true, args: BROWSER_ARGS });
@@ -107,7 +96,7 @@ function initPuppeteerScraper(broker) {
       try {
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: NAVIGATION_TIMEOUT_MS });
       } catch (navErr) {
-        console.warn(`[Scraper]  ⚠️ Navigation timeout, attempting extraction anyway...`);
+        console.warn(`[Scraper] Navigation timeout, attempting extraction anyway...`);
       }
 
       const pageTitle = await page.title();
@@ -134,7 +123,7 @@ function initPuppeteerScraper(broker) {
           const links = block.querySelectorAll('a');
           let linkTextLength = 0;
           links.forEach(l => linkTextLength += (l.innerText || '').length);
-          
+
           const textRatio = rawText.length - (linkTextLength * 2);
           if (textRatio > highestScore) {
             highestScore = textRatio;
@@ -150,11 +139,11 @@ function initPuppeteerScraper(broker) {
         throw new Error(`Extracted text too short. Blocked by advanced CAPTCHA.`);
       }
 
-      console.log(`[Scraper]  ✅ PUPPETEER SUCCESS: Extracted ${text.length.toLocaleString()} characters.`);
+      console.log(`[Scraper] PUPPETEER SUCCESS: Extracted ${text.length.toLocaleString()} characters.`);
       broker.emit(EVENTS.SCRAPER.SUCCESS, { url, text });
 
     } catch (err) {
-      console.error(`[Scraper]  ❌ ALL LAYERS FAILED for ${url} →`, err.message);
+      console.error(`[Scraper] ALL LAYERS FAILED for ${url} →`, err.message);
       broker.emit(EVENTS.SYSTEM.ERROR, {
         source: 'HybridScraper',
         url,
@@ -164,12 +153,12 @@ function initPuppeteerScraper(broker) {
     } finally {
       if (browser !== null) {
         await browser.close();
-        console.log('[Scraper]  Browser instance closed cleanly.');
+        console.log('[Scraper] Browser instance closed cleanly.');
       }
     }
   });
 
-  console.log('[Scraper]  Hybrid scraper (Jina + Puppeteer) initialized and listening.');
+  console.log('[Scraper] Hybrid scraper (Jina + Puppeteer) initialized and listening.');
 }
 
 module.exports = { initPuppeteerScraper };

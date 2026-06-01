@@ -3,25 +3,8 @@
 const { GoogleGenerativeAI, SchemaType } = require('@google/generative-ai');
 const EVENTS = require('../../config/constants/events');
 
-// ---------------------------------------------------------------------------
-// Token budget guard.
-// gemini-1.5-flash has a 1 M token context window, but scholarship pages
-// rarely need more than ~4 k tokens to make an eligibility decision.
-// Capping at 15 000 characters keeps latency low and costs negligible.
-// ---------------------------------------------------------------------------
 const MAX_TEXT_CHARS = 15_000;
 
-// ---------------------------------------------------------------------------
-// JSON response schema — enforced at the API level via `responseSchema`.
-// The model is CONSTRAINED to return exactly these fields; it cannot add
-// free-form commentary outside the JSON structure.
-//
-// Schema:
-//   is_match     boolean  — true only when ALL hard requirements are satisfied
-//   program_name string   — canonical name of the scholarship / program
-//   deadline     string   — application deadline ("Not specified" if absent)
-//   analysis     string   — 2–3 sentence justification for the decision
-// ---------------------------------------------------------------------------
 const SCHOLARSHIP_RESPONSE_SCHEMA = {
   type: SchemaType.OBJECT,
   properties: {
@@ -47,14 +30,6 @@ const SCHOLARSHIP_RESPONSE_SCHEMA = {
   required: ['is_match', 'program_name', 'deadline', 'analysis'],
 };
 
-// ---------------------------------------------------------------------------
-// System instruction — defines the evaluator persona, hard requirements,
-// scoring boosts, and applicant profile.
-//
-// DESIGN DECISION: All criteria are baked into the system instruction rather
-// than the user prompt so they are immutable across all calls and cannot be
-// accidentally overridden by page content that contains adversarial text.
-// ---------------------------------------------------------------------------
 const SYSTEM_INSTRUCTION = `
 You are a rigorous scholarship eligibility analyst for a specific applicant profile.
 You receive raw text scraped from a scholarship webpage and must evaluate eligibility.
@@ -90,26 +65,7 @@ OUTPUT RULES
   • Always return a single, valid JSON object — no preamble, no trailing text.
 `.trim();
 
-/**
- * Initializes the Gemini AI analyzer service and binds it to the central broker.
- *
- * INBOUND   (Broker → Analyzer)
- *   • EVENTS.SCRAPER.SUCCESS  → { url: string, text: string }
- *     Sends truncated text to gemini-1.5-flash for JSON evaluation.
- *
- * OUTBOUND  (Analyzer → Broker)
- *   • EVENTS.ANALYZER.MATCH_FOUND → { url: string, ai_data: object }
- *     Emitted ONLY when ai_data.is_match === true.
- *   • EVENTS.SYSTEM.ERROR → on API failure, JSON parse error, or missing key.
- *
- * FAIL-FAST:
- *   The function throws synchronously if GEMINI_API_KEY is absent so the
- *   process crashes on startup rather than silently swallowing every analysis.
- *
- * @param {import('events').EventEmitter} broker - The central event bus.
- */
 function initGeminiAnalyzer(broker) {
-  // Validate the API key at service init time — not lazily per request
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error(
@@ -120,63 +76,34 @@ function initGeminiAnalyzer(broker) {
 
   const genAI = new GoogleGenerativeAI(apiKey);
 
-  // Build the model instance once.
-  // `systemInstruction` is evaluated server-side before every prompt —
-  // it cannot be overridden by user-turn content.
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
     systemInstruction: SYSTEM_INSTRUCTION,
     generationConfig: {
-      // Force structured JSON output — the model cannot respond in free text
       responseMimeType: 'application/json',
-      // Constrain the JSON shape at the API level (not just via prompting)
       responseSchema: SCHOLARSHIP_RESPONSE_SCHEMA,
     },
   });
 
-  // -------------------------------------------------------------------------
-  // Core analysis handler
-  // -------------------------------------------------------------------------
   broker.on(EVENTS.SCRAPER.SUCCESS, async ({ url, text }) => {
-    console.log(`[Analyzer]  Analyzing content from: ${url}`);
+    console.log(`[Analyzer] Analyzing content from: ${url}`);
 
     try {
-      // -----------------------------------------------------------------
-      // 1. Guard against empty payloads
-      // -----------------------------------------------------------------
       if (!text || text.trim().length === 0) {
         throw new Error(`Received empty text payload for URL: ${url}`);
       }
 
-      // -----------------------------------------------------------------
-      // 2. Truncate to stay within the token budget
-      // -----------------------------------------------------------------
       const safeText = text.slice(0, MAX_TEXT_CHARS);
 
-      // -----------------------------------------------------------------
-      // 3. Build the user-turn prompt
-      //    The system instruction already contains all criteria; this prompt
-      //    simply delivers the raw content to evaluate.
-      // -----------------------------------------------------------------
       const prompt =
         `Evaluate the following scholarship page content for eligibility:\n\n` +
         `--- BEGIN PAGE CONTENT ---\n${safeText}\n--- END PAGE CONTENT ---`;
 
-      // -----------------------------------------------------------------
-      // 4. Call the Gemini API
-      // -----------------------------------------------------------------
       const result = await model.generateContent(prompt);
       const rawResponse = result.response.text();
 
-      // -----------------------------------------------------------------
-      // 5. Parse the JSON response
-      //    Even with responseMimeType = 'application/json', defensive parsing
-      //    guards against edge cases (e.g., the model prefixing a BOM or
-      //    wrapping in markdown fences on certain SDK versions).
-      // -----------------------------------------------------------------
       let ai_data;
       try {
-        // Strip potential markdown code fences defensively
         const cleaned = rawResponse.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
         ai_data = JSON.parse(cleaned);
       } catch (parseErr) {
@@ -187,9 +114,6 @@ function initGeminiAnalyzer(broker) {
         );
       }
 
-      // -----------------------------------------------------------------
-      // 6. Validate expected fields are present
-      // -----------------------------------------------------------------
       if (typeof ai_data.is_match !== 'boolean') {
         throw new Error(
           `Gemini response missing required boolean field 'is_match'. ` +
@@ -205,19 +129,15 @@ function initGeminiAnalyzer(broker) {
         `           analysis    : ${ai_data.analysis}`,
       );
 
-      // -----------------------------------------------------------------
-      // 7. Gate — only propagate CONFIRMED matches downstream
-      // -----------------------------------------------------------------
       if (ai_data.is_match === true) {
-        console.log(`[Analyzer]  MATCH CONFIRMED → ${ai_data.program_name}`);
+        console.log(`[Analyzer] MATCH CONFIRMED → ${ai_data.program_name}`);
         broker.emit(EVENTS.ANALYZER.MATCH_FOUND, { url, ai_data });
       } else {
-        // Log non-matches for audit trail; do NOT emit further events
-        console.log(`[Analyzer]  Not a match — ${ai_data.analysis}`);
+        console.log(`[Analyzer] Not a match — ${ai_data.analysis}`);
       }
 
     } catch (err) {
-      console.error(`[Analyzer]  Analysis failed for ${url} →`, err.message);
+      console.error(`[Analyzer] Analysis failed for ${url} →`, err.message);
       broker.emit(EVENTS.SYSTEM.ERROR, {
         source: 'GeminiAnalyzer',
         url,
@@ -227,7 +147,7 @@ function initGeminiAnalyzer(broker) {
     }
   });
 
-  console.log('[Analyzer]  Gemini analyzer service initialized and listening.');
+  console.log('[Analyzer] Gemini analyzer service initialized and listening.');
 }
 
 module.exports = { initGeminiAnalyzer };
