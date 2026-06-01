@@ -49,10 +49,20 @@ class BaseNotifier {
   constructor(config = {}) {
     this.config = config;
     this.name = this.constructor.name;
+    this.provider = null;
   }
 
-  format(_data) {
-    throw new Error(`${this.name}#format() not implemented`);
+  setProvider(provider) {
+    this.provider = provider;
+  }
+
+  format(data) {
+    if (this.provider && typeof this.provider.getNotifier === 'function') {
+      return this.provider.getNotifier().format(data);
+    }
+    throw new Error(
+      `${this.name}#format() not implemented: No provider set or provider has no notifier`
+    );
   }
 }
 

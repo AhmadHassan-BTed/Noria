@@ -4,7 +4,6 @@ const fs = require('fs');
 const yaml = require('js-yaml');
 const { registry } = require('./registry');
 const { EventTypes } = require('./events');
-const { config } = require('../config');
 
 class PipelineOrchestrator {
   constructor(broker) {
@@ -215,34 +214,8 @@ class PipelineOrchestrator {
           throw new Error('Analyzer service not registered for this pipeline.');
         }
 
-        // A. Analyze the content using the Gemini plugin
-        const analysisConfig = await services.analyzer.analyze(text);
-
-        // B. Execute Gemini model call
-        const { GoogleGenAI } = require('@google/generative-ai');
-        const apiKey = config.get('GEMINI_API_KEY');
-        if (!apiKey) {
-          throw new Error('GEMINI_API_KEY is not configured');
-        }
-
-        const genAI = new GoogleGenAI({ apiKey });
-        const modelName = pipelineConfig.stages.analyze.config?.model || 'gemini-2.5-flash';
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseSchema: analysisConfig.schema,
-            temperature: pipelineConfig.stages.analyze.config?.temperature || 0.1,
-          },
-        });
-
-        const response = await model.generateContent(analysisConfig.prompt);
-        const responseText = response.response.text();
-        const parsedResult = JSON.parse(responseText);
-
-        // C. Validate analyzer response
-        const { validateAnalyzerResponse } = require('../utils/validators');
-        const validatedResponse = validateAnalyzerResponse(parsedResult, url);
+        // A. Analyze the content using the active analyzer plugin
+        const validatedResponse = await services.analyzer.analyze(text, { url });
 
         // Add original URL to results
         validatedResponse.url = url;
@@ -295,11 +268,8 @@ class PipelineOrchestrator {
         // A. Format the message
         const message = services.notifier.format(result);
 
-        // B. Send notification using the notifier plugin
-        const notifierPlugin = registry.getPlugin('notifier', 'whatsapp-notifier');
-        const notifierInstance = new notifierPlugin(pipelineConfig.stages.notify.config || {});
-
-        await notifierInstance.send(pipelineConfig.stages.notify.config.phoneNumber, message);
+        // B. Send notification using the dynamic, configured notifier plugin instance
+        await services.notifier.send(pipelineConfig.stages.notify.config.phoneNumber, message);
 
         this.broker.emit(EventTypes.NOTIFIER.SEND, { pipelineName, url });
         console.log(`[Pipeline:${pipelineName}] Notification sent successfully!`);

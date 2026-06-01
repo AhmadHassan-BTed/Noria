@@ -149,15 +149,38 @@ describe('PipelineOrchestrator Core', () => {
 
   describe('wirePipelineEvents', () => {
     let mockListenerInstance;
+    let mockScraperInstance;
+    let mockAnalyzerInstance;
+    let mockNotifierInstance;
+    let mockProviderInstance;
 
     beforeEach(() => {
       orchestrator.loadPipelineFromObject(validConfig);
       mockListenerInstance = {
         on: jest.fn(),
       };
+      mockScraperInstance = {
+        scrape: jest.fn(),
+      };
+      mockAnalyzerInstance = {
+        analyze: jest.fn(),
+        setProvider: jest.fn(),
+      };
+      mockNotifierInstance = {
+        format: jest.fn(),
+        send: jest.fn(),
+        setProvider: jest.fn(),
+      };
+      mockProviderInstance = {
+        name: 'mock-provider',
+      };
       orchestrator.activeServices.set('test-pipeline', {
         listener: mockListenerInstance,
-        provider: 'scholarships',
+        primaryScraper: mockScraperInstance,
+        fallbackScraper: mockScraperInstance,
+        analyzer: mockAnalyzerInstance,
+        notifier: mockNotifierInstance,
+        provider: mockProviderInstance,
       });
     });
 
@@ -181,6 +204,110 @@ describe('PipelineOrchestrator Core', () => {
       expect(() => {
         orchestrator.wirePipelineEvents('unknown');
       }).toThrow('Pipeline not ready: unknown');
+    });
+
+    test('should handle scraper:start event and trigger analyzer', async () => {
+      orchestrator.wirePipelineEvents('test-pipeline');
+
+      // Find the scraper:start listener callback
+      const scraperStartCall = broker.on.mock.calls.find(
+        (call) => call[0] === 'scraper:start'
+      );
+      expect(scraperStartCall).toBeDefined();
+
+      const callback = scraperStartCall[1];
+      const longText = 'Valid scraper opportunity content. '.repeat(10);
+      mockScraperInstance.scrape.mockResolvedValue({ text: longText });
+
+      // Trigger scraper:start
+      await callback({
+        pipelineName: 'test-pipeline',
+        url: 'https://opportunity.com/1',
+      });
+
+      expect(mockScraperInstance.scrape).toHaveBeenCalledWith('https://opportunity.com/1');
+      expect(broker.emit).toHaveBeenCalledWith('scraper:success', {
+        pipelineName: 'test-pipeline',
+        url: 'https://opportunity.com/1',
+      });
+      expect(broker.emit).toHaveBeenCalledWith('analyzer:start', {
+        pipelineName: 'test-pipeline',
+        provider: 'scholarships',
+        url: 'https://opportunity.com/1',
+        text: longText.trim(),
+      });
+    });
+
+    test('should handle analyzer:start and evaluate opportunity match score', async () => {
+      orchestrator.wirePipelineEvents('test-pipeline');
+
+      const analyzerStartCall = broker.on.mock.calls.find(
+        (call) => call[0] === 'analyzer:start'
+      );
+      expect(analyzerStartCall).toBeDefined();
+
+      const callback = analyzerStartCall[1];
+      const mockResult = {
+        match_score: 85,
+        verdict: 'Good alignment',
+      };
+      mockAnalyzerInstance.analyze.mockResolvedValue(mockResult);
+
+      // Trigger analyzer:start
+      await callback({
+        pipelineName: 'test-pipeline',
+        url: 'https://opportunity.com/2',
+        text: 'Valid opportunity text',
+      });
+
+      expect(mockAnalyzerInstance.analyze).toHaveBeenCalledWith('Valid opportunity text', {
+        url: 'https://opportunity.com/2',
+      });
+      expect(broker.emit).toHaveBeenCalledWith('analyzer:match_found', {
+        pipelineName: 'test-pipeline',
+        provider: 'scholarships',
+        url: 'https://opportunity.com/2',
+        result: {
+          ...mockResult,
+          url: 'https://opportunity.com/2',
+        },
+      });
+    });
+
+    test('should handle analyzer:match_found and deliver custom notification', async () => {
+      orchestrator.wirePipelineEvents('test-pipeline');
+
+      const matchFoundCall = broker.on.mock.calls.find(
+        (call) => call[0] === 'analyzer:match_found'
+      );
+      expect(matchFoundCall).toBeDefined();
+
+      const callback = matchFoundCall[1];
+      mockNotifierInstance.format.mockReturnValue('Beautiful custom layout message');
+      mockNotifierInstance.send.mockResolvedValue();
+
+      // Trigger analyzer:match_found
+      await callback({
+        pipelineName: 'test-pipeline',
+        url: 'https://opportunity.com/3',
+        result: {
+          match_score: 90,
+          url: 'https://opportunity.com/3',
+        },
+      });
+
+      expect(mockNotifierInstance.format).toHaveBeenCalledWith({
+        match_score: 90,
+        url: 'https://opportunity.com/3',
+      });
+      expect(mockNotifierInstance.send).toHaveBeenCalledWith(
+        undefined,
+        'Beautiful custom layout message'
+      );
+      expect(broker.emit).toHaveBeenCalledWith('notifier:send', {
+        pipelineName: 'test-pipeline',
+        url: 'https://opportunity.com/3',
+      });
     });
   });
 

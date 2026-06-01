@@ -8,6 +8,7 @@ const { PuppeteerScraper } = require('../plugins/scrapers/puppeteer');
 const { JinaScraper } = require('../plugins/scrapers/jina');
 const { WhatsAppNotifier } = require('../plugins/notifiers/whatsapp');
 const { ScholarshipsProvider } = require('../providers/scholarships');
+const { JobsProvider } = require('../providers/jobs');
 
 function registerBuiltInPlugins() {
   registry.registerPlugin('listener', 'whatsapp-listener', WhatsAppListener);
@@ -24,6 +25,7 @@ function registerBuiltInPlugins() {
 
 function registerBuiltInProviders() {
   registry.registerProvider('scholarships', ScholarshipsProvider);
+  registry.registerProvider('jobs', JobsProvider);
 
   console.log('[Registry] Built-in providers registered');
 }
