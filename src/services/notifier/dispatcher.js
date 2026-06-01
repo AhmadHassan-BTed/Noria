@@ -7,25 +7,25 @@ function initNotifierDispatcher(broker) {
 
   broker.on(EVENTS.ANALYZER.MATCH_FOUND, (payload) => {
     try {
-      // Defensive structural check to protect event routing
       if (!payload || typeof payload !== 'object') {
         throw new Error(`MATCH_FOUND received an invalid or completely empty payload.`);
       }
-      
+
       if (!payload.url || typeof payload.url !== 'string') {
         throw new Error(
           `MATCH_FOUND payload is missing a valid source 'url'. Received: ${JSON.stringify(payload.url)}`,
         );
       }
 
-      // Safe fallback logging to guarantee no undefined interpolation
+      if (!payload.match_score || typeof payload.match_score !== 'number') {
+        throw new Error(`MATCH_FOUND missing valid 'match_score' field.`);
+      }
+
       const programLabel = payload.program_name || payload.scholarship_name || 'Unknown Program';
       console.log(`[Dispatcher] Formatting notification for: "${programLabel}"`);
 
-      // Compile data map through your template engine
       const formattedMessage = formatNotification(payload);
 
-      // Ship telemetry string directly out to the WhatsApp client interface
       broker.emit(EVENTS.NOTIFIER.SEND, formattedMessage);
       console.log('[Dispatcher] NOTIFIER.SEND emitted — message queued for delivery.');
 

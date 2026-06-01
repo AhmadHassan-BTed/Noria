@@ -1,0 +1,65 @@
+'use strict';
+
+function isRetryableError(err) {
+  if (!err) return false;
+
+  const message = (err.message || '').toLowerCase();
+  const statusCode = err.status || err.statusCode;
+
+  // Network/timeout errors
+  if (message.includes('timeout') || message.includes('econnrefused') ||
+      message.includes('econnreset') || message.includes('etimedout') ||
+      message.includes('network')) {
+    return true;
+  }
+
+  // Rate limit and server errors
+  if (statusCode === 429 || statusCode === 503 || statusCode === 500 || statusCode === 502) {
+    return true;
+  }
+
+  return false;
+}
+
+async function withRetry(fn, options = {}) {
+  const {
+    maxRetries = 3,
+    baseDelayMs = 1000,
+    maxDelayMs = 30000,
+    jitterFactor = 0.1,
+    onRetry = null,
+  } = options;
+
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+
+      if (attempt === maxRetries || !isRetryableError(err)) {
+        throw err;
+      }
+
+      const exponentialDelay = baseDelayMs * Math.pow(2, attempt - 1);
+      const jitter = exponentialDelay * jitterFactor * Math.random();
+      const delay = Math.min(exponentialDelay + jitter, maxDelayMs);
+
+      if (onRetry) {
+        onRetry({
+          attempt,
+          maxRetries,
+          delay: Math.round(delay),
+          error: err.message,
+        });
+      }
+
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+
+  throw lastError;
+}
+
+module.exports = { withRetry, isRetryableError };

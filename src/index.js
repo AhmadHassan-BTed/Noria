@@ -7,8 +7,11 @@ const broker = require('./queue/broker');
 const EVENTS = require('./config/constants/events');
 const { initWhatsAppListener }   = require('./services/listener/whatsapp');
 const { initPuppeteerScraper }   = require('./services/scraper/puppeteer');
+const { initDeduplicator }       = require('./services/scraper/deduplicator');
 const { initGeminiAnalyzer }     = require('./services/analyzer/gemini');
 const { initNotifierDispatcher } = require('./services/notifier/dispatcher');
+const { dlq }                    = require('./utils/queue');
+const { metrics }                = require('./utils/metrics');
 
 function detectAndConfigureHardware() {
   const platform = os.platform();
@@ -33,6 +36,11 @@ function wireEventBridges() {
   broker.on(EVENTS.WHATSAPP.LINK_EXTRACTED, (url) => {
     console.log(`[Bridge] LINK_EXTRACTED → SCRAPER.START  (${url})`);
     broker.emit(EVENTS.SCRAPER.START, url);
+  });
+
+  broker.on(EVENTS.SCRAPER.FAILED, ({ url, reason }) => {
+    console.log(`[Bridge] SCRAPER.FAILED → QUEUE.ADD (${url})`);
+    dlq.add({ url, reason });
   });
 
   console.log('[Boot] Event bridges wired.');
@@ -62,12 +70,20 @@ function registerProcessSafetyNets() {
 function registerShutdownHandlers() {
   const onShutdown = (signal) => {
     console.log(`\n[Noria] ${signal} received — shutting down gracefully...`);
+    dlq.stop();
     console.log('[Noria] Goodbye.\n');
     process.exit(0);
   };
 
   process.on('SIGINT',  () => onShutdown('SIGINT'));
   process.on('SIGTERM', () => onShutdown('SIGTERM'));
+}
+
+function startMetricsReporter() {
+  setInterval(() => {
+    console.log(metrics.getReport());
+  }, 60000);
+  console.log('[Boot] Metrics reporter started (every 60s).');
 }
 
 function boot() {
@@ -91,6 +107,19 @@ function boot() {
     console.log('');
 
     wireEventBridges();
+    console.log('');
+
+    initDeduplicator(broker);
+    console.log('');
+
+    if (process.env.ENABLE_QUEUE_RETRY !== 'false') {
+      dlq.start((url, attempt) => {
+        console.log(`[Queue] Retrying failed URL (attempt ${attempt}): ${url}`);
+        broker.emit(EVENTS.SCRAPER.START, url);
+      });
+    }
+
+    startMetricsReporter();
     console.log('');
 
     initWhatsAppListener(broker);

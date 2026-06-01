@@ -3,6 +3,9 @@
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const EVENTS = require('../../config/constants/events');
+const { withRetry } = require('../../utils/retry');
+const { validateScraperPayload } = require('../../utils/validators');
+const { metrics } = require('../../utils/metrics');
 
 puppeteer.use(StealthPlugin());
 
@@ -15,6 +18,7 @@ const BROWSER_ARGS = [
 ];
 
 const NAVIGATION_TIMEOUT_MS = 45_000;
+const BROWSER_LAUNCH_TIMEOUT_MS = 20_000;
 const MIN_CONTENT_LENGTH = 200;
 
 async function autoScroll(page) {
@@ -44,30 +48,46 @@ async function fetchWithJina(url) {
     headers['Authorization'] = `Bearer ${process.env.JINA_API_KEY}`;
   }
 
-  const response = await fetch(jinaUrl, { headers });
+  return withRetry(
+    async () => {
+      const response = await fetch(jinaUrl, { headers, timeout: 15000 });
 
-  if (!response.ok) {
-    throw new Error(`Jina API rejected request with status: ${response.status}`);
-  }
+      if (!response.ok) {
+        throw new Error(`Jina API rejected request with status: ${response.status}`);
+      }
 
-  const text = await response.text();
-  if (text.length < MIN_CONTENT_LENGTH) {
-    throw new Error(`Jina returned insufficient content (${text.length} chars). Likely blocked.`);
-  }
+      const text = await response.text();
+      if (text.length < MIN_CONTENT_LENGTH) {
+        throw new Error(`Jina returned insufficient content (${text.length} chars). Likely blocked.`);
+      }
 
-  return text;
+      return text;
+    },
+    {
+      maxRetries: 3,
+      baseDelayMs: 800,
+      onRetry: ({ attempt, delay, error }) => {
+        console.warn(`[Scraper] Jina retry ${attempt}/3 after ${delay}ms: ${error}`);
+        metrics.recordScraperRetry();
+      },
+    },
+  );
 }
 
 function initPuppeteerScraper(broker) {
   broker.on(EVENTS.SCRAPER.START, async (url) => {
     console.log(`[Scraper] Scrape started → ${url}`);
+    metrics.recordScraperAttempt();
 
     try {
       console.log(`[Scraper] Attempting Fast-Path extraction via Jina AI...`);
       const jinaText = await fetchWithJina(url);
 
       console.log(`[Scraper] JINA SUCCESS: Extracted ${jinaText.length.toLocaleString()} characters.`);
-      broker.emit(EVENTS.SCRAPER.SUCCESS, { url, text: jinaText });
+      metrics.recordScraperSuccess();
+
+      const payload = validateScraperPayload({ url, text: jinaText });
+      broker.emit(EVENTS.SCRAPER.SUCCESS, payload);
       return;
 
     } catch (jinaError) {
@@ -77,7 +97,20 @@ function initPuppeteerScraper(broker) {
 
     let browser = null;
     try {
-      browser = await puppeteer.launch({ headless: true, args: BROWSER_ARGS });
+      await withRetry(
+        async () => {
+          browser = await puppeteer.launch({ headless: true, args: BROWSER_ARGS });
+        },
+        {
+          maxRetries: 2,
+          baseDelayMs: 2000,
+          onRetry: ({ attempt, delay, error }) => {
+            console.warn(`[Scraper] Browser launch retry ${attempt}/2 after ${delay}ms: ${error}`);
+            metrics.recordScraperRetry();
+          },
+        },
+      );
+
       const page = await browser.newPage();
 
       await page.setViewport({
@@ -136,14 +169,31 @@ function initPuppeteerScraper(broker) {
       }, MIN_CONTENT_LENGTH);
 
       if (!text || text.trim().length < MIN_CONTENT_LENGTH) {
+        console.warn('[Scraper] Fallback extraction attempt...');
+        const fallbackText = await page.evaluate(() => document.body.innerText || '');
+
+        if (fallbackText.length >= MIN_CONTENT_LENGTH) {
+          console.log(`[Scraper] FALLBACK SUCCESS: Extracted ${fallbackText.length.toLocaleString()} characters.`);
+          metrics.recordScraperSuccess();
+
+          const payload = validateScraperPayload({ url, text: fallbackText });
+          broker.emit(EVENTS.SCRAPER.SUCCESS, payload);
+          return;
+        }
+
         throw new Error(`Extracted text too short. Blocked by advanced CAPTCHA.`);
       }
 
       console.log(`[Scraper] PUPPETEER SUCCESS: Extracted ${text.length.toLocaleString()} characters.`);
-      broker.emit(EVENTS.SCRAPER.SUCCESS, { url, text });
+      metrics.recordScraperSuccess();
+
+      const payload = validateScraperPayload({ url, text });
+      broker.emit(EVENTS.SCRAPER.SUCCESS, payload);
 
     } catch (err) {
       console.error(`[Scraper] ALL LAYERS FAILED for ${url} →`, err.message);
+      metrics.recordScraperFailure();
+
       broker.emit(EVENTS.SYSTEM.ERROR, {
         source: 'HybridScraper',
         url,
@@ -152,8 +202,12 @@ function initPuppeteerScraper(broker) {
 
     } finally {
       if (browser !== null) {
-        await browser.close();
-        console.log('[Scraper] Browser instance closed cleanly.');
+        try {
+          await browser.close();
+          console.log('[Scraper] Browser instance closed cleanly.');
+        } catch (closeErr) {
+          console.warn('[Scraper] Browser close error:', closeErr.message);
+        }
       }
     }
   });
