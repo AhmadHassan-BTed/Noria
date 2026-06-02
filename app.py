@@ -217,7 +217,119 @@ for name, info in running_instances.items():
             pass
 if len(cleaned) != len(running_instances):
     save_running_processes(cleaned)
-    running_instances = cleaned
+@st.fragment(run_every="2s")
+def render_device_linker_fragment(p_id, p_info, profiles):
+    linker_sess_id = st.session_state.linker_sess_id
+    if not linker_sess_id:
+        return
+        
+    status_info = get_session_status(linker_sess_id)
+    status = status_info.get("status", "UNKNOWN")
+    
+    st.markdown(f"**Connection Linker Status:** `{status}`")
+    
+    if status == "CONNECTED":
+        linked_phone = status_info.get("phone", "")
+        linked_channels = status_info.get("channels", [])
+        
+        if linked_phone:
+            # Ensure devices dict exists
+            if "devices" not in p_info:
+                p_info["devices"] = {}
+            
+            p_info["devices"][linked_phone] = {
+                "phone": linked_phone,
+                "channels": linked_channels,
+                "linkedAt": time.strftime("%Y-%m-%d %H:%M:%S")
+            }
+            save_profiles(profiles)
+            
+            # Clean stop of helper process
+            linker_proc_info = running_instances.get(linker_sess_id)
+            if linker_proc_info:
+                try:
+                    if os.name == 'nt':
+                        subprocess.run(['taskkill', '/F', '/T', '/PID', str(linker_proc_info['pid'])], capture_output=True)
+                    else:
+                        os.kill(linker_proc_info['pid'], signal.SIGTERM)
+                except Exception:
+                    pass
+                del running_instances[linker_sess_id]
+                save_running_processes(running_instances)
+                
+            try:
+                os.remove(f"data/status-{linker_sess_id}.json")
+            except FileNotFoundError:
+                pass
+            try:
+                os.remove(f"data/qr-{linker_sess_id}.txt")
+            except FileNotFoundError:
+                pass
+            
+            st.session_state.linking_profile = None
+            st.session_state.linker_sess_id = None
+            st.success(f"Device +{linked_phone} linked successfully!")
+            time.sleep(1)
+            st.rerun()
+            
+    elif status == "SCAN_QR":
+        st.warning("Action Required: Scan the QR code below using WhatsApp Linked Devices.")
+        
+        qr_file = f"data/qr-{linker_sess_id}.txt"
+        if os.path.exists(qr_file):
+            try:
+                with open(qr_file, "r") as f:
+                    qr_data = f.read().strip()
+                
+                if HAS_QRCODE:
+                    qr = qrcode.QRCode(version=1, box_size=5, border=2)
+                    qr.add_data(qr_data)
+                    qr.make(fit=True)
+                    qr_img = qr.make_image(fill_color="black", back_color="white")
+                    
+                    buf = io.BytesIO()
+                    try:
+                        qr_img.save(buf, format='PNG')
+                    except TypeError:
+                        qr_img.save(buf)
+                    
+                    st.image(buf.getvalue(), caption="Scan QR Code to Pair Device", width=220)
+                else:
+                    st.code(qr_data, language="text")
+            except Exception as e:
+                st.error(f"Failed to render QR: {e}")
+        else:
+            st.info("Loading QR Code from server...")
+            
+    else:
+        st.info("Initializing Linker socket connection...")
+        
+    # Cancel button
+    if st.button("Cancel Pairing", key=f"cancel_pair_{p_id}", use_container_width=True):
+        linker_proc_info = running_instances.get(linker_sess_id)
+        if linker_proc_info:
+            try:
+                if os.name == 'nt':
+                    subprocess.run(['taskkill', '/F', '/T', '/PID', str(linker_proc_info['pid'])], capture_output=True)
+                else:
+                    os.kill(linker_proc_info['pid'], signal.SIGTERM)
+            except Exception:
+                pass
+            del running_instances[linker_sess_id]
+            save_running_processes(running_instances)
+            
+        try:
+            os.remove(f"data/status-{linker_sess_id}.json")
+        except FileNotFoundError:
+            pass
+        try:
+            os.remove(f"data/qr-{linker_sess_id}.txt")
+        except FileNotFoundError:
+            pass
+        
+        st.session_state.linking_profile = None
+        st.session_state.linker_sess_id = None
+        st.rerun()
 
 # Initialize session states for inline active scans and add forms tracking
 if "focused_scan" not in st.session_state:
@@ -534,119 +646,7 @@ if editing_profile is None:
                     linking_active = (st.session_state.linking_profile == p_id)
                     
                     if linking_active:
-                        linker_sess_id = st.session_state.linker_sess_id
-                        status_info = get_session_status(linker_sess_id)
-                        status = status_info.get("status", "UNKNOWN")
-                        
-                        st.markdown(f"**Connection Linker Status:** `{status}`")
-                        
-                        if status == "CONNECTED":
-                            linked_phone = status_info.get("phone", "")
-                            linked_channels = status_info.get("channels", [])
-                            
-                            if linked_phone:
-                                # Ensure devices dict exists
-                                if "devices" not in p_info:
-                                    p_info["devices"] = {}
-                                
-                                p_info["devices"][linked_phone] = {
-                                    "phone": linked_phone,
-                                    "channels": linked_channels,
-                                    "linkedAt": time.strftime("%Y-%m-%d %H:%M:%S")
-                                }
-                                save_profiles(profiles)
-                                
-                                # Clean stop of helper process
-                                linker_proc_info = running_instances.get(linker_sess_id)
-                                if linker_proc_info:
-                                    try:
-                                        if os.name == 'nt':
-                                            subprocess.run(['taskkill', '/F', '/T', '/PID', str(linker_proc_info['pid'])], capture_output=True)
-                                        else:
-                                            os.kill(linker_proc_info['pid'], signal.SIGTERM)
-                                    except Exception:
-                                        pass
-                                    del running_instances[linker_sess_id]
-                                    save_running_processes(running_instances)
-                                    
-                                try:
-                                    os.remove(f"data/status-{linker_sess_id}.json")
-                                except FileNotFoundError:
-                                    pass
-                                try:
-                                    os.remove(f"data/qr-{linker_sess_id}.txt")
-                                except FileNotFoundError:
-                                    pass
-                                
-                                st.session_state.linking_profile = None
-                                st.session_state.linker_sess_id = None
-                                st.success(f"Device +{linked_phone} linked successfully!")
-                                time.sleep(1)
-                                st.rerun()
-                        
-                        elif status == "SCAN_QR":
-                            st.warning("Action Required: Scan the QR code below using WhatsApp Linked Devices.")
-                            
-                            qr_file = f"data/qr-{linker_sess_id}.txt"
-                            if os.path.exists(qr_file):
-                                try:
-                                    with open(qr_file, "r") as f:
-                                        qr_data = f.read().strip()
-                                    
-                                    if HAS_QRCODE:
-                                        qr = qrcode.QRCode(version=1, box_size=5, border=2)
-                                        qr.add_data(qr_data)
-                                        qr.make(fit=True)
-                                        qr_img = qr.make_image(fill_color="black", back_color="white")
-                                        
-                                        buf = io.BytesIO()
-                                        try:
-                                            qr_img.save(buf, format='PNG')
-                                        except TypeError:
-                                            qr_img.save(buf)
-                                        
-                                        st.image(buf.getvalue(), caption="Scan QR Code to Pair Device", width=220)
-                                    else:
-                                        st.code(qr_data, language="text")
-                                except Exception as e:
-                                    st.error(f"Failed to render QR: {e}")
-                            else:
-                                st.info("Loading QR Code from server...")
-                                
-                        else:
-                            st.info("Initializing Linker socket connection...")
-                            
-                        # Cancel button
-                        if st.button("Cancel Pairing", key=f"cancel_pair_{p_id}", use_container_width=True):
-                            linker_proc_info = running_instances.get(linker_sess_id)
-                            if linker_proc_info:
-                                try:
-                                    if os.name == 'nt':
-                                        subprocess.run(['taskkill', '/F', '/T', '/PID', str(linker_proc_info['pid'])], capture_output=True)
-                                    else:
-                                        os.kill(linker_proc_info['pid'], signal.SIGTERM)
-                                except Exception:
-                                    pass
-                                del running_instances[linker_sess_id]
-                                save_running_processes(running_instances)
-                                
-                            try:
-                                os.remove(f"data/status-{linker_sess_id}.json")
-                            except FileNotFoundError:
-                                pass
-                            try:
-                                os.remove(f"data/qr-{linker_sess_id}.txt")
-                            except FileNotFoundError:
-                                pass
-                            
-                            st.session_state.linking_profile = None
-                            st.session_state.linker_sess_id = None
-                            st.rerun()
-
-                        # Lightweight auto-refresh loop to poll connection status
-                        time.sleep(2.0)
-                        st.rerun()
-                            
+                        render_device_linker_fragment(p_id, p_info, profiles)
                     else:
                         devices = p_info.get("devices", {})
                         if not devices:
