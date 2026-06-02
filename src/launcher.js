@@ -128,10 +128,10 @@ async function launch() {
     }
   }
 
-  const { template, instance, sessionId, channels, phone } = args;
+  const { template, instance, sessionId, channels, phone, sourceMode } = args;
 
   if (!template || !instance) {
-    console.error('Usage: node src/launcher.js --template <name> --instance <id> [--sessionId <id>] [--channels <list>] [--phone <num>]');
+    console.error('Usage: node src/launcher.js --template <name> --instance <id> [--sessionId <id>] [--channels <list>] [--phone <num>] [--sourceMode <mode>]');
     process.exit(1);
   }
 
@@ -144,6 +144,7 @@ async function launch() {
   console.log(`  Session ID: ${currentSessionId}`);
   console.log(`  Channels  : ${channels || 'None (watch all)'}`);
   console.log(`  Phone     : ${phone || 'Default'}`);
+  console.log(`  SourceMode: ${sourceMode || 'auto (channels if whitelist, else chats)'}`);
   console.log('');
 
   try {
@@ -178,7 +179,7 @@ async function launch() {
     listen: {
       sessionId: currentSessionId,
       allowedChannels: allowedChannels,
-      sourceMode: allowedChannels.length > 0 ? 'both' : 'chats',
+      sourceMode: sourceMode || (allowedChannels.length > 0 ? 'both' : 'chats'),
     },
     notify: {
       sessionId: currentSessionId,

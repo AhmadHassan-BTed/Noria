@@ -42,6 +42,40 @@ st.markdown("""
 # Ensure data directory exists
 os.makedirs("data", exist_ok=True)
 
+def kill_zombie_node_chrome_processes():
+    try:
+        import psutil
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                name = proc.info.get('name')
+                if name and 'node' in name.lower():
+                    cmdline = proc.info.get('cmdline') or []
+                    if any('launcher.js' in arg for arg in cmdline):
+                        proc.kill()
+                elif name and 'chrome' in name.lower():
+                    cmdline = proc.info.get('cmdline') or []
+                    if any('headless' in arg for arg in cmdline) and any('.wwebjs_auth' in arg for arg in cmdline):
+                        proc.kill()
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+@st.cache_resource
+def perform_server_startup_cleanup():
+    # Kill any stale node/chrome processes from previous runs on server start
+    kill_zombie_node_chrome_processes()
+    try:
+        if os.path.exists("data/processes.json"):
+            with open("data/processes.json", "w") as f:
+                json.dump({}, f)
+    except Exception:
+        pass
+    return True
+
+# Trigger server startup cleanup once globally
+perform_server_startup_cleanup()
+
 PROCESS_FILE = "data/processes.json"
 PROFILE_FILE = "data/profiles.json"
 
@@ -191,7 +225,7 @@ def get_session_status(session_id):
     status_path = f"data/status-{session_id}.json"
     if os.path.exists(status_path):
         try:
-            with open(status_path, "r") as f:
+            with open(status_path, "r", encoding="utf-8", errors="replace") as f:
                 return json.load(f)
         except Exception:
             return {"status": "UNKNOWN"}
@@ -204,7 +238,7 @@ def read_session_logs(session_id, max_lines=200):
     if not os.path.exists(log_path):
         return []
     try:
-        with open(log_path, "r") as f:
+        with open(log_path, "r", encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
             # Return last max_lines, stripping newlines
             return [line.rstrip() for line in lines[-max_lines:]]
@@ -224,13 +258,22 @@ def clear_session_logs(session_id):
 
 def is_process_alive(pid):
     try:
-        os.kill(pid, 0)
-        return True
-    except OSError:
-        return False
+        import psutil
+        if not psutil.pid_exists(pid):
+            return False
+        p = psutil.Process(pid)
+        return 'node' in p.name().lower()
+    except ImportError:
+        try:
+            if os.name == 'nt':
+                output = subprocess.check_output(f'tasklist /FI "PID eq {pid}" /NH', shell=True).decode()
+                return str(pid) in output and 'node' in output.lower()
+            else:
+                os.kill(pid, 0)
+                return True
+        except Exception:
+            return False
 
-# Clean zombie process entries (but preserve CONNECTED status files)
-# This runs at page load to clean up dead processes while preserving successful connections
 def cleanup_zombie_processes():
     """Clean up dead processes but preserve CONNECTED status files for the fragment to handle."""
     instances = load_running_processes()
@@ -251,21 +294,29 @@ def cleanup_zombie_processes():
                 except Exception:
                     pass
             
-            # Keep CONNECTED status files and their process entries
+            # Keep CONNECTED status files and their process entries ONLY if they are linker sessions
             # so the fragment can process them and add the device
-            if status_data.get("status") == "CONNECTED":
+            is_linker = "linker" in info["sessionId"]
+            if is_linker and status_data.get("status") == "CONNECTED":
                 cleaned[name] = info
             else:
-                # Delete non-connected status files for dead processes
+                # Delete QR files for dead processes but preserve status to reflect disconnected state
                 changed = True
                 try:
                     os.remove(f"data/qr-{info['sessionId']}.txt")
                 except FileNotFoundError:
                     pass
-                try:
-                    os.remove(status_path)
-                except FileNotFoundError:
-                    pass
+                
+                # If a normal scan daemon died, mark it as DISCONNECTED in the status file
+                if not is_linker:
+                    try:
+                        with open(status_path, "w") as f:
+                            json.dump({
+                                "status": "DISCONNECTED",
+                                "reason": "Scan process stopped unexpectedly"
+                            }, f)
+                    except Exception:
+                        pass
     
     if changed:
         save_running_processes(cleaned)
@@ -315,37 +366,21 @@ def render_device_linker_fragment(p_id, p_info, profiles):
         }
         save_profiles(profiles)
         
-        # Clean stop of helper process
-        linker_proc_info = running_instances.get(linker_sess_id)
-        if linker_proc_info:
-            try:
-                if os.name == 'nt':
-                    subprocess.run(['taskkill', '/F', '/T', '/PID', str(linker_proc_info['pid'])], capture_output=True)
-                else:
-                    os.kill(linker_proc_info['pid'], signal.SIGTERM)
-            except Exception:
-                pass
-        
-        # Migrate credentials directory in Python to avoid Puppeteer delay in Node
-        src_dir = os.path.join(".wwebjs_auth", f"session-{linker_sess_id}")
-        dst_dir = os.path.join(".wwebjs_auth", f"session-session_{p_id}_dev_{linked_phone}")
-        if os.path.exists(src_dir):
-            try:
-                import shutil
-                if os.path.exists(dst_dir):
-                    shutil.rmtree(dst_dir, ignore_errors=True)
-                os.makedirs(os.path.dirname(dst_dir), exist_ok=True)
-                shutil.move(src_dir, dst_dir)
-            except Exception:
+        # Stop any existing scans on this device to release file locks on dst_dir
+        for name, info in list(running_instances.items()):
+            if info.get("profileId") == p_id and info.get("phone") == linked_phone and name != linker_sess_id:
                 try:
-                    shutil.copytree(src_dir, dst_dir)
-                    shutil.rmtree(src_dir, ignore_errors=True)
+                    if os.name == 'nt':
+                        subprocess.run(['taskkill', '/F', '/T', '/PID', str(info['pid'])], capture_output=True)
+                    else:
+                        os.kill(info['pid'], signal.SIGTERM)
+                    del running_instances[name]
                 except Exception:
                     pass
-
+        
         if linker_sess_id in running_instances:
             del running_instances[linker_sess_id]
-            save_running_processes(running_instances)
+        save_running_processes(running_instances)
             
         try:
             os.remove(f"data/status-{linker_sess_id}.json")
@@ -353,6 +388,12 @@ def render_device_linker_fragment(p_id, p_info, profiles):
             pass
         try:
             os.remove(f"data/qr-{linker_sess_id}.txt")
+        except FileNotFoundError:
+            pass
+            
+        # Clean up any previous error status file for this specific device
+        try:
+            os.remove(f"data/status-session_{p_id}_dev_{linked_phone}.json")
         except FileNotFoundError:
             pass
         
@@ -869,7 +910,16 @@ if editing_profile is None:
                         else:
                             st.success(f"Registered Devices: **{len(devices)}** linked.")
                             for d_phone in sorted(devices.keys()):
-                                st.markdown(f"✅ **Device Active:** `+{d_phone}`")
+                                device_sess_id = f"session_{p_id}_dev_{d_phone}"
+                                status_info = get_session_status(device_sess_id)
+                                curr_status = status_info.get("status", "UNKNOWN")
+                                reason = status_info.get("reason", "")
+                                if curr_status in ["SCAN_QR", "auth_failure"]:
+                                    st.markdown(f"⚠️ **Device Disconnected (Re-link required):** `+{d_phone}`")
+                                elif curr_status == "DISCONNECTED" and not ("Stopped" in reason or "user" in reason.lower()):
+                                    st.markdown(f"⚠️ **Device Offline:** `+{d_phone}`")
+                                else:
+                                    st.markdown(f"✅ **Device Active:** `+{d_phone}`")
                         
                         st.write("")
                         if st.button("🔗 Link WhatsApp Device", key=f"link_device_btn_{p_id}", use_container_width=True, type="primary"):
@@ -923,135 +973,171 @@ if editing_profile is None:
                                 st.error(f"Failed to spawn linker socket: {e}")
                 
                 st.write("---")
-                
-                # Render Sub-cards for Registered Devices
-                st.markdown("### 📱 Linked Devices (Sub-cards)")
-                devices = p_info.get("devices", {})
-                if not devices:
-                    st.info("No active devices linked to this profile. Pair a device upfront using the button above.")
-                else:
-                    dev_cols = st.columns(min(len(devices), 3))
-                    for idx, (dev_phone, dev_info) in enumerate(sorted(devices.items())):
-                        col_idx = idx % min(len(devices), 3)
-                        with dev_cols[col_idx]:
-                            with st.container(border=True):
-                                st.markdown(f"#### 📱 +{dev_phone}")
-                                st.caption(f"Linked: {dev_info.get('linkedAt', 'Unknown')}")
-                                # Scans running on this device
-                                device_scans = [name for name, info in running_instances.items() if info.get("profileId") == p_id and info.get("phone") == dev_phone]
-                                
-                                # Dynamic Channel Sync from active scans
-                                channels_list = dev_info.get("channels", [])
-                                for scan_name in device_scans:
-                                    scan_info = running_instances[scan_name]
-                                    status_info = get_session_status(scan_info["sessionId"])
-                                    discovered = status_info.get("channels", [])
-                                    if len(discovered) > len(channels_list):
-                                        channels_list = discovered
-                                        dev_info["channels"] = discovered
-                                        save_profiles(profiles)
-                                
-                                st.markdown(f"**Subscribed Channels:** `{len(channels_list)}`")
-                                
-                                if not device_scans:
-                                    st.info("No active scans on this device.")
-                                else:
-                                    st.markdown("**Running Scans:**")
+
+                @st.fragment(run_every=2)
+                def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
+                    # Render Sub-cards for Registered Devices
+                    st.markdown("### 📱 Linked Devices (Sub-cards)")
+                    devices = p_info.get("devices", {})
+                    if not devices:
+                        st.info("No active devices linked to this profile. Pair a device upfront using the button above.")
+                    else:
+                        dev_cols = st.columns(min(len(devices), 3))
+                        for idx, (dev_phone, dev_info) in enumerate(sorted(devices.items())):
+                            col_idx = idx % min(len(devices), 3)
+                            with dev_cols[col_idx]:
+                                with st.container(border=True):
+                                    st.markdown(f"#### 📱 +{dev_phone}")
+                                    st.caption(f"Linked: {dev_info.get('linkedAt', 'Unknown')}")
+                                    
+                                    device_sess_id = f"session_{p_id}_dev_{dev_phone}"
+                                    status_info = get_session_status(device_sess_id)
+                                    curr_status = status_info.get("status", "UNKNOWN")
+                                    reason = status_info.get("reason", "")
+                                    
+                                    if curr_status in ["SCAN_QR", "auth_failure"]:
+                                        st.error("⚠️ Authentication Expired - Re-link required")
+                                    elif curr_status == "DISCONNECTED":
+                                        if "Stopped" in reason or "user" in reason.lower():
+                                            st.info("💤 Inactive (Standby)")
+                                        else:
+                                            st.warning("⚠️ Offline")
+                                        
+                                    # Scans running on this device
+                                    device_scans = [name for name, info in running_instances.items() if info.get("profileId") == p_id and info.get("phone") == dev_phone]
+                                    
+                                    # Dynamic Channel Sync from active scans
+                                    channels_list = dev_info.get("channels", [])
                                     for scan_name in device_scans:
                                         scan_info = running_instances[scan_name]
-                                        st.markdown(f"🔸 `{scan_name}` (`{scan_info['category']}`)")
-                                        
                                         status_info = get_session_status(scan_info["sessionId"])
-                                        scan_status = status_info.get("status", "UNKNOWN")
-                                        disc_status = status_info.get("discoveryStatus", "COMPLETED")
-                                        
-                                        if scan_status == "CONNECTED" and disc_status == "DISCOVERING":
-                                            disc_progress = status_info.get("discoveryProgress", 0)
-                                            disc_msg = status_info.get("discoveryMessage", "Discovering channels...")
-                                            st.warning(f"🔍 Discovery: {disc_progress}%")
-                                            st.progress(disc_progress / 100.0)
-                                            st.caption(f"_{disc_msg}_")
-                                            
-                                        act_col1, act_col2 = st.columns([1, 1])
-                                        with act_col1:
-                                            if scan_status == "CONNECTED":
-                                                if disc_status == "DISCOVERING":
-                                                    st.info("Syncing")
-                                                else:
-                                                    st.success("Active")
-                                            else:
-                                                st.warning("Connecting")
-                                        with act_col2:
-                                            if st.button("Stop", key=f"stop_sub_{p_id}_{dev_phone}_{scan_name}", use_container_width=True):
-                                                try:
-                                                    if os.name == 'nt':
-                                                        subprocess.run(['taskkill', '/F', '/T', '/PID', str(scan_info['pid'])], capture_output=True)
-                                                    else:
-                                                        os.kill(scan_info['pid'], signal.SIGTERM)
-                                                    
-                                                    del running_instances[scan_name]
-                                                    save_running_processes(running_instances)
-                                                    st.toast(f"Scan '{scan_name}' stopped successfully.")
-                                                    time.sleep(1)
-                                                    st.rerun()
-                                                except Exception as e:
-                                                    st.error(f"Error: {e}")
-                                
-                                st.write("---")
-                                
-                                # ── Device Log Viewer ──────────────────────────────────
-                                device_sess_id = f"session_{p_id}_dev_{dev_phone}"
-                                with st.expander(f"📋 Device Logs — +{dev_phone}", expanded=False):
-                                    log_col1, log_col2 = st.columns([3, 1])
-                                    with log_col1:
-                                        st.caption(f"Session ID: `{device_sess_id}`")
-                                    with log_col2:
-                                        if st.button("🗑️ Clear Logs", key=f"clear_logs_{p_id}_{dev_phone}", use_container_width=True):
-                                            if clear_session_logs(device_sess_id):
-                                                st.toast("Logs cleared successfully.")
-                                            else:
-                                                st.toast("No logs to clear.")
+                                        discovered = status_info.get("channels", [])
+                                        if len(discovered) > len(channels_list):
+                                            channels_list = discovered
+                                            dev_info["channels"] = discovered
+                                            save_profiles(profiles)
                                     
-                                    # Read and display logs
-                                    log_lines = read_session_logs(device_sess_id, max_lines=100)
+                                    st.markdown(f"**Subscribed Channels:** `{len(channels_list)}`")
                                     
-                                    if not log_lines:
-                                        st.info("No logs available for this device. Logs will appear once the device is connected and processing messages.")
+                                    if not device_scans:
+                                        st.info("No active scans on this device.")
                                     else:
-                                        # Display logs in a scrollable code block
-                                        log_text = "\n".join(log_lines)
-                                        st.code(log_text, language="text")
-                                        st.caption(f"Showing last {len(log_lines)} log entries. Logs auto-refresh every 2 seconds.")
-                                
-                                st.write("---")
-                                
-                                if st.button("Unlink Device", key=f"unlink_{p_id}_{dev_phone}", use_container_width=True):
-                                    for scan_name in device_scans:
+                                        st.markdown("**Running Scans:**")
+                                        for scan_name in device_scans:
+                                            scan_info = running_instances[scan_name]
+                                            st.markdown(f"🔸 `{scan_name}` (`{scan_info['category']}`)")
+                                            
+                                            status_info = get_session_status(scan_info["sessionId"])
+                                            scan_status = status_info.get("status", "UNKNOWN")
+                                            disc_status = status_info.get("discoveryStatus", "COMPLETED")
+                                            
+                                            if scan_status == "CONNECTED" and disc_status == "DISCOVERING":
+                                                disc_progress = status_info.get("discoveryProgress", 0)
+                                                disc_msg = status_info.get("discoveryMessage", "Discovering channels...")
+                                                st.warning(f"🔍 Discovery: {disc_progress}%")
+                                                st.progress(disc_progress / 100.0)
+                                                st.caption(f"_{disc_msg}_")
+                                                
+                                            act_col1, act_col2 = st.columns([1, 1])
+                                            with act_col1:
+                                                if scan_status == "CONNECTED":
+                                                    if disc_status == "DISCOVERING":
+                                                        st.info("Syncing")
+                                                    else:
+                                                        st.success("Active")
+                                                elif scan_status == "DISCONNECTED":
+                                                    reason = status_info.get("reason", "Disconnected")
+                                                    st.error(f"Error: {reason}")
+                                                else:
+                                                    st.warning("Connecting")
+                                            with act_col2:
+                                                if st.button("Stop", key=f"stop_sub_{p_id}_{dev_phone}_{scan_name}", use_container_width=True):
+                                                    try:
+                                                        if os.name == 'nt':
+                                                            subprocess.run(['taskkill', '/F', '/T', '/PID', str(scan_info['pid'])], capture_output=True)
+                                                        else:
+                                                            os.kill(scan_info['pid'], signal.SIGTERM)
+                                                        
+                                                        del running_instances[scan_name]
+                                                        save_running_processes(running_instances)
+                                                        
+                                                        # Write DISCONNECTED status cleanly
+                                                        status_path = f"data/status-{scan_info['sessionId']}.json"
+                                                        try:
+                                                            with open(status_path, "w") as f:
+                                                                json.dump({
+                                                                    "status": "DISCONNECTED",
+                                                                    "reason": "Stopped by user"
+                                                                }, f)
+                                                        except Exception:
+                                                            pass
+                                                            
+                                                        st.toast(f"Scan '{scan_name}' stopped successfully.")
+                                                        time.sleep(1)
+                                                        st.rerun()
+                                                    except Exception as e:
+                                                        st.error(f"Error: {e}")
+                                    
+                                    st.write("---")
+                                    
+                                    # ── Device Log Viewer ──────────────────────────────────
+                                    device_sess_id = f"session_{p_id}_dev_{dev_phone}"
+                                    with st.expander(f"📋 Device Logs — +{dev_phone}", expanded=False):
+                                        log_col1, log_col2 = st.columns([3, 1])
+                                        with log_col1:
+                                            st.caption(f"Session ID: `{device_sess_id}`")
+                                        with log_col2:
+                                            if st.button("🗑️ Clear Logs", key=f"clear_logs_{p_id}_{dev_phone}", use_container_width=True):
+                                                if clear_session_logs(device_sess_id):
+                                                    st.toast("Logs cleared successfully.")
+                                                else:
+                                                    st.toast("No logs to clear.")
+                                        
+                                        # Read and display logs
+                                        log_lines = read_session_logs(device_sess_id, max_lines=100)
+                                        
+                                        if not log_lines:
+                                            st.info("No logs available for this device. Logs will appear once the device is connected and processing messages.")
+                                        else:
+                                            # Display logs in a scrollable code block
+                                            log_text = "\n".join(log_lines)
+                                            st.code(log_text, language="text")
+                                            st.caption(f"Showing last {len(log_lines)} log entries. Logs auto-refresh every 2 seconds.")
+                                    
+                                    st.write("---")
+                                    
+                                    if st.button("Unlink Device", key=f"unlink_{p_id}_{dev_phone}", use_container_width=True):
+                                        for scan_name in device_scans:
+                                            try:
+                                                if os.name == 'nt':
+                                                    subprocess.run(['taskkill', '/F', '/T', '/PID', str(running_instances[scan_name]['pid'])], capture_output=True)
+                                                else:
+                                                    os.kill(running_instances[scan_name]['pid'], signal.SIGTERM)
+                                                del running_instances[scan_name]
+                                            except Exception:
+                                                pass
+                                        save_running_processes(running_instances)
+                                        
                                         try:
-                                            if os.name == 'nt':
-                                                subprocess.run(['taskkill', '/F', '/T', '/PID', str(running_instances[scan_name]['pid'])], capture_output=True)
-                                            else:
-                                                os.kill(running_instances[scan_name]['pid'], signal.SIGTERM)
-                                            del running_instances[scan_name]
+                                            import shutil
+                                            shutil.rmtree(f".wwebjs_auth/session-session_{p_id}_dev_{dev_phone}", ignore_errors=True)
                                         except Exception:
                                             pass
-                                    save_running_processes(running_instances)
-                                    
-                                    try:
-                                        import shutil
-                                        shutil.rmtree(f".wwebjs_auth/session_session_{p_id}_dev_{dev_phone}", ignore_errors=True)
-                                    except Exception:
-                                        pass
-                                    
-                                    # Also clear logs on unlink
-                                    clear_session_logs(device_sess_id)
                                         
-                                    del p_info["devices"][dev_phone]
-                                    save_profiles(profiles)
-                                    st.toast("Device unlinked successfully.")
-                                    time.sleep(1)
-                                    st.rerun()
-                
+                                        # Also clear status and logs on unlink
+                                        try:
+                                            os.remove(f"data/status-{device_sess_id}.json")
+                                        except FileNotFoundError:
+                                            pass
+                                        clear_session_logs(device_sess_id)
+                                            
+                                        del p_info["devices"][dev_phone]
+                                        save_profiles(profiles)
+                                        st.toast("Device unlinked successfully.")
+                                        time.sleep(1)
+                                        st.rerun()
+
+                render_linked_devices_fragment(p_id, p_info, profiles, running_instances)
                 st.write("---")
                 
                 # Fetch persistent unassigned scans
@@ -1141,7 +1227,9 @@ if editing_profile is None:
                                 
                         if not matching_instances:
                             st.write("---")
-                            if not devices:
+                            if not p_info.get("gemini_key"):
+                                st.error("⚠️ **Gemini API Key is missing!** You must configure a Gemini API key for this profile before you can activate a scan. Please click **Edit** at the top of the card to configure your API keys.")
+                            elif not devices:
                                 st.warning("You must link a WhatsApp device to this profile first before you can activate this scan.")
                             else:
                                 activation_col1, activation_col2 = st.columns([3, 1])
@@ -1187,6 +1275,17 @@ if editing_profile is None:
                                             "APPLICANT_TARGET_FIELDS": p_info["applicant_target_fields"],
                                             "APPLICANT_RESEARCH_FOCUS": p_info["applicant_focus"]
                                         })
+
+                                        # Reset the status file to prevent rendering stale previous statuses
+                                        status_path = f"data/status-{device_sess_id}.json"
+                                        try:
+                                            with open(status_path, "w") as f:
+                                                json.dump({
+                                                    "status": "CONNECTING",
+                                                    "reason": "Starting background daemon..."
+                                                }, f)
+                                        except Exception:
+                                            pass
 
                                         try:
                                             p = subprocess.Popen(

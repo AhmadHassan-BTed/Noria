@@ -10,7 +10,23 @@ const { validateUrl }       = require('../../utils/validators');
 const { metrics }           = require('../../utils/metrics');
 const { withRetry }         = require('../../utils/retry');
 const { initConnectionManager } = require('./connection-manager');
-const { ChannelFetcher }    = require('./channel-fetcher');  // ← NEW
+const { ChannelFetcher }    = require('./channel-fetcher');
+
+// Decoupled source-mode & classifier modules
+const {
+  CHAT_ID_SUFFIX,
+  SOURCE_MODE,
+  VALID_ORIGINS,
+  normalizeSourceMode,
+} = require('./source-mode');
+
+const {
+  isChannelMessage,
+  isGroupMessage,
+  isIndividualMessage,
+  classifyOrigin,
+  isSourceAllowed,
+} = require('./source-classifier');
 
 // =============================================================================
 // File Logger (unchanged from original)
@@ -71,22 +87,6 @@ class SessionLogger {
 
 const URL_REGEX = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)/gi;
 
-const CHAT_ID_SUFFIX = Object.freeze({
-  PERSONAL: '@c.us',
-  GROUP:    '@g.us',
-  CHANNEL:  '@newsletter',
-});
-
-/**
- * Source mode flag — controls which message origins trigger URL extraction.
- * Exported so callers can use SOURCE_MODE.CHANNELS instead of raw strings.
- */
-const SOURCE_MODE = Object.freeze({
-  CHATS:    'chats',
-  CHANNELS: 'channels',
-  BOTH:     'both',
-});
-
 const CHANNEL_CACHE_TTL_MS = 60 * 60 * 1_000; // 1 hour (re-fetch from fetcher)
 const MAX_DEDUP_CACHE_SIZE = 2_000;
 
@@ -107,14 +107,14 @@ class WhatsAppListener extends BaseListener {
     super(config);
 
     // ── Source mode ───────────────────────────────────────────────────────
-    const mode = config.sourceMode ?? SOURCE_MODE.CHATS;
-    if (!Object.values(SOURCE_MODE).includes(mode)) {
-      throw new Error(
-        `[WhatsAppListener] Invalid sourceMode: "${mode}". ` +
-        `Valid: ${Object.values(SOURCE_MODE).join(' | ')}.`
-      );
-    }
-    this.sourceMode = mode;
+    // Accepts:
+    //   - Legacy strings: 'chats', 'channels', 'both', 'all'
+    //   - Comma-separated strings: 'individual,groups,channels'
+    //   - Arrays: ['individual', 'groups', 'channels']
+    //
+    // Internally normalised to an array of canonical origin names.
+    const rawMode = config.sourceMode ?? SOURCE_MODE.CHATS;
+    this.sourceMode = normalizeSourceMode(rawMode);
 
     // ── Channel whitelist ─────────────────────────────────────────────────
     this.allowedChannels = (config.allowedChannels ?? [])
@@ -220,7 +220,7 @@ class WhatsAppListener extends BaseListener {
     const found = await this._channelFetcher.setup();
 
     // Log the whitelist status
-    if (this.sourceMode !== SOURCE_MODE.CHATS) {
+    if (this.sourceMode.includes('channels')) {
       if (found.length === 0) {
         console.log('[WhatsApp] ⚠️  No subscribed channels found yet (bridge is active for late arrivals).');
       } else {
@@ -239,28 +239,42 @@ class WhatsAppListener extends BaseListener {
   }
 
   // ==========================================================================
-  // Private — source classification
+  // Private — source classification (delegates to decoupled modules)
   // ==========================================================================
 
   /** @param {import('whatsapp-web.js').Message} msg */
   _isChannelMessage(msg) {
-    return typeof msg.from === 'string' &&
-           msg.from.endsWith(CHAT_ID_SUFFIX.CHANNEL);
+    return isChannelMessage(msg);
+  }
+
+  /**
+   * @param {import('whatsapp-web.js').Message} msg
+   * @returns {'channels'|'groups'|'individual'}
+   */
+  _classifyOrigin(msg) {
+    return classifyOrigin(msg);
+  }
+
+  /**
+   * @param {import('whatsapp-web.js').Message} msg
+   * @returns {boolean}
+   */
+  _isSourceAllowed(msg) {
+    return isSourceAllowed(msg, this.sourceMode);
   }
 
   /** @returns {Promise<boolean>} */
   async _shouldProcess(msg) {
-    const msgId     = msg.id?._serialized;
-    const isChannel = this._isChannelMessage(msg);
+    const msgId = msg.id?._serialized;
 
     // Dedup (O(1))
     if (msgId && this._processedIds.has(msgId)) return false;
 
-    // Source gate
-    if (isChannel  && this.sourceMode === SOURCE_MODE.CHATS)    return false;
-    if (!isChannel && this.sourceMode === SOURCE_MODE.CHANNELS) return false;
+    // Source gate — uses granular origin classification
+    if (!this._isSourceAllowed(msg)) return false;
 
-    // Whitelist
+    // Channel whitelist (only applies to channel messages)
+    const isChannel = this._isChannelMessage(msg);
     if (isChannel && this.allowedChannels.length > 0) {
       return this._isAllowedChannel(msg);
     }
@@ -474,7 +488,7 @@ class WhatsAppListener extends BaseListener {
         this._isReady = true;
 
         console.log('[WhatsApp INFO] [Ready Event] ✅ Client ready.');
-        console.log(`[WhatsApp INFO] [Ready Event] ⚙️ Source mode: ${this.sourceMode.toUpperCase()}`);
+        console.log(`[WhatsApp INFO] [Ready Event] ⚙️ Source mode: ${this.sourceMode.join(',').toUpperCase()}`);
         this.logger.info('CONNECTION', 'Client ready', { sourceMode: this.sourceMode });
 
         // Remove the QR file — no longer needed
@@ -508,21 +522,64 @@ class WhatsAppListener extends BaseListener {
           }
           console.log(`[WhatsApp DEBUG] [Ready Event] [LINKER SEQUENCE] Phone: "${finalPhone}", WID: "${wid}"`);
 
-          // 2. Write CONNECTED status file immediately so the UI registers connection instantly!
-          console.log('[WhatsApp INFO] [LINKER SEQUENCE] Writing CONNECTED status file...');
-          this._writeData(`status-${this.sessionId}.json`, {
-            status:   'CONNECTED',
-            phone:    finalPhone,
-            wid,
-            channels: [],
-            discoveryStatus: 'COMPLETED',
-            discoveryProgress: 100,
-            discoveryMessage: 'Scan confirmed. Device paired successfully.'
-          });
+          // Extract profile ID from session ID (session_{pId}_linker_{timestamp})
+          const parts = this.sessionId.split('_');
+          const pId = parts[1] || 'default';
 
-          console.log('[WhatsApp INFO] [LINKER SEQUENCE] Registered successfully. Exiting process.');
-          resolve();
-          process.exit(0);
+          // 2. Shut down client gracefully to flush state and release all file locks
+          console.log('[WhatsApp INFO] [LINKER SEQUENCE] Closing WhatsApp client gracefully to release file locks...');
+          
+          this.client.destroy().then(() => {
+            console.log('[WhatsApp INFO] [LINKER SEQUENCE] WhatsApp client closed. Migrating session directory...');
+            
+            const srcDir = path.join('.wwebjs_auth', `session-${this.sessionId}`);
+            const dstDir = path.join('.wwebjs_auth', `session-session_${pId}_dev_${finalPhone}`);
+            
+            try {
+              if (fs.existsSync(srcDir)) {
+                if (fs.existsSync(dstDir)) {
+                  fs.rmSync(dstDir, { recursive: true, force: true });
+                }
+                fs.mkdirSync(path.dirname(dstDir), { recursive: true });
+                fs.renameSync(srcDir, dstDir);
+                console.log(`[WhatsApp INFO] [LINKER SEQUENCE] Session directory successfully migrated to: ${dstDir}`);
+              } else {
+                console.warn(`[WhatsApp WARN] [LINKER SEQUENCE] Source directory does not exist: ${srcDir}`);
+              }
+            } catch (err) {
+              console.error(`[WhatsApp ERROR] [LINKER SEQUENCE] Failed to migrate session directory: ${err.message}`);
+              // Fallback copy if rename fails
+              try {
+                if (fs.existsSync(srcDir)) {
+                  fs.cpSync(srcDir, dstDir, { recursive: true });
+                  fs.rmSync(srcDir, { recursive: true, force: true });
+                  console.log(`[WhatsApp INFO] [LINKER SEQUENCE] Session directory copied to: ${dstDir}`);
+                }
+              } catch (copyErr) {
+                console.error(`[WhatsApp ERROR] [LINKER SEQUENCE] Fallback migration failed: ${copyErr.message}`);
+              }
+            }
+
+            // 3. Write CONNECTED status file (only after successful migration!)
+            console.log('[WhatsApp INFO] [LINKER SEQUENCE] Writing CONNECTED status file...');
+            this._writeData(`status-${this.sessionId}.json`, {
+              status:   'CONNECTED',
+              phone:    finalPhone,
+              wid,
+              channels: [],
+              discoveryStatus: 'COMPLETED',
+              discoveryProgress: 100,
+              discoveryMessage: 'Scan confirmed. Device paired successfully.'
+            });
+
+            console.log('[WhatsApp INFO] [LINKER SEQUENCE] Registered successfully. Exiting process.');
+            resolve();
+            process.exit(0);
+          }).catch((err) => {
+            console.error('[WhatsApp ERROR] [LINKER SEQUENCE] Error closing client:', err.message);
+            process.exit(1);
+          });
+          
           return;
         }
 
@@ -598,7 +655,10 @@ class WhatsAppListener extends BaseListener {
       // channel posts through message_create instead of (or in addition to) message.
       // Deduplication by message ID prevents double-processing.
       this.client.on('message_create', (msg) => {
-        if (!msg.fromMe) this._handleMessage(msg);
+        const isBotSent = msg.fromMe && global.botSentMessageIds && global.botSentMessageIds.has(msg.id?._serialized);
+        if (!isBotSent) {
+          this._handleMessage(msg);
+        }
       });
 
       // ── Start initialization with comprehensive error handling ─────────

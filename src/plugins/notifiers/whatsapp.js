@@ -242,10 +242,11 @@ class WhatsAppNotifier extends BaseNotifier {
     console.log(`[WhatsAppNotifier] 📤  Sending to ${masked}...`);
     metrics.recordWhatsAppSend?.();
 
+    let sentMsg = null;
     try {
       await withRetry(
         async () => {
-          await client.sendMessage(chatId, message);
+          sentMsg = await client.sendMessage(chatId, message);
         },
         {
           maxRetries:  this.maxRetries,
@@ -259,6 +260,11 @@ class WhatsAppNotifier extends BaseNotifier {
           },
         }
       );
+
+      if (sentMsg && sentMsg.id && sentMsg.id._serialized) {
+        global.botSentMessageIds = global.botSentMessageIds || new Set();
+        global.botSentMessageIds.add(sentMsg.id._serialized);
+      }
 
       console.log(`[WhatsAppNotifier] ✅  Delivered to ${masked}.`);
 
