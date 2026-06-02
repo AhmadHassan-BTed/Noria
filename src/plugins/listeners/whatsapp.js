@@ -449,20 +449,37 @@ class WhatsAppListener extends BaseListener {
           // Retrieve connected phone number
           const phone = this.client.info?.wid?.user || '';
 
-          // Retrieve subscribed channels
-          const allChats = await this.client.getChats().catch(() => []);
-          const channels = [];
-          for (const chat of allChats) {
-            if (chat.id?._serialized?.endsWith('@newsletter')) {
-              channels.push(chat.name?.trim() || chat.id._serialized);
-            }
-          }
-
+          // Write initial CONNECTED state IMMEDIATELY so the frontend is unblocked!
           fs.writeFileSync(`data/status-${this.sessionId}.json`, JSON.stringify({
             status: 'CONNECTED',
             phone: phone,
-            channels: channels
+            channels: []
           }));
+
+          // Fetch chats/channels asynchronously without blocking the ready event!
+          (async () => {
+            try {
+              console.log('[WhatsApp] ⏳  Fetching subscribed channels in background...');
+              const allChats = await this.client.getChats().catch(() => []);
+              const channels = [];
+              for (const chat of allChats) {
+                if (chat.id?._serialized?.endsWith('@newsletter')) {
+                  channels.push(chat.name?.trim() || chat.id._serialized);
+                }
+              }
+              console.log(`[WhatsApp] 📡  Fetched ${channels.length} subscribed channel(s) in background.`);
+              
+              // Rewrite status file with resolved channels
+              fs.writeFileSync(`data/status-${this.sessionId}.json`, JSON.stringify({
+                status: 'CONNECTED',
+                phone: phone,
+                channels: channels
+              }));
+            } catch (err) {
+              console.error('[WhatsApp] Background getChats failed:', err.message);
+            }
+          })();
+
         } catch (err) {
           console.error('[WhatsApp] Failed to manage status files on ready:', err.message);
           fs.writeFileSync(`data/status-${this.sessionId}.json`, JSON.stringify({ status: 'CONNECTED' }));

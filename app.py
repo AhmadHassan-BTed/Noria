@@ -217,7 +217,7 @@ for name, info in running_instances.items():
             pass
 if len(cleaned) != len(running_instances):
     save_running_processes(cleaned)
-@st.fragment(run_every="2s")
+@st.fragment(run_every=2)
 def render_device_linker_fragment(p_id, p_info, profiles):
     linker_sess_id = st.session_state.linker_sess_id
     if not linker_sess_id:
