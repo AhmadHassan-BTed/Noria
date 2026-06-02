@@ -642,6 +642,10 @@ if editing_profile is None:
                             st.session_state.linking_profile = None
                             st.session_state.linker_sess_id = None
                             st.rerun()
+
+                        # Lightweight auto-refresh loop to poll connection status
+                        time.sleep(2.0)
+                        st.rerun()
                             
                     else:
                         devices = p_info.get("devices", {})
