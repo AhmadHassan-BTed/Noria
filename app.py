@@ -4,8 +4,13 @@ import os
 import json
 import time
 import signal
+import warnings
 from PIL import Image
 import io
+
+# Suppress Streamlit ScriptRunContext warning when running in bare mode
+# This warning is benign and occurs when @st.fragment is used outside of a full Streamlit context
+warnings.filterwarnings("ignore", message=".*missing ScriptRunContext.*")
 
 # Optional qrcode import fallback
 try:
@@ -190,7 +195,32 @@ def get_session_status(session_id):
                 return json.load(f)
         except Exception:
             return {"status": "UNKNOWN"}
-    return {"status": "DISCONNECTED"}
+    # No status file yet = process is still starting up, show loading bar
+    return {"status": "UNKNOWN"}
+
+def read_session_logs(session_id, max_lines=200):
+    """Read the last N lines from a session's log file."""
+    log_path = f"data/logs-{session_id}.log"
+    if not os.path.exists(log_path):
+        return []
+    try:
+        with open(log_path, "r") as f:
+            lines = f.readlines()
+            # Return last max_lines, stripping newlines
+            return [line.rstrip() for line in lines[-max_lines:]]
+    except Exception:
+        return []
+
+def clear_session_logs(session_id):
+    """Clear a session's log file."""
+    log_path = f"data/logs-{session_id}.log"
+    try:
+        if os.path.exists(log_path):
+            os.remove(log_path)
+            return True
+    except Exception:
+        pass
+    return False
 
 def is_process_alive(pid):
     try:
@@ -199,24 +229,50 @@ def is_process_alive(pid):
     except OSError:
         return False
 
-# Clean zombie process entries
-running_instances = load_running_processes()
-cleaned = {}
-for name, info in running_instances.items():
-    if is_process_alive(info["pid"]):
-        cleaned[name] = info
-    else:
-        # Delete related QR/Status files if crashed/stopped
-        try:
-            os.remove(f"data/qr-{info['sessionId']}.txt")
-        except FileNotFoundError:
-            pass
-        try:
-            os.remove(f"data/status-{info['sessionId']}.json")
-        except FileNotFoundError:
-            pass
-if len(cleaned) != len(running_instances):
-    save_running_processes(cleaned)
+# Clean zombie process entries (but preserve CONNECTED status files)
+# This runs at page load to clean up dead processes while preserving successful connections
+def cleanup_zombie_processes():
+    """Clean up dead processes but preserve CONNECTED status files for the fragment to handle."""
+    instances = load_running_processes()
+    cleaned = {}
+    changed = False
+    
+    for name, info in instances.items():
+        if is_process_alive(info["pid"]):
+            cleaned[name] = info
+        else:
+            # Check if the status file indicates a successful connection
+            status_path = f"data/status-{info['sessionId']}.json"
+            status_data = {}
+            if os.path.exists(status_path):
+                try:
+                    with open(status_path, "r") as f:
+                        status_data = json.load(f)
+                except Exception:
+                    pass
+            
+            # Keep CONNECTED status files and their process entries
+            # so the fragment can process them and add the device
+            if status_data.get("status") == "CONNECTED":
+                cleaned[name] = info
+            else:
+                # Delete non-connected status files for dead processes
+                changed = True
+                try:
+                    os.remove(f"data/qr-{info['sessionId']}.txt")
+                except FileNotFoundError:
+                    pass
+                try:
+                    os.remove(status_path)
+                except FileNotFoundError:
+                    pass
+    
+    if changed:
+        save_running_processes(cleaned)
+    
+    return cleaned
+
+running_instances = cleanup_zombie_processes()
 @st.fragment(run_every=2)
 def render_device_linker_fragment(p_id, p_info, profiles):
     linker_sess_id = st.session_state.linker_sess_id
@@ -226,52 +282,70 @@ def render_device_linker_fragment(p_id, p_info, profiles):
     status_info = get_session_status(linker_sess_id)
     status = status_info.get("status", "UNKNOWN")
     
+    # Track when linking started for timeout detection
+    if "linker_start_time" not in st.session_state:
+        st.session_state.linker_start_time = time.time()
+    
+    elapsed = time.time() - st.session_state.get("linker_start_time", time.time())
+    
     st.markdown(f"**Connection Linker Status:** `{status}`")
     
+    # ── Handle CONNECTED status ────────────────────────────────────────────
     if status == "CONNECTED":
         linked_phone = status_info.get("phone", "")
         linked_channels = status_info.get("channels", [])
+        linked_wid = status_info.get("wid", "")
         
-        if linked_phone:
-            # Ensure devices dict exists
-            if "devices" not in p_info:
-                p_info["devices"] = {}
-            
-            p_info["devices"][linked_phone] = {
-                "phone": linked_phone,
-                "channels": linked_channels,
-                "linkedAt": time.strftime("%Y-%m-%d %H:%M:%S")
-            }
-            save_profiles(profiles)
-            
-            # Clean stop of helper process
-            linker_proc_info = running_instances.get(linker_sess_id)
-            if linker_proc_info:
-                try:
-                    if os.name == 'nt':
-                        subprocess.run(['taskkill', '/F', '/T', '/PID', str(linker_proc_info['pid'])], capture_output=True)
-                    else:
-                        os.kill(linker_proc_info['pid'], signal.SIGTERM)
-                except Exception:
-                    pass
-                del running_instances[linker_sess_id]
-                save_running_processes(running_instances)
-                
+        # Fallback: if phone is empty but we have WID or session info, use that
+        if not linked_phone and linked_wid:
+            linked_phone = linked_wid.split('@')[0] if '@' in linked_wid else linked_wid
+        
+        # Final fallback: generate a device identifier from timestamp
+        if not linked_phone:
+            linked_phone = f"device_{int(time.time())}"
+        
+        # Ensure devices dict exists
+        if "devices" not in p_info:
+            p_info["devices"] = {}
+        
+        p_info["devices"][linked_phone] = {
+            "phone": linked_phone,
+            "channels": linked_channels,
+            "linkedAt": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        save_profiles(profiles)
+        
+        # Clean stop of helper process
+        linker_proc_info = running_instances.get(linker_sess_id)
+        if linker_proc_info:
             try:
-                os.remove(f"data/status-{linker_sess_id}.json")
-            except FileNotFoundError:
+                if os.name == 'nt':
+                    subprocess.run(['taskkill', '/F', '/T', '/PID', str(linker_proc_info['pid'])], capture_output=True)
+                else:
+                    os.kill(linker_proc_info['pid'], signal.SIGTERM)
+            except Exception:
                 pass
-            try:
-                os.remove(f"data/qr-{linker_sess_id}.txt")
-            except FileNotFoundError:
-                pass
+        if linker_sess_id in running_instances:
+            del running_instances[linker_sess_id]
+            save_running_processes(running_instances)
             
-            st.session_state.linking_profile = None
-            st.session_state.linker_sess_id = None
-            st.success(f"Device +{linked_phone} linked successfully!")
-            time.sleep(1)
-            st.rerun()
+        try:
+            os.remove(f"data/status-{linker_sess_id}.json")
+        except FileNotFoundError:
+            pass
+        try:
+            os.remove(f"data/qr-{linker_sess_id}.txt")
+        except FileNotFoundError:
+            pass
+        
+        st.session_state.linking_profile = None
+        st.session_state.linker_sess_id = None
+        st.session_state.pop("linker_start_time", None)
+        st.success(f"Device +{linked_phone} linked successfully with {len(linked_channels)} subscribed channel(s)!")
+        time.sleep(1)
+        st.rerun()
             
+    # ── Handle SCAN_QR status ──────────────────────────────────────────────
     elif status == "SCAN_QR":
         st.warning("Action Required: Scan the QR code below using WhatsApp Linked Devices.")
         
@@ -288,10 +362,20 @@ def render_device_linker_fragment(p_id, p_info, profiles):
                     qr_img = qr.make_image(fill_color="black", back_color="white")
                     
                     buf = io.BytesIO()
-                    try:
-                        qr_img.save(buf, format='PNG')
-                    except TypeError:
-                        qr_img.save(buf)
+                    # Convert to PIL Image for consistent save() signature
+                    if hasattr(qr_img, 'get_image'):
+                        # qrcode image with get_image() method (PIL-based)
+                        pil_img = qr_img.get_image()
+                        pil_img.save(buf, format='PNG')
+                    elif hasattr(qr_img, 'save'):
+                        # Direct save - try with format, fallback without
+                        try:
+                            qr_img.save(buf, format='PNG')  # type: ignore[call-arg]
+                        except TypeError:
+                            qr_img.save(buf)
+                    else:
+                        # Fallback: write raw bytes
+                        buf.write(bytes(qr_img))
                     
                     st.image(buf.getvalue(), caption="Scan QR Code to Pair Device", width=220)
                 else:
@@ -301,33 +385,113 @@ def render_device_linker_fragment(p_id, p_info, profiles):
         else:
             st.info("Loading QR Code from server...")
             
+    # ── Handle DISCONNECTED status ─────────────────────────────────────────
+    # Show loading bar for a grace period before displaying the error
+    # This gives the process time to potentially recover or for QR to appear
+    elif status == "DISCONNECTED":
+        grace_period = 30  # seconds before showing actual error
+        
+        if elapsed < grace_period:
+            # Still in grace period - show loading bar and wait
+            curr_progress = st.session_state.get("linker_progress", 5)
+            if curr_progress < 85:
+                curr_progress += 3
+                st.session_state.linker_progress = curr_progress
+
+            if curr_progress <= 30:
+                step_msg = "🚀 Launching Chrome headless engine..."
+            elif curr_progress <= 50:
+                step_msg = "🔌 Initializing WhatsApp connection..."
+            elif curr_progress <= 70:
+                step_msg = "🔑 Synchronizing authentication keys..."
+            else:
+                step_msg = "📱 Preparing QR code..."
+
+            st.info(step_msg)
+            st.progress(curr_progress / 100.0)
+            st.caption(f"Elapsed: {int(elapsed)}s — Connecting to WhatsApp...")
+            return
+        
+        # Grace period passed - show the actual error
+        disconnect_reason = status_info.get("reason", "Connection was terminated")
+        
+        # Clean up the failed process entry
+        if linker_sess_id in running_instances:
+            del running_instances[linker_sess_id]
+            save_running_processes(running_instances)
+        
+        st.error(f"❌ Connection failed: {disconnect_reason}")
+        
+        # Show logs if available
+        log_lines = read_session_logs(linker_sess_id, max_lines=20)
+        if log_lines:
+            with st.expander("📋 View Error Logs", expanded=False):
+                st.code("\n".join(log_lines[-10:]), language="text")
+        
+        # Retry button - also clean up status file
+        if st.button("Try Again", key=f"retry_link_{p_id}", type="primary", use_container_width=True):
+            # Clean up old status and QR files
+            try:
+                os.remove(f"data/status-{linker_sess_id}.json")
+            except FileNotFoundError:
+                pass
+            try:
+                os.remove(f"data/qr-{linker_sess_id}.txt")
+            except FileNotFoundError:
+                pass
+            
+            st.session_state.linking_profile = None
+            st.session_state.linker_sess_id = None
+            st.session_state.pop("linker_start_time", None)
+            st.rerun()
+            
+    # ── Handle initializing/unknown status (progress animation) ────────────
     else:
+        # Show loading progress bar during initialization
+        timeout_seconds = 90  # 90 second timeout before declaring failure
+        
+        # Only show timeout error if we've waited long enough
+        if elapsed > timeout_seconds:
+            st.error(f"⏱️ Connection timed out after {int(elapsed)} seconds.")
+            
+            # Clean up
+            if linker_sess_id in running_instances:
+                del running_instances[linker_sess_id]
+                save_running_processes(running_instances)
+            
+            if st.button("Try Again", key=f"retry_timeout_{p_id}", type="primary", use_container_width=True):
+                st.session_state.linking_profile = None
+                st.session_state.linker_sess_id = None
+                st.session_state.pop("linker_start_time", None)
+                st.rerun()
+            return
+        
         # Increment progress dynamically to animate initialization progress
         curr_progress = st.session_state.get("linker_progress", 5)
-        if curr_progress < 95:
-            curr_progress += 15
-            if curr_progress > 95:
-                curr_progress = 95
+        if curr_progress < 90:  # Cap at 90% to show we're still waiting
+            curr_progress += 5
+            if curr_progress > 90:
+                curr_progress = 90
             st.session_state.linker_progress = curr_progress
 
         if curr_progress <= 20:
-            step_msg = "Launching sandboxed Chrome headless engine..."
-        elif curr_progress <= 45:
-            step_msg = "Initializing secure WhatsApp connection socket..."
-        elif curr_progress <= 70:
-            step_msg = "Synchronizing keys and authentication listeners..."
-        elif curr_progress <= 90:
-            step_msg = "Awaiting secure QR token payload..."
+            step_msg = "🚀 Launching Chrome headless engine..."
+        elif curr_progress <= 40:
+            step_msg = "🔌 Initializing WhatsApp connection..."
+        elif curr_progress <= 60:
+            step_msg = "🔑 Synchronizing authentication keys..."
+        elif curr_progress <= 80:
+            step_msg = "📱 Generating QR code for pairing..."
         else:
-            step_msg = "Generating visual pairing QR code..."
+            step_msg = f"⏳ Waiting for WhatsApp response... ({int(elapsed)}s)"
 
         st.info(step_msg)
         st.progress(curr_progress / 100.0)
-        st.markdown(f"""
-        <div style="font-size: 0.82rem; color: #718096; text-align: right; margin-top: -8px; font-weight: 500;">
-          Connection Progress: {curr_progress}%
-        </div>
-        """, unsafe_allow_html=True)
+        st.caption(f"Elapsed: {int(elapsed)}s — Please wait while we connect to WhatsApp...")
+        
+        # Show hint if taking longer than usual
+        if elapsed > 30:
+            st.caption("💡 Taking longer than expected? Make sure Chrome is installed and accessible.")
         
     # Cancel button
     if st.button("Cancel Pairing", key=f"cancel_pair_{p_id}", use_container_width=True):
@@ -785,6 +949,33 @@ if editing_profile is None:
                                                     st.error(f"Error: {e}")
                                 
                                 st.write("---")
+                                
+                                # ── Device Log Viewer ──────────────────────────────────
+                                device_sess_id = f"session_{p_id}_dev_{dev_phone}"
+                                with st.expander(f"📋 Device Logs — +{dev_phone}", expanded=False):
+                                    log_col1, log_col2 = st.columns([3, 1])
+                                    with log_col1:
+                                        st.caption(f"Session ID: `{device_sess_id}`")
+                                    with log_col2:
+                                        if st.button("🗑️ Clear Logs", key=f"clear_logs_{p_id}_{dev_phone}", use_container_width=True):
+                                            if clear_session_logs(device_sess_id):
+                                                st.toast("Logs cleared successfully.")
+                                            else:
+                                                st.toast("No logs to clear.")
+                                    
+                                    # Read and display logs
+                                    log_lines = read_session_logs(device_sess_id, max_lines=100)
+                                    
+                                    if not log_lines:
+                                        st.info("No logs available for this device. Logs will appear once the device is connected and processing messages.")
+                                    else:
+                                        # Display logs in a scrollable code block
+                                        log_text = "\n".join(log_lines)
+                                        st.code(log_text, language="text")
+                                        st.caption(f"Showing last {len(log_lines)} log entries. Logs auto-refresh every 2 seconds.")
+                                
+                                st.write("---")
+                                
                                 if st.button("Unlink Device", key=f"unlink_{p_id}_{dev_phone}", use_container_width=True):
                                     for scan_name in device_scans:
                                         try:
@@ -802,6 +993,9 @@ if editing_profile is None:
                                         shutil.rmtree(f".wwebjs_auth/session_session_{p_id}_dev_{dev_phone}", ignore_errors=True)
                                     except Exception:
                                         pass
+                                    
+                                    # Also clear logs on unlink
+                                    clear_session_logs(device_sess_id)
                                         
                                     del p_info["devices"][dev_phone]
                                     save_profiles(profiles)
