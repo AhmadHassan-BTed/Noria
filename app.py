@@ -325,6 +325,24 @@ def render_device_linker_fragment(p_id, p_info, profiles):
                     os.kill(linker_proc_info['pid'], signal.SIGTERM)
             except Exception:
                 pass
+        
+        # Migrate credentials directory in Python to avoid Puppeteer delay in Node
+        src_dir = os.path.join(".wwebjs_auth", f"session-{linker_sess_id}")
+        dst_dir = os.path.join(".wwebjs_auth", f"session-session_{p_id}_dev_{linked_phone}")
+        if os.path.exists(src_dir):
+            try:
+                import shutil
+                if os.path.exists(dst_dir):
+                    shutil.rmtree(dst_dir, ignore_errors=True)
+                os.makedirs(os.path.dirname(dst_dir), exist_ok=True)
+                shutil.move(src_dir, dst_dir)
+            except Exception:
+                try:
+                    shutil.copytree(src_dir, dst_dir)
+                    shutil.rmtree(src_dir, ignore_errors=True)
+                except Exception:
+                    pass
+
         if linker_sess_id in running_instances:
             del running_instances[linker_sess_id]
             save_running_processes(running_instances)
@@ -586,7 +604,15 @@ if st.session_state.current_page == "Scans":
                     status_info = get_session_status(info["sessionId"])
                     scan_status = status_info.get("status", "UNKNOWN")
                     if scan_status == "CONNECTED":
-                        st.success("Linked & Active")
+                        disc_status = status_info.get("discoveryStatus", "COMPLETED")
+                        if disc_status == "DISCOVERING":
+                            disc_progress = status_info.get("discoveryProgress", 0)
+                            disc_msg = status_info.get("discoveryMessage", "Discovering channels...")
+                            st.warning(f"🔍 Discovery: {disc_progress}%")
+                            st.progress(disc_progress / 100.0)
+                            st.caption(f"_{disc_msg}_")
+                        else:
+                            st.success("Linked & Active")
                     elif scan_status == "SCAN_QR":
                         st.warning("Awaiting Scan")
                     else:
@@ -911,10 +937,21 @@ if editing_profile is None:
                             with st.container(border=True):
                                 st.markdown(f"#### 📱 +{dev_phone}")
                                 st.caption(f"Linked: {dev_info.get('linkedAt', 'Unknown')}")
-                                st.markdown(f"**Subscribed Channels:** `{len(dev_info.get('channels', []))}`")
-                                
                                 # Scans running on this device
                                 device_scans = [name for name, info in running_instances.items() if info.get("profileId") == p_id and info.get("phone") == dev_phone]
+                                
+                                # Dynamic Channel Sync from active scans
+                                channels_list = dev_info.get("channels", [])
+                                for scan_name in device_scans:
+                                    scan_info = running_instances[scan_name]
+                                    status_info = get_session_status(scan_info["sessionId"])
+                                    discovered = status_info.get("channels", [])
+                                    if len(discovered) > len(channels_list):
+                                        channels_list = discovered
+                                        dev_info["channels"] = discovered
+                                        save_profiles(profiles)
+                                
+                                st.markdown(f"**Subscribed Channels:** `{len(channels_list)}`")
                                 
                                 if not device_scans:
                                     st.info("No active scans on this device.")
@@ -924,12 +961,24 @@ if editing_profile is None:
                                         scan_info = running_instances[scan_name]
                                         st.markdown(f"🔸 `{scan_name}` (`{scan_info['category']}`)")
                                         
+                                        status_info = get_session_status(scan_info["sessionId"])
+                                        scan_status = status_info.get("status", "UNKNOWN")
+                                        disc_status = status_info.get("discoveryStatus", "COMPLETED")
+                                        
+                                        if scan_status == "CONNECTED" and disc_status == "DISCOVERING":
+                                            disc_progress = status_info.get("discoveryProgress", 0)
+                                            disc_msg = status_info.get("discoveryMessage", "Discovering channels...")
+                                            st.warning(f"🔍 Discovery: {disc_progress}%")
+                                            st.progress(disc_progress / 100.0)
+                                            st.caption(f"_{disc_msg}_")
+                                            
                                         act_col1, act_col2 = st.columns([1, 1])
                                         with act_col1:
-                                            status_info = get_session_status(scan_info["sessionId"])
-                                            scan_status = status_info.get("status", "UNKNOWN")
                                             if scan_status == "CONNECTED":
-                                                st.success("Active")
+                                                if disc_status == "DISCOVERING":
+                                                    st.info("Syncing")
+                                                else:
+                                                    st.success("Active")
                                             else:
                                                 st.warning("Connecting")
                                         with act_col2:

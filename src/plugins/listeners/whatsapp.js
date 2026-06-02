@@ -139,7 +139,17 @@ class WhatsAppListener extends BaseListener {
       authStrategy: new LocalAuth({
         dataPath: `.wwebjs_auth/session-${this.sessionId}`,
       }),
-      puppeteer: { args: ['--no-sandbox', '--disable-setuid-sandbox'] },
+      puppeteer: {
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--disable-features=IsolateOrigins,site-per-process',
+          '--disable-site-isolation-trials'
+        ],
+      },
     });
 
     this.callbacks = new Map();
@@ -185,6 +195,27 @@ class WhatsAppListener extends BaseListener {
       this.logger.info('CHANNEL', `Channel updated: "${info.name}"`, { id: info.id });
     });
 
+    // Progress updates to status file
+    this._channelFetcher.on('progress', (data) => {
+      let currStatus = { status: 'CONNECTED', phone: '', wid: '' };
+      try {
+        const statusPath = path.join('data', `status-${this.sessionId}.json`);
+        if (fs.existsSync(statusPath)) {
+          currStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+        }
+      } catch (err) { /* non-fatal */ }
+
+      const channels = this._channelFetcher.getAll().map((c) => c.name || c.id);
+
+      this._writeData(`status-${this.sessionId}.json`, {
+        ...currStatus,
+        discoveryStatus: data.percent === 100 ? 'COMPLETED' : 'DISCOVERING',
+        discoveryProgress: data.percent,
+        discoveryMessage: data.message,
+        channels: channels
+      });
+    });
+
     // Full setup: bridge + initial fetch
     const found = await this._channelFetcher.setup();
 
@@ -204,7 +235,6 @@ class WhatsAppListener extends BaseListener {
       }
     }
 
-    // Write known channels to the status file
     return found;
   }
 
@@ -389,7 +419,7 @@ class WhatsAppListener extends BaseListener {
       }
 
       // ── Emit ─────────────────────────────────────────────────────────────
-      const source = isChannel ? 'channel' : 'chat';
+      const source = isChannel ? 'channel' : (msg.from.endsWith(CHAT_ID_SUFFIX.GROUP) ? 'group' : 'chat');
       const label  = channelName ? ` "${channelName}"` : '';
       console.log(`[WhatsApp] 🔗  URL from ${source}${label}: ${validatedUrl}`);
 
@@ -436,71 +466,106 @@ class WhatsAppListener extends BaseListener {
 
       // ── Ready ────────────────────────────────────────────────────────────
       this.client.on('ready', async () => {
-        console.log('[WhatsApp] ✅  Client ready.');
-        console.log(`[WhatsApp] ⚙️   Source mode: ${this.sourceMode.toUpperCase()}`);
+        if (this._isReady) {
+          console.log('[WhatsApp INFO] [Ready Event] 🔄 Client re-connected (ignoring duplicate ready event).');
+          this.logger.info('CONNECTION', 'Duplicate ready event ignored');
+          return;
+        }
+        this._isReady = true;
+
+        console.log('[WhatsApp INFO] [Ready Event] ✅ Client ready.');
+        console.log(`[WhatsApp INFO] [Ready Event] ⚙️ Source mode: ${this.sourceMode.toUpperCase()}`);
         this.logger.info('CONNECTION', 'Client ready', { sourceMode: this.sourceMode });
 
         // Remove the QR file — no longer needed
+        console.log(`[WhatsApp DEBUG] [Ready Event] Deleting QR file: qr-${this.sessionId}.txt`);
         this._deleteData(`qr-${this.sessionId}.txt`);
 
-        this.connMgr = initConnectionManager(this.client, this.sessionId);
-        
-        // Get phone number with multiple fallback methods
-        let phone = '';
-        try {
-          // Method 1: wid.user (most common)
-          phone = this.client.info?.wid?.user || '';
-          
-          // Method 2: Try to get from pushname or other info
+        // Check if this is a linker session (device pairing)
+        const isLinker = this.sessionId.includes('_linker_');
+        console.log(`[WhatsApp DEBUG] [Ready Event] Session ID: "${this.sessionId}", IsLinker: ${isLinker}`);
+
+        if (isLinker) {
+          console.log('[WhatsApp INFO] [Ready Event] 🚀 [LINKER SEQUENCE] Starting instant linker sequence...');
+
+          // 1. Get phone number and WID immediately
+          let phone = this.client.info?.wid?.user || '';
+          if (!phone && this.client.info?.wid) {
+            phone = this.client.info.wid._serialized?.split('@')[0] || '';
+          }
           if (!phone && this.client.info) {
             phone = this.client.info.pushname || '';
           }
-          
-          // Method 3: Try to get from the WID object directly
-          if (!phone && this.client.info?.wid) {
-            // WID might have _serialized or other properties
-            phone = this.client.info.wid._serialized?.split('@')[0] || '';
+          const wid = this.client.info?.wid?._serialized || '';
+
+          // Ensure phone is set, use fallback if not found
+          let finalPhone = phone;
+          if (!finalPhone && wid) {
+            finalPhone = wid.split('@')[0];
           }
-          
-          // Method 4: Try to get from me contact
-          if (!phone) {
-            const me = await this.client.getContactById(this.client.info?.wid?._serialized || '');
-            if (me && me.id && me.id.user) {
-              phone = me.id.user;
-            }
+          if (!finalPhone) {
+            finalPhone = `device_${Date.now()}`;
           }
-          
-          this.logger.info('CONNECTION', `Phone number retrieved: ${phone}`, { 
-            method: phone ? 'success' : 'failed',
-            infoAvailable: !!this.client.info 
+          console.log(`[WhatsApp DEBUG] [Ready Event] [LINKER SEQUENCE] Phone: "${finalPhone}", WID: "${wid}"`);
+
+          // 2. Write CONNECTED status file immediately so the UI registers connection instantly!
+          console.log('[WhatsApp INFO] [LINKER SEQUENCE] Writing CONNECTED status file...');
+          this._writeData(`status-${this.sessionId}.json`, {
+            status:   'CONNECTED',
+            phone:    finalPhone,
+            wid,
+            channels: [],
+            discoveryStatus: 'COMPLETED',
+            discoveryProgress: 100,
+            discoveryMessage: 'Scan confirmed. Device paired successfully.'
           });
-        } catch (err) {
-          console.warn('[WhatsApp] ⚠️  Could not retrieve phone number:', err.message);
-          this.logger.warn('CONNECTION', 'Phone retrieval failed', { error: err.message });
+
+          console.log('[WhatsApp INFO] [LINKER SEQUENCE] Registered successfully. Exiting process.');
+          resolve();
+          process.exit(0);
+          return;
         }
 
-        // ── Channel discovery (the fix) ───────────────────────────────────
-        let channelNames = [];
+        // ── Normal scanning daemon flow (non-linker) ───────────────────────
+        console.log('[WhatsApp DEBUG] [Ready Event] Initializing Connection Manager...');
+        this.connMgr = initConnectionManager(this.client, this.sessionId);
+
+        // Get phone number with fallbacks
+        let phone = '';
         try {
-          const channels = await this._initChannelFetcher();
-          channelNames = channels.map((c) => c.name || c.id);
+          phone = this.client.info?.wid?.user || '';
+          if (!phone && this.client.info) phone = this.client.info.pushname || '';
+          if (!phone && this.client.info?.wid) phone = this.client.info.wid._serialized?.split('@')[0] || '';
+          if (!phone) {
+            const meID = this.client.info?.wid?._serialized || '';
+            const me = await this.client.getContactById(meID);
+            if (me && me.id && me.id.user) phone = me.id.user;
+          }
         } catch (err) {
-          console.warn('[WhatsApp] ⚠️  Channel fetcher init error (non-fatal):', err.message);
-          this.logger.warn('CHANNEL_FETCHER', 'Init error', { error: err.message });
+          console.warn('[WhatsApp WARN] [Ready Event] ⚠️ Could not retrieve phone number:', err.message);
         }
 
-        // Get WID as fallback identifier
         const wid = this.client.info?.wid?._serialized || '';
-        
-        // Write single CONNECTED status file
         this._writeData(`status-${this.sessionId}.json`, {
           status:   'CONNECTED',
           phone,
           wid,
-          channels: channelNames,
+          channels: [],
+          discoveryStatus: 'DISCOVERING',
+          discoveryProgress: 0,
+          discoveryMessage: 'Spawning background channel fetcher...'
         });
-        
-        console.log(`[WhatsApp] 📱 Connected with phone: ${phone || '(empty)'}, wid: ${wid || '(empty)'}, channels: ${channelNames.length}`);
+
+        console.log(`[WhatsApp INFO] [Ready Event] Connected with phone: ${phone || '(empty)'}, wid: ${wid || '(empty)'}. Resolving initialize and running channel fetcher in background...`);
+
+        // Discover channels in the background asynchronously (non-blocking!)
+        this._initChannelFetcher()
+          .then((channels) => {
+            console.log(`[WhatsApp INFO] [Background Fetch] Background discovery completed. Discovered ${channels.length} channels.`);
+          })
+          .catch((err) => {
+            console.warn('[WhatsApp WARN] [Background Fetch] ⚠️ Background channel fetch error:', err.message);
+          });
 
         resolve();
       });

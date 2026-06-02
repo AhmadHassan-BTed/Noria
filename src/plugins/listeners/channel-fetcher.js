@@ -131,13 +131,23 @@ class ChannelFetcher extends EventEmitter {
       { label: 'Newsletter Store (window.Store.Newsletter)', fn: this._strategyNewsletterStore.bind(this) },
       { label: 'Chat Store filter (@newsletter suffix)',     fn: this._strategyChatStore.bind(this) },
       { label: 'WAPI bridge (window.WAPI)',                  fn: this._strategyWAPI.bind(this) },
-      { label: 'getChats() shim (last resort)',             fn: this._strategyGetChats.bind(this) },
     ];
+
+    const totalSteps = this.maxAttempts * strategies.length;
 
     for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
       this._log(`[ChannelFetcher] 🔍  Fetch attempt ${attempt}/${this.maxAttempts}...`);
 
+      let strategyIndex = 0;
       for (const strategy of strategies) {
+        const stepIndex = (attempt - 1) * strategies.length + strategyIndex;
+        const progress = Math.min(95, Math.round((stepIndex / totalSteps) * 95));
+        
+        this.emit('progress', {
+          percent: progress,
+          message: `Attempt ${attempt}/${this.maxAttempts}: Evaluating ${strategy.label}...`
+        });
+
         try {
           const results = await strategy.fn();
           if (Array.isArray(results) && results.length > 0) {
@@ -150,11 +160,16 @@ class ChannelFetcher extends EventEmitter {
         } catch (err) {
           this._log(`[ChannelFetcher] ⚠️  Strategy "${strategy.label}" error: ${err.message}`);
         }
+        strategyIndex++;
       }
 
       // If any strategy found channels, we're done
       if (this._channels.size > 0) {
         this._log(`[ChannelFetcher] ✅  Total channels discovered: ${this._channels.size}`);
+        this.emit('progress', {
+          percent: 100,
+          message: `Discovery finished. Discovered ${this._channels.size} channels.`
+        });
         return this.getAll();
       }
 
@@ -164,7 +179,17 @@ class ChannelFetcher extends EventEmitter {
           `[ChannelFetcher] ⏳  No channels found yet. ` +
           `WhatsApp may still be syncing. Retrying in ${this.retryDelay / 1000}s...`
         );
-        await this._sleep(this.retryDelay);
+        
+        const waitMs = this.retryDelay;
+        const sleepSteps = 10;
+        for (let s = 0; s < sleepSteps; s++) {
+          const sleepProgress = Math.min(98, Math.round(95 + (s / sleepSteps) * 3));
+          this.emit('progress', {
+            percent: sleepProgress,
+            message: `Waiting for WhatsApp sync... (${Math.round((waitMs / 1000) * (1 - s / sleepSteps))}s left)`
+          });
+          await this._sleep(waitMs / sleepSteps);
+        }
       }
     }
 
@@ -176,6 +201,11 @@ class ChannelFetcher extends EventEmitter {
       `[ChannelFetcher]    • whatsapp-web.js version does not expose Store.Newsletter.\n` +
       `[ChannelFetcher]    → The real-time bridge remains active and will catch late syncs.`
     );
+    
+    this.emit('progress', {
+      percent: 100,
+      message: `Discovery finished. Discovered ${this._channels.size} channels.`
+    });
     return [];
   }
 

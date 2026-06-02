@@ -11,6 +11,12 @@ jest.mock('whatsapp-web.js', () => {
     getChats: jest.fn().mockResolvedValue([]),
     destroy: jest.fn().mockResolvedValue(undefined),
     sendMessage: jest.fn().mockResolvedValue({}),
+    pupPage: {
+      exposeFunction: jest.fn().mockResolvedValue(undefined),
+      evaluate: jest.fn().mockResolvedValue([
+        { id: 'chat1@newsletter', name: 'Channel One' }
+      ]),
+    }
   };
   return {
     Client: jest.fn().mockImplementation(() => mockClientInstance),
@@ -279,7 +285,11 @@ describe('WhatsAppListener', () => {
 
       await expect(initPromise).resolves.toBeUndefined();
       expect(initConnectionManager).toHaveBeenCalledWith(mockClient, 'default');
-      expect(mockGetChats).toHaveBeenCalled();
+      
+      // Wait for background channel discovery to run asynchronously
+      await new Promise((r) => setTimeout(r, 50));
+      
+      expect(mockClient.pupPage.evaluate).toHaveBeenCalled();
       expect(listener._channelCache.get('chat1@newsletter').name).toBe('Channel One');
     });
 
