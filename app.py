@@ -1101,6 +1101,56 @@ if editing_profile is None:
                                         else:
                                             # Display logs in a scrollable code block
                                             log_text = "\n".join(log_lines)
+                                            
+                                            # Copy logs button using custom HTML/JS
+                                            import urllib.parse
+                                            encoded_logs = urllib.parse.quote(log_text)
+                                            copy_btn_html = f"""
+                                            <div style="display: flex; justify-content: flex-end; margin-bottom: -10px;">
+                                                <button id="copyBtn" style="
+                                                    background-color: #2b2b36;
+                                                    color: #f4f4f4;
+                                                    border: 1px solid #444;
+                                                    padding: 6px 12px;
+                                                    border-radius: 6px;
+                                                    cursor: pointer;
+                                                    font-size: 13px;
+                                                    font-family: system-ui, -apple-system, sans-serif;
+                                                    display: flex;
+                                                    align-items: center;
+                                                    gap: 6px;
+                                                    transition: background-color 0.2s;
+                                                " onclick="copyLogs()">
+                                                    📋 Copy Logs
+                                                </button>
+                                                <textarea id="logText" style="display:none;"></textarea>
+                                            </div>
+                                            <script>
+                                            function copyLogs() {{
+                                                const text = decodeURIComponent("{encoded_logs}");
+                                                const textArea = document.getElementById("logText");
+                                                textArea.style.display = "block";
+                                                textArea.value = text;
+                                                textArea.select();
+                                                try {{
+                                                    document.execCommand("copy");
+                                                    const btn = document.getElementById("copyBtn");
+                                                    btn.innerHTML = "✅ Copied!";
+                                                    btn.style.backgroundColor = "#1b4d3e";
+                                                    setTimeout(() => {{
+                                                        btn.innerHTML = "📋 Copy Logs";
+                                                        btn.style.backgroundColor = "#2b2b36";
+                                                    }}, 2000);
+                                                }} catch (err) {{
+                                                    alert("Could not copy: " + err);
+                                                }}
+                                                textArea.style.display = "none";
+                                            }}
+                                            </script>
+                                            """
+                                            import streamlit.components.v1 as components
+                                            components.html(copy_btn_html, height=45)
+                                            
                                             st.code(log_text, language="text")
                                             st.caption(f"Showing last {len(log_lines)} log entries. Logs auto-refresh every 2 seconds.")
                                     
