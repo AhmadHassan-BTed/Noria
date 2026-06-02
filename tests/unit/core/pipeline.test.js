@@ -261,6 +261,36 @@ describe('PipelineOrchestrator Core', () => {
       });
     });
 
+    test('should clear the urlCache if clear-cache flag file exists during scraper:start', async () => {
+      orchestrator.wirePipelineEvents('test-pipeline');
+
+      const scraperStartCall = broker.on.mock.calls.find(
+        (call) => call[0] === 'scraper:start'
+      );
+      const callback = scraperStartCall[1];
+
+      // Setup mock behavior for fs
+      fs.existsSync.mockReturnValue(true);
+      fs.unlinkSync.mockImplementation(() => {});
+
+      const { urlCache } = require('../../../src/utils/cache');
+      urlCache.set('https://opportunity.com/cached', true);
+      expect(urlCache.has('https://opportunity.com/cached')).toBe(true);
+
+      mockScraperInstance.scrape.mockResolvedValue({ text: 'Some opportunity content' });
+
+      // Trigger scraper:start which should trigger the clear cache check
+      await callback({
+        pipelineName: 'test-pipeline',
+        url: 'https://opportunity.com/cached',
+      });
+
+      // urlCache should have been cleared, so it shouldn't hit cache and should trigger scraper success
+      expect(urlCache.has('https://opportunity.com/cached')).toBe(false);
+      expect(fs.existsSync).toHaveBeenCalledWith(expect.stringContaining('clear-cache-test-pipeline.flag'));
+      expect(fs.unlinkSync).toHaveBeenCalledWith(expect.stringContaining('clear-cache-test-pipeline.flag'));
+    });
+
     test('should handle analyzer:start and evaluate opportunity match score', async () => {
       orchestrator.wirePipelineEvents('test-pipeline');
 

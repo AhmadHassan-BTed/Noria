@@ -97,6 +97,13 @@ process.on('unhandledRejection', (reason, promise) => {
   if (reason instanceof Error) {
     console.error(reason.stack);
   }
+
+  // If it's a known non-fatal file-lock error from session folder cleanup on Windows, log warning and do not crash
+  if (errorMsg.includes('EBUSY') && (errorMsg.includes('.wwebjs_auth') || errorMsg.includes('first_party_sets.db') || errorMsg.includes('session'))) {
+    console.warn('[Launcher] ⚠️ Ignored non-fatal EBUSY file lock during session cleanup.');
+    return;
+  }
+
   writeDisconnectStatus(`Unhandled rejection: ${errorMsg}`);
   process.exit(1);
 });

@@ -14,7 +14,10 @@ function isRetryableError(err) {
     message.includes('econnrefused') ||
     message.includes('econnreset') ||
     message.includes('etimedout') ||
-    message.includes('network')
+    message.includes('network') ||
+    message.includes('429') ||
+    message.includes('quota') ||
+    message.includes('too many requests')
   ) {
     return true;
   }
@@ -31,7 +34,7 @@ async function withRetry(fn, options = {}) {
   const {
     maxRetries = 3,
     baseDelayMs = 1000,
-    maxDelayMs = 30000,
+    maxDelayMs = 60000, // Increase max delay limit to 60s
     jitterFactor = 0.1,
     onRetry = null,
   } = options;
@@ -48,7 +51,15 @@ async function withRetry(fn, options = {}) {
         throw err;
       }
 
-      const exponentialDelay = baseDelayMs * Math.pow(2, attempt - 1);
+      // Check if it's a rate limit error to apply aggressive backoff
+      const lowerMsg = (err.message || '').toLowerCase();
+      const isRateLimit = err.status === 429 || err.statusCode === 429 || 
+                          lowerMsg.includes('429') || lowerMsg.includes('quota') || 
+                          lowerMsg.includes('too many requests');
+
+      const currentBaseDelay = isRateLimit ? Math.max(baseDelayMs, 15000) : baseDelayMs;
+
+      const exponentialDelay = currentBaseDelay * Math.pow(2, attempt - 1);
       const jitter = exponentialDelay * jitterFactor * Math.random();
       const delay = Math.min(exponentialDelay + jitter, maxDelayMs);
 

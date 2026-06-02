@@ -165,6 +165,18 @@ class WhatsAppListener extends BaseListener {
     this.callbacks = new Map();
     this.connMgr   = null;
 
+    // Wrap authStrategy.logout to handle EBUSY / file locks on Windows gracefully
+    if (this.client.authStrategy && typeof this.client.authStrategy.logout === 'function') {
+      const originalLogout = this.client.authStrategy.logout.bind(this.client.authStrategy);
+      this.client.authStrategy.logout = async () => {
+        try {
+          return await originalLogout();
+        } catch (err) {
+          console.warn(`[WhatsApp WARN] [Logout] Ignored session folder cleanup error (likely due to file lock on Windows):`, err.message);
+        }
+      };
+    }
+
     this.logger.info('SYSTEM', 'Listener constructed', {
       sessionId:       this.sessionId,
       sourceMode:      this.sourceMode,
@@ -322,11 +334,11 @@ class WhatsAppListener extends BaseListener {
   }
 
   /** @returns {Promise<boolean>} */
-  async _shouldProcess(msg) {
+  async _shouldProcess(msg, skipDedup = false) {
     const msgId = msg.id?._serialized;
 
     // Dedup (O(1))
-    if (msgId && this._processedIds.has(msgId)) return false;
+    if (!skipDedup && msgId && this._processedIds.has(msgId)) return false;
 
     // Source gate — uses granular origin classification
     if (!this._isSourceAllowed(msg)) return false;
@@ -520,7 +532,21 @@ class WhatsAppListener extends BaseListener {
    */
   async _handleMessage(msg) {
     try {
+      // Ignore all outgoing messages (fromMe) to prevent infinite loops from our own notification alerts
+      if (msg && msg.fromMe) {
+        return;
+      }
+
       const msgId     = msg.id?._serialized;
+
+      // ── Synchronous deduplication to prevent async race conditions ───────
+      if (msgId) {
+        if (this._processedIds.has(msgId)) {
+          return;
+        }
+        this._markProcessed(msgId);
+      }
+
       const isChannel = this._isChannelMessage(msg);
       const msgSource = isChannel ? 'channel' : 'chat';
 
@@ -531,14 +557,11 @@ class WhatsAppListener extends BaseListener {
       });
 
       // ── Gate ────────────────────────────────────────────────────────────
-      const shouldProcess = await this._shouldProcess(msg);
+      const shouldProcess = await this._shouldProcess(msg, true);
       if (!shouldProcess) {
-        this.logger.debug('MESSAGE', 'Filtered (mode/whitelist/dedup)', { messageId: msgId });
+        this.logger.debug('MESSAGE', 'Filtered (mode/whitelist)', { messageId: msgId });
         return;
       }
-
-      // Mark processed BEFORE any await to close the dedup race window
-      this._markProcessed(msgId);
 
       // ── URL extraction ───────────────────────────────────────────────────
       const body = msg.body;

@@ -5,52 +5,60 @@ const { config } = require('../../config');
 const { SCHOLARSHIP_RESPONSE_SCHEMA } = require('./schema');
 
 function buildScholarshipPrompt(text, applicantProfile, messageText) {
-  let prompt = `
-You are an advanced academic scoring engine for scholarship evaluation.
-Evaluate raw web content against the applicant profile and generate a score from 0-100.
+  return `
+You are Noria's production-grade multi-objective evaluation engine for global postgraduate funding opportunities.
+Analyze the provided web content and build a strict JSON response conforming to the schema.
 
 ════════════════════════════════════════════
-APPLICANT PROFILE
+APPLICANT TARGET PROFILE
 ════════════════════════════════════════════
 Name           : ${applicantProfile.name}
-Nationality    : ${applicantProfile.nationality} (Hard constraint)
-Academic tier  : ${applicantProfile.degreeTier}
-Target fields  : ${applicantProfile.targetFields}
-Research focus : ${applicantProfile.researchFocus}
+Nationality    : ${applicantProfile.nationality} [CRITICAL HARD FILTER]
+Academic Tier  : ${applicantProfile.degreeTier}
+Target Fields  : ${applicantProfile.targetFields}
+Research Focus : ${applicantProfile.researchFocus}
 
 ════════════════════════════════════════════
-SCORING CRITERIA (0-100 PTS)
+SCORING MATRIX & WEIGHT DISTRIBUTION (0-100 TOTAL)
 ════════════════════════════════════════════
-+30 pts : Fully funded (tuition + living stipend). Partial: +10.
-+20 pts : MS/MSc/Postgraduate or combined MS/PhD. PhD-only: +15 if Bachelor entry, +10 if single-track.
-+20 pts : Software Engineering, Computer Science, or AI specializations.
-+15 pts : Block account constraints don't apply or waived.
-+10 pts : Program verified as English-taught.
-+5 pts  : Post-study job-seeker visa available.
+1. CORE FIELD ALIGNMENT (Max 25 pts)
+   * Full +25 pts: Software Engineering, Computer Science, AI, Distributed Computing, or Advanced Systems.
+   * Partial +10 pts: Interdisciplinary data analytics or general management information systems.
 
-CRITICAL PENALTIES:
-- Excludes ${applicantProfile.nationality} citizens → force score to 0
-- Exclusively Bachelor/undergraduate only → force score to 0
-- If the degree program's academic discipline is fundamentally unrelated to the applicant's target fields (${applicantProfile.targetFields}), immediately force the total match_score to 0. Do not allow funding, location, or language metrics to compensate for an incompatible degree discipline (e.g., Global Affairs, Arts, Humanities).
-`;
+2. FINANCIAL TIER (Max 25 pts)
+   * Full +25 pts: Fully Funded (Tuition 100% covered + monthly living stipend).
+   * Partial +10 pts: Tuition waiver only or stipend only.
 
-  if (messageText) {
-    prompt += `
-════════════════════════════════════════════
-WHATSAPP MESSAGE CONTEXT
-════════════════════════════════════════════
-${messageText}
-`;
-  }
+3. PROGRAM ELEVATION (Max 20 pts)
+   * Full +20 pts: MS / M.Sc. / Postgraduate degrees or combined MS/PhD tracks.
+   * Partial +10 pts: Single-track PhD programs.
 
-  prompt += `
+4. LOGISTICAL HURDLES (Max 15 pts) [Calculated Risk Layer]
+   * Full +15 pts: Block account constraints are not applicable, waived by the grant, or not required.
+   * Partial +5 pts: Block account required but offset by high post-study visa length.
+
+5. ACADEMIC COMPATIBILITY (Max 10 pts)
+   * Full +10 pts: Program format is verified as Research/Thesis-based.
+   * Partial +5 pts: Program is purely Coursework-based.
+
+6. CAREER RUNWAY & LOGISTICS (Max 5 pts)
+   * Full +5 pts: Host country allows a post-study job-seeker visa (PSW) AND verified as English-taught.
+
 ════════════════════════════════════════════
-PAGE CONTENT
+CRITICAL FILTER TERMINATION (FORCE MATCH_SCORE TO 0)
+════════════════════════════════════════════
+If any of these conditions are met, IMMEDIATELY set match_score to 0:
+- Excludes citizens of ${applicantProfile.nationality}.
+- The opportunity is strictly an undergraduate, Bachelor's, or school-level application.
+- The academic field is fundamentally unrelated to ${applicantProfile.targetFields} (e.g., Public Policy, Global Affairs, Arts, Business Administration, Humanities). Core technology/software must be the primary focus.
+
+${messageText ? `\nContext from incoming alert:\n${messageText}\n` : ''}
+
+════════════════════════════════════════════
+TARGET WEB INTERNET MATERIAL TO ANALYZE
 ════════════════════════════════════════════
 ${text}
 `;
-
-  return prompt.trim();
 }
 
 class ScholarshipAnalyzer extends BaseAnalyzer {
@@ -69,11 +77,11 @@ class ScholarshipAnalyzer extends BaseAnalyzer {
     }
 
     const applicantProfile = {
-      name: config.get('APPLICANT_NAME'),
-      nationality: config.get('APPLICANT_NATIONALITY'),
-      degreeTier: config.get('APPLICANT_DEGREE_TIER'),
-      targetFields: config.get('APPLICANT_TARGET_FIELDS'),
-      researchFocus: config.get('APPLICANT_RESEARCH_FOCUS'),
+      name: config.get('APPLICANT_NAME') || 'Ahmad Hassan',
+      nationality: config.get('APPLICANT_NATIONALITY') || 'Pakistani',
+      degreeTier: config.get('APPLICANT_DEGREE_TIER') || 'Master',
+      targetFields: config.get('APPLICANT_TARGET_FIELDS') || 'Software Engineering, Computer Science, AI, Distributed Computing',
+      researchFocus: config.get('APPLICANT_RESEARCH_FOCUS') || 'Federated Learning, on-device AI, distributed computation systems',
     };
 
     const prompt = buildScholarshipPrompt(content, applicantProfile, context.messageText);

@@ -1,49 +1,36 @@
 'use strict';
 
 const SCHOLARSHIP_CRITERIA = {
+  field_alignment: {
+    points: 25,
+    description: 'Software Engineering, Computer Science, AI, Distributed Computing, or Advanced Systems.'
+  },
   funding_tier: {
-    points: 30,
-    description: 'Fully funded (tuition + living stipend). Partial funding: +10.',
+    points: 25,
+    description: 'Fully funded (tuition 100% covered + monthly living stipend).'
   },
   program_flexibility: {
     points: 20,
-    description:
-      'MS/MSc/Postgraduate or MS/PhD combined. PhD-only: +15 if accepts Bachelor entry, +10 if single-track.',
-  },
-  field_alignment: {
-    points: 20,
-    description: 'Software Engineering, Computer Science, AI specializations.',
+    description: 'MS/MSc/Postgraduate or combined MS/PhD tracks.'
   },
   financial_logistics: {
     points: 15,
-    description: 'Block account constraints waived or not applicable.',
+    description: 'Block account constraints waived, not required, or not applicable.'
   },
-  language_barriers: {
+  academic_compatibility: {
     points: 10,
-    description: 'Program verified as English-taught.',
+    description: 'Research/Thesis-based program layouts.'
   },
   career_runway: {
     points: 5,
-    description: 'Country allows post-study job-seeker visa.',
-  },
+    description: 'Host country provides post-study work visa clearance and English medium verification.'
+  }
 };
 
 const SCHOLARSHIP_PENALTIES = [
-  {
-    deduction: 'match_score forced to 0',
-    condition: 'Applicant nationality excluded from eligibility',
-  },
-  {
-    deduction: 'match_score forced to 0',
-    condition: 'Program is exclusively undergraduate/Bachelor degree',
-  },
-  {
-    deduction: 'match_score forced to 0',
-    condition: "Degree program's academic discipline is fundamentally unrelated to the applicant's target fields",
-  },
+  { deduction: 'match_score forced to 0', condition: 'Applicant nationality excluded from eligibility pool' },
+  { deduction: 'match_score forced to 0', condition: 'Program is exclusively an undergraduate/Bachelor degree tier' },
+  { deduction: 'match_score forced to 0', condition: 'Degree discipline is unaligned with target computing engineering tracks' }
 ];
 
-module.exports = {
-  SCHOLARSHIP_CRITERIA,
-  SCHOLARSHIP_PENALTIES,
-};
+module.exports = { SCHOLARSHIP_CRITERIA, SCHOLARSHIP_PENALTIES };

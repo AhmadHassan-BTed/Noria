@@ -179,7 +179,19 @@ class PipelineOrchestrator {
 
       try {
         // A. Caching Check (Deduplication)
+        const path = require('path');
+        const clearCacheFlag = path.join(__dirname, '..', '..', 'data', `clear-cache-${instanceId}.flag`);
         const { urlCache } = require('../utils/cache');
+        if (fs.existsSync(clearCacheFlag)) {
+          console.log(`[Pipeline:${instanceId}] Clear cache flag detected. Clearing URL cache...`);
+          urlCache.clear();
+          try {
+            fs.unlinkSync(clearCacheFlag);
+          } catch (err) {
+            console.warn(`[Pipeline:${instanceId}] Failed to delete clear-cache flag: ${err.message}`);
+          }
+        }
+
         if (urlCache.has(url)) {
           console.log(`[Pipeline:${instanceId}] URL already processed (Cache hit): ${url}`);
           return;

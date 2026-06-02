@@ -368,7 +368,12 @@ def render_device_linker_fragment(p_id, p_info, profiles):
         
         # Stop any existing scans on this device to release file locks on dst_dir
         for name, info in list(running_instances.items()):
-            if info.get("profileId") == p_id and info.get("phone") == linked_phone and name != linker_sess_id:
+            is_matching_device = (
+                info.get("phone") == linked_phone or
+                info.get("devicePhone") == linked_phone or
+                info.get("sessionId") == f"session_{p_id}_dev_{linked_phone}"
+            )
+            if info.get("profileId") == p_id and is_matching_device and name != linker_sess_id:
                 try:
                     if os.name == 'nt':
                         subprocess.run(['taskkill', '/F', '/T', '/PID', str(info['pid'])], capture_output=True)
@@ -858,14 +863,28 @@ if editing_profile is None:
         for p_id, p_info in sorted(profiles.items()):
             with st.container(border=True):
                 # Profile Card Header & Quick Actions
-                card_header_cols = st.columns([4, 1, 1])
+                card_header_cols = st.columns([3, 1, 1, 1])
                 with card_header_cols[0]:
                     st.markdown(f"### 👤 {p_info['name']}")
                 with card_header_cols[1]:
+                    if st.button("🧹 Clear Cache", key=f"clear_cache_profile_{p_id}", use_container_width=True):
+                        profile_scans = [
+                            name for name, info in running_instances.items()
+                            if info.get("profileId") == p_id
+                        ]
+                        for scan_name in profile_scans:
+                            flag_path = f"data/clear-cache-{scan_name}.flag"
+                            try:
+                                with open(flag_path, "w") as f:
+                                    f.write("clear")
+                            except Exception:
+                                pass
+                        st.toast(f"Cache clear requested for {len(profile_scans)} active scan(s).")
+                with card_header_cols[2]:
                     if st.button("✏️ Edit", key=f"edit_btn_{p_id}", use_container_width=True):
                         st.session_state.editing_profile = p_id
                         st.rerun()
-                with card_header_cols[2]:
+                with card_header_cols[3]:
                     if st.button("🗑️ Delete", key=f"delete_btn_{p_id}", use_container_width=True):
                         if p_id == "default":
                             st.error("The Default Profile cannot be deleted.")
@@ -1004,7 +1023,14 @@ if editing_profile is None:
                                             st.warning("⚠️ Offline")
                                         
                                     # Scans running on this device
-                                    device_scans = [name for name, info in running_instances.items() if info.get("profileId") == p_id and info.get("phone") == dev_phone]
+                                    device_scans = [
+                                        name for name, info in running_instances.items()
+                                        if info.get("profileId") == p_id and (
+                                            info.get("devicePhone") == dev_phone or 
+                                            info.get("sessionId") == f"session_{p_id}_dev_{dev_phone}" or
+                                            (not info.get("devicePhone") and info.get("phone") == dev_phone)
+                                        )
+                                    ]
                                     
                                     # Dynamic Channel, Group, and Chat Sync from active scans
                                     channels_list = dev_info.get("channels", [])
@@ -1176,36 +1202,48 @@ if editing_profile is None:
                                     
                                     st.write("---")
                                     
-                                    if st.button("Unlink Device", key=f"unlink_{p_id}_{dev_phone}", use_container_width=True):
-                                        for scan_name in device_scans:
+                                    col_cache, col_unlink = st.columns([1, 1])
+                                    with col_cache:
+                                        if st.button("🧹 Clear Cache", key=f"clear_cache_dev_{p_id}_{dev_phone}", use_container_width=True):
+                                            for scan_name in device_scans:
+                                                flag_path = f"data/clear-cache-{scan_name}.flag"
+                                                try:
+                                                    with open(flag_path, "w") as f:
+                                                        f.write("clear")
+                                                except Exception:
+                                                    pass
+                                            st.toast(f"Cache clear requested for active scan(s) on +{dev_phone}.")
+                                    with col_unlink:
+                                        if st.button("Unlink Device", key=f"unlink_{p_id}_{dev_phone}", use_container_width=True):
+                                            for scan_name in device_scans:
+                                                try:
+                                                    if os.name == 'nt':
+                                                        subprocess.run(['taskkill', '/F', '/T', '/PID', str(running_instances[scan_name]['pid'])], capture_output=True)
+                                                    else:
+                                                        os.kill(running_instances[scan_name]['pid'], signal.SIGTERM)
+                                                    del running_instances[scan_name]
+                                                except Exception:
+                                                    pass
+                                            save_running_processes(running_instances)
+                                            
                                             try:
-                                                if os.name == 'nt':
-                                                    subprocess.run(['taskkill', '/F', '/T', '/PID', str(running_instances[scan_name]['pid'])], capture_output=True)
-                                                else:
-                                                    os.kill(running_instances[scan_name]['pid'], signal.SIGTERM)
-                                                del running_instances[scan_name]
+                                                import shutil
+                                                shutil.rmtree(f".wwebjs_auth/session-session_{p_id}_dev_{dev_phone}", ignore_errors=True)
                                             except Exception:
                                                 pass
-                                        save_running_processes(running_instances)
-                                        
-                                        try:
-                                            import shutil
-                                            shutil.rmtree(f".wwebjs_auth/session-session_{p_id}_dev_{dev_phone}", ignore_errors=True)
-                                        except Exception:
-                                            pass
-                                        
-                                        # Also clear status and logs on unlink
-                                        try:
-                                            os.remove(f"data/status-{device_sess_id}.json")
-                                        except FileNotFoundError:
-                                            pass
-                                        clear_session_logs(device_sess_id)
                                             
-                                        del p_info["devices"][dev_phone]
-                                        save_profiles(profiles)
-                                        st.toast("Device unlinked successfully.")
-                                        time.sleep(1)
-                                        st.rerun()
+                                            # Also clear status and logs on unlink
+                                            try:
+                                                os.remove(f"data/status-{device_sess_id}.json")
+                                            except FileNotFoundError:
+                                                pass
+                                            clear_session_logs(device_sess_id)
+                                                
+                                            del p_info["devices"][dev_phone]
+                                            save_profiles(profiles)
+                                            st.toast("Device unlinked successfully.")
+                                            time.sleep(1)
+                                            st.rerun()
 
                 render_linked_devices_fragment(p_id, p_info, profiles, running_instances)
                 st.write("---")
@@ -1290,7 +1328,10 @@ if editing_profile is None:
                             matching_instances = [name for name, info in running_instances.items() if info.get("profileId") == p_id and info.get("template") == scan_cfg["template"] and (name == active_focus or name.startswith(active_focus + "_"))]
                             
                             if matching_instances:
-                                running_phones = [running_instances[n]['phone'] for n in matching_instances]
+                                running_phones = [
+                                    running_instances[n].get('devicePhone') or running_instances[n].get('phone') or 'Unknown'
+                                    for n in matching_instances
+                                ]
                                 st.success(f"This scan is currently active on device(s): **{', '.join(running_phones)}**")
                             else:
                                 st.info("This scan pill is currently unassigned (dormant). Select a linked device below to activate it.")
@@ -1398,6 +1439,7 @@ if editing_profile is None:
                                                 "chats": scan_cfg.get("chats", ""),
                                                 "sourceMode": scan_cfg.get("sourceMode", "individual,groups,channels"),
                                                 "phone": notification_target,
+                                                "devicePhone": selected_device_phone,
                                                 "startedAt": time.strftime("%Y-%m-%d %H:%M:%S")
                                             }
                                             save_running_processes(running_instances)

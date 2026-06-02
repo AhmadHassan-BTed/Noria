@@ -6,6 +6,36 @@ const { withRetry } = require('../../utils/retry');
 const { validateAnalyzerResponse } = require('../../utils/validators');
 const { metrics } = require('../../utils/metrics');
 
+class RequestQueue {
+  constructor(minDelayMs = 3000) {
+    this.minDelayMs = minDelayMs;
+    this.lastRequestTime = 0;
+    this.queue = Promise.resolve();
+  }
+
+  async add(fn) {
+    return new Promise((resolve, reject) => {
+      this.queue = this.queue.then(async () => {
+        const now = Date.now();
+        const elapsed = now - this.lastRequestTime;
+        const delay = Math.max(0, this.minDelayMs - elapsed);
+        if (delay > 0) {
+          await new Promise((r) => setTimeout(r, delay));
+        }
+        this.lastRequestTime = Date.now();
+        try {
+          const res = await fn();
+          resolve(res);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+  }
+}
+
+const geminiQueue = new RequestQueue(3000);
+
 class GeminiAnalyzer extends BaseAnalyzer {
   constructor(config = {}) {
     super(config);
@@ -50,15 +80,17 @@ class GeminiAnalyzer extends BaseAnalyzer {
     try {
       result = await withRetry(
         async () => {
-          const res = await model.generateContent(analysisConfig.prompt);
+          const res = await geminiQueue.add(async () => {
+            return await model.generateContent(analysisConfig.prompt);
+          });
           metrics.recordGeminiRequest();
           return res;
         },
         {
-          maxRetries: 3,
+          maxRetries: 5,
           baseDelayMs: 1000,
           onRetry: ({ attempt, delay, error }) => {
-            console.warn(`[Gemini] Retry ${attempt}/3 after ${delay}ms: ${error}`);
+            console.warn(`[Gemini] Retry ${attempt}/5 after ${delay}ms: ${error}`);
             metrics.recordAnalyzerRetry();
           },
         }
