@@ -1013,7 +1013,10 @@ if editing_profile is None:
                                 )
                             else:
                                 channel_input_mode = "Monitor Custom Channels"
-                                st.info("No paired devices found. Enter custom channels manually below.")
+                                if devices:
+                                    st.info("No verified subscribed channels found on paired devices. Enter custom channels manually below.")
+                                else:
+                                    st.info("No paired devices found. Enter custom channels manually below.")
                                 
                             if channel_input_mode == "Verified Selection":
                                 selected_channels = st.multiselect(

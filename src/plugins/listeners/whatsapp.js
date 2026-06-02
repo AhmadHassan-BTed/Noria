@@ -449,36 +449,33 @@ class WhatsAppListener extends BaseListener {
           // Retrieve connected phone number
           const phone = this.client.info?.wid?.user || '';
 
-          // Write initial CONNECTED state IMMEDIATELY so the frontend is unblocked!
+          // Fetch chats with a 6-second timeout to avoid deadlocks
+          console.log('[WhatsApp] ⏳  Fetching subscribed channels with timeout...');
+          let allChats = [];
+          try {
+            const fetchPromise = this.client.getChats();
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Chats sync timeout')), 6000)
+            );
+            allChats = await Promise.race([fetchPromise, timeoutPromise]);
+          } catch (err) {
+            console.warn('[WhatsApp] Subscribed channels fetch timed out or failed:', err.message);
+          }
+
+          const channels = [];
+          for (const chat of allChats) {
+            if (chat.id?._serialized?.endsWith('@newsletter')) {
+              channels.push(chat.name?.trim() || chat.id._serialized);
+            }
+          }
+          console.log(`[WhatsApp] 📡  Subscribed channel(s) resolved: ${channels.length}`);
+
+          // Now write the single CONNECTED status file containing the phone and resolved channels
           fs.writeFileSync(`data/status-${this.sessionId}.json`, JSON.stringify({
             status: 'CONNECTED',
             phone: phone,
-            channels: []
+            channels: channels
           }));
-
-          // Fetch chats/channels asynchronously without blocking the ready event!
-          (async () => {
-            try {
-              console.log('[WhatsApp] ⏳  Fetching subscribed channels in background...');
-              const allChats = await this.client.getChats().catch(() => []);
-              const channels = [];
-              for (const chat of allChats) {
-                if (chat.id?._serialized?.endsWith('@newsletter')) {
-                  channels.push(chat.name?.trim() || chat.id._serialized);
-                }
-              }
-              console.log(`[WhatsApp] 📡  Fetched ${channels.length} subscribed channel(s) in background.`);
-              
-              // Rewrite status file with resolved channels
-              fs.writeFileSync(`data/status-${this.sessionId}.json`, JSON.stringify({
-                status: 'CONNECTED',
-                phone: phone,
-                channels: channels
-              }));
-            } catch (err) {
-              console.error('[WhatsApp] Background getChats failed:', err.message);
-            }
-          })();
 
         } catch (err) {
           console.error('[WhatsApp] Failed to manage status files on ready:', err.message);
