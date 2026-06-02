@@ -1,39 +1,68 @@
 'use strict';
 
 class ConnectionManager {
-  constructor(client) {
-    this.client = client;
-    this.isAlive = true;
-    this.startHealthCheck();
+  constructor() {
+    this.sessions = new Map();
   }
 
-  startHealthCheck() {
-    this.interval = setInterval(async () => {
+  startHealthCheck(sessionId) {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return;
+    }
+
+    session.interval = setInterval(async () => {
       try {
-        const state = await this.client.getState();
-        this.isAlive = state === 'CONNECTED';
+        const state = await session.client.getState();
+        session.isAlive = state === 'CONNECTED';
       } catch (err) {
-        this.isAlive = false;
-        console.error('[ConnectionManager] Health check failed:', err.message);
+        session.isAlive = false;
+        console.error(`[ConnectionManager] Health check failed for session ${sessionId}:`, err.message);
       }
     }, 60000);
   }
 
-  stop() {
-    if (this.interval) {
-      clearInterval(this.interval);
+  stopSession(sessionId) {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      if (session.interval) {
+        clearInterval(session.interval);
+      }
+      this.sessions.delete(sessionId);
     }
   }
 
-  getClient() {
-    return this.client;
+  stop() {
+    for (const sessionId of this.sessions.keys()) {
+      this.stopSession(sessionId);
+    }
+  }
+
+  registerClient(sessionId, client) {
+    this.stopSession(sessionId);
+
+    this.sessions.set(sessionId, {
+      client,
+      isAlive: true,
+      interval: null,
+    });
+
+    this.startHealthCheck(sessionId);
+  }
+
+  getClient(sessionId = 'default') {
+    return this.sessions.get(sessionId)?.client || null;
+  }
+
+  isAlive(sessionId = 'default') {
+    return this.sessions.get(sessionId)?.isAlive || false;
   }
 }
 
-let instance = null;
+const instance = new ConnectionManager();
 
-function initConnectionManager(client) {
-  instance = new ConnectionManager(client);
+function initConnectionManager(client, sessionId = 'default') {
+  instance.registerClient(sessionId, client);
   return instance;
 }
 
@@ -41,4 +70,4 @@ function getConnectionManager() {
   return instance;
 }
 
-module.exports = { initConnectionManager, getConnectionManager };
+module.exports = { initConnectionManager, getConnectionManager, ConnectionManager };

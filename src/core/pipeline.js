@@ -14,7 +14,13 @@ class PipelineOrchestrator {
 
   loadPipelineFromYAML(filePath) {
     try {
-      const fileContent = fs.readFileSync(filePath, 'utf8');
+      let fileContent = fs.readFileSync(filePath, 'utf8');
+
+      // Interpolate environment variables of the form ${VAR_NAME}
+      fileContent = fileContent.replace(/\$\{([A-Za-z0-9_]+)\}/g, (match, p1) => {
+        return process.env[p1] !== undefined ? process.env[p1] : match;
+      });
+
       const config = yaml.load(fileContent);
 
       if (!config.name) {
@@ -47,13 +53,13 @@ class PipelineOrchestrator {
     return config;
   }
 
-  async initializePipeline(pipelineName) {
+  async initializePipeline(pipelineName, customConfig = {}, instanceId = pipelineName) {
     const pipelineConfig = this.pipelines.get(pipelineName);
     if (!pipelineConfig) {
       throw new Error(`Pipeline not found: ${pipelineName}`);
     }
 
-    console.log(`[Pipeline] Initializing: ${pipelineName}`);
+    console.log(`[Pipeline] Initializing: ${instanceId} (Template: ${pipelineName})`);
 
     const services = {};
     const providerName = pipelineConfig.provider;
@@ -64,10 +70,14 @@ class PipelineOrchestrator {
 
     if (stages.listen) {
       const pluginName = stages.listen.plugin || stages.listen;
+      const listenConfig = {
+        ...(stages.listen.config || {}),
+        ...(customConfig.listen || {}),
+      };
       services.listener = registry.instantiatePlugin(
         'listener',
         pluginName,
-        stages.listen.config || {}
+        listenConfig
       );
       await services.listener.initialize();
     }
@@ -87,10 +97,14 @@ class PipelineOrchestrator {
     if (stages.analyze) {
       const analyzerConfig = stages.analyze;
       const analyzerName = analyzerConfig.plugin || analyzerConfig;
+      const analyzeConfig = {
+        ...(analyzerConfig.config || {}),
+        ...(customConfig.analyze || {}),
+      };
       services.analyzer = registry.instantiatePlugin(
         'analyzer',
         analyzerName,
-        analyzerConfig.config || {}
+        analyzeConfig
       );
       services.analyzer.setProvider(services.provider);
     }
@@ -98,34 +112,49 @@ class PipelineOrchestrator {
     if (stages.notify) {
       const notifierConfig = stages.notify;
       const notifierName = notifierConfig.plugin || notifierConfig;
+      const notifyConfig = {
+        ...(notifierConfig.config || {}),
+        ...(customConfig.notify || {}),
+      };
       services.notifier = registry.instantiatePlugin(
         'notifier',
         notifierName,
-        notifierConfig.config || {}
+        notifyConfig
       );
       services.notifier.setProvider(services.provider);
     }
 
-    this.activeServices.set(pipelineName, services);
-    console.log(`[Pipeline] Initialized: ${pipelineName}`);
+    this.activeServices.set(instanceId, services);
+    console.log(`[Pipeline] Initialized: ${instanceId}`);
     return services;
   }
 
-  wirePipelineEvents(pipelineName) {
+  wirePipelineEvents(pipelineName, instanceId = pipelineName) {
     const pipelineConfig = this.pipelines.get(pipelineName);
-    const services = this.activeServices.get(pipelineName);
+    const services = this.activeServices.get(instanceId);
 
     if (!pipelineConfig || !services) {
-      throw new Error(`Pipeline not ready: ${pipelineName}`);
+      throw new Error(`Pipeline not ready: ${instanceId}`);
     }
 
     const provider = pipelineConfig.provider;
 
     // 1. Listen stage triggers scraper:start
     if (services.listener) {
-      services.listener.on('link_extracted', (url) => {
+      services.listener.on('link_extracted', (payload) => {
+        // Backward/forward compatibility:
+        // - legacy: listener emits a bare string URL
+        // - current: listener emits { url: string, ... }
+        const url =
+          typeof payload === 'string'
+            ? payload
+            : payload && typeof payload.url === 'string'
+              ? payload.url
+              : undefined;
+
         this.broker.emit(EventTypes.SCRAPER.START, {
           pipelineName,
+          instanceId,
           provider,
           url,
         });
@@ -134,19 +163,22 @@ class PipelineOrchestrator {
 
     // 2. Handle scraper:start
     this.broker.on(EventTypes.SCRAPER.START, async (event) => {
-      // If the event is not for this pipeline, ignore
-      if (event.pipelineName && event.pipelineName !== pipelineName) {
+      // If the event is not for this instance, ignore
+      if (event.instanceId && event.instanceId !== instanceId) {
+        return;
+      }
+      if (!event.instanceId && event.pipelineName && event.pipelineName !== pipelineName) {
         return;
       }
 
       const { url } = event;
-      console.log(`[Pipeline:${pipelineName}] Starting scraper for URL: ${url}`);
+      console.log(`[Pipeline:${instanceId}] Starting scraper for URL: ${url}`);
 
       try {
         // A. Caching Check (Deduplication)
         const { urlCache } = require('../utils/cache');
         if (urlCache.has(url)) {
-          console.log(`[Pipeline:${pipelineName}] URL already processed (Cache hit): ${url}`);
+          console.log(`[Pipeline:${instanceId}] URL already processed (Cache hit): ${url}`);
           return;
         }
 
@@ -158,7 +190,7 @@ class PipelineOrchestrator {
           }
         } catch (primaryErr) {
           console.warn(
-            `[Pipeline:${pipelineName}] Primary scraper failed: ${primaryErr.message}. Trying fallback...`
+            `[Pipeline:${instanceId}] Primary scraper failed: ${primaryErr.message}. Trying fallback...`
           );
           if (services.fallbackScraper) {
             scrapedData = await services.fallbackScraper.scrape(url);
@@ -179,20 +211,21 @@ class PipelineOrchestrator {
         urlCache.set(url, true);
 
         // Emit SCRAPER.SUCCESS
-        this.broker.emit(EventTypes.SCRAPER.SUCCESS, { pipelineName, url });
+        this.broker.emit(EventTypes.SCRAPER.SUCCESS, { pipelineName, instanceId, url });
 
         // Trigger Analyzer stage
         this.broker.emit(EventTypes.ANALYZER.START, {
           pipelineName,
+          instanceId,
           provider,
           url,
           text: validatedPayload.text,
         });
       } catch (err) {
-        console.error(`[Pipeline:${pipelineName}] Scrape stage failed:`, err.message);
-        this.broker.emit(EventTypes.SCRAPER.FAILED, { pipelineName, url, error: err.message });
+        console.error(`[Pipeline:${instanceId}] Scrape stage failed:`, err.message);
+        this.broker.emit(EventTypes.SCRAPER.FAILED, { pipelineName, instanceId, url, error: err.message });
         this.broker.emit(EventTypes.SYSTEM.ERROR, {
-          source: `scraper:${pipelineName}`,
+          source: `scraper:${instanceId}`,
           url,
           message: err.message,
           stack: err.stack,
@@ -202,12 +235,15 @@ class PipelineOrchestrator {
 
     // 3. Handle analyzer:start
     this.broker.on(EventTypes.ANALYZER.START, async (event) => {
-      if (event.pipelineName && event.pipelineName !== pipelineName) {
+      if (event.instanceId && event.instanceId !== instanceId) {
+        return;
+      }
+      if (!event.instanceId && event.pipelineName && event.pipelineName !== pipelineName) {
         return;
       }
 
       const { url, text } = event;
-      console.log(`[Pipeline:${pipelineName}] Starting analyzer for URL: ${url}`);
+      console.log(`[Pipeline:${instanceId}] Starting analyzer for URL: ${url}`);
 
       try {
         if (!services.analyzer) {
@@ -221,12 +257,13 @@ class PipelineOrchestrator {
         validatedResponse.url = url;
 
         console.log(
-          `[Pipeline:${pipelineName}] Analysis match score: ${validatedResponse.match_score}`
+          `[Pipeline:${instanceId}] Analysis match score: ${validatedResponse.match_score}`
         );
 
         if (validatedResponse.match_score >= 50) {
           this.broker.emit(EventTypes.ANALYZER.MATCH_FOUND, {
             pipelineName,
+            instanceId,
             provider,
             url,
             result: validatedResponse,
@@ -234,16 +271,17 @@ class PipelineOrchestrator {
         } else {
           this.broker.emit(EventTypes.ANALYZER.NO_MATCH, {
             pipelineName,
+            instanceId,
             provider,
             url,
             result: validatedResponse,
           });
         }
       } catch (err) {
-        console.error(`[Pipeline:${pipelineName}] Analyze stage failed:`, err.message);
-        this.broker.emit(EventTypes.ANALYZER.FAILED, { pipelineName, url, error: err.message });
+        console.error(`[Pipeline:${instanceId}] Analyze stage failed:`, err.message);
+        this.broker.emit(EventTypes.ANALYZER.FAILED, { pipelineName, instanceId, url, error: err.message });
         this.broker.emit(EventTypes.SYSTEM.ERROR, {
-          source: `analyzer:${pipelineName}`,
+          source: `analyzer:${instanceId}`,
           url,
           message: err.message,
           stack: err.stack,
@@ -253,12 +291,15 @@ class PipelineOrchestrator {
 
     // 4. Handle analyzer:match_found
     this.broker.on(EventTypes.ANALYZER.MATCH_FOUND, async (event) => {
-      if (event.pipelineName && event.pipelineName !== pipelineName) {
+      if (event.instanceId && event.instanceId !== instanceId) {
+        return;
+      }
+      if (!event.instanceId && event.pipelineName && event.pipelineName !== pipelineName) {
         return;
       }
 
       const { url, result } = event;
-      console.log(`[Pipeline:${pipelineName}] Match found! Preparing notification...`);
+      console.log(`[Pipeline:${instanceId}] Match found! Preparing notification...`);
 
       try {
         if (!services.notifier) {
@@ -269,14 +310,14 @@ class PipelineOrchestrator {
         const message = services.notifier.format(result);
 
         // B. Send notification using the dynamic, configured notifier plugin instance
-        await services.notifier.send(pipelineConfig.stages.notify.config.phoneNumber, message);
+        await services.notifier.send(services.notifier.phoneNumber, message);
 
-        this.broker.emit(EventTypes.NOTIFIER.SEND, { pipelineName, url });
-        console.log(`[Pipeline:${pipelineName}] Notification sent successfully!`);
+        this.broker.emit(EventTypes.NOTIFIER.SEND, { pipelineName, instanceId, url });
+        console.log(`[Pipeline:${instanceId}] Notification sent successfully!`);
       } catch (err) {
-        console.error(`[Pipeline:${pipelineName}] Notify stage failed:`, err.message);
+        console.error(`[Pipeline:${instanceId}] Notify stage failed:`, err.message);
         this.broker.emit(EventTypes.SYSTEM.ERROR, {
-          source: `notifier:${pipelineName}`,
+          source: `notifier:${instanceId}`,
           url,
           message: err.message,
           stack: err.stack,
@@ -284,13 +325,13 @@ class PipelineOrchestrator {
       }
     });
 
-    console.log(`[Pipeline] Events wired: ${pipelineName}`);
+    console.log(`[Pipeline] Events wired: ${instanceId}`);
   }
 
-  getService(pipelineName, serviceName) {
-    const services = this.activeServices.get(pipelineName);
+  getService(instanceId, serviceName) {
+    const services = this.activeServices.get(instanceId);
     if (!services) {
-      throw new Error(`Pipeline not initialized: ${pipelineName}`);
+      throw new Error(`Pipeline not initialized: ${instanceId}`);
     }
 
     return services[serviceName];

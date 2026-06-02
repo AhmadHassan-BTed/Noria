@@ -142,6 +142,26 @@ describe('PipelineOrchestrator Core', () => {
       expect(services.notifier).toBe(mockNotifierInstance);
     });
 
+    test('should instantiate dynamic pipeline instance with merged configurations', async () => {
+      const customConfig = {
+        listen: { sessionId: 'user_xyz', allowedChannels: ['Dynamic Channel'] },
+        notify: { phoneNumber: '+923334445555' },
+      };
+
+      const services = await orchestrator.initializePipeline('test-pipeline', customConfig, 'dynamic-instance-1');
+
+      expect(registry.instantiatePlugin).toHaveBeenCalledWith('listener', 'whatsapp-listener', {
+        sessionId: 'user_xyz',
+        allowedChannels: ['Dynamic Channel'],
+      });
+      expect(registry.instantiatePlugin).toHaveBeenCalledWith('notifier', 'whatsapp-notifier', {
+        phoneNumber: '+923334445555',
+      });
+
+      expect(orchestrator.activeServices.has('dynamic-instance-1')).toBe(true);
+      expect(orchestrator.activeServices.has('test-pipeline')).toBe(false);
+    });
+
     test('should throw error if initializing non-existent pipeline', async () => {
       await expect(orchestrator.initializePipeline('unknown')).rejects.toThrow('Pipeline not found: unknown');
     });
@@ -195,6 +215,7 @@ describe('PipelineOrchestrator Core', () => {
 
       expect(broker.emit).toHaveBeenCalledWith('scraper:start', {
         pipelineName: 'test-pipeline',
+        instanceId: 'test-pipeline',
         provider: 'scholarships',
         url: 'https://target.url',
       });
@@ -228,10 +249,12 @@ describe('PipelineOrchestrator Core', () => {
       expect(mockScraperInstance.scrape).toHaveBeenCalledWith('https://opportunity.com/1');
       expect(broker.emit).toHaveBeenCalledWith('scraper:success', {
         pipelineName: 'test-pipeline',
+        instanceId: 'test-pipeline',
         url: 'https://opportunity.com/1',
       });
       expect(broker.emit).toHaveBeenCalledWith('analyzer:start', {
         pipelineName: 'test-pipeline',
+        instanceId: 'test-pipeline',
         provider: 'scholarships',
         url: 'https://opportunity.com/1',
         text: longText.trim(),
@@ -265,6 +288,7 @@ describe('PipelineOrchestrator Core', () => {
       });
       expect(broker.emit).toHaveBeenCalledWith('analyzer:match_found', {
         pipelineName: 'test-pipeline',
+        instanceId: 'test-pipeline',
         provider: 'scholarships',
         url: 'https://opportunity.com/2',
         result: {
@@ -306,6 +330,7 @@ describe('PipelineOrchestrator Core', () => {
       );
       expect(broker.emit).toHaveBeenCalledWith('notifier:send', {
         pipelineName: 'test-pipeline',
+        instanceId: 'test-pipeline',
         url: 'https://opportunity.com/3',
       });
     });

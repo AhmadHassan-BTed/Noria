@@ -2,10 +2,12 @@
 
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+const fs = require('fs');
 const { BaseListener } = require('../base');
 const { validateUrl } = require('../../utils/validators');
-const { withRetry } = require('../../utils/retry');
 const { metrics } = require('../../utils/metrics');
+const { withRetry } = require('../../utils/retry');
+
 const { initConnectionManager } = require('./connection-manager');
 
 // =============================================================================
@@ -94,6 +96,7 @@ class WhatsAppListener extends BaseListener {
       .filter(Boolean);
 
     // ── Internal state ────────────────────────────────────────────────────
+    this.sessionId = config.sessionId ?? 'default';
 
     /**
      * Channel name cache — avoids a getChat() call on every message.
@@ -111,7 +114,7 @@ class WhatsAppListener extends BaseListener {
 
     // ── whatsapp-web.js client ────────────────────────────────────────────
     this.client = new Client({
-      authStrategy: new LocalAuth({ dataPath: '.wwebjs_auth' }),
+      authStrategy: new LocalAuth({ dataPath: `.wwebjs_auth/session-${this.sessionId}` }),
       puppeteer: { args: ['--no-sandbox', '--disable-setuid-sandbox'] },
     });
 
@@ -153,8 +156,12 @@ class WhatsAppListener extends BaseListener {
     }
 
     // ── Source mode gate ──────────────────────────────────────────────────
-    if (isChannel  && this.sourceMode === SOURCE_MODE.CHATS)    return false;
-    if (!isChannel && this.sourceMode === SOURCE_MODE.CHANNELS) return false;
+    if (isChannel && this.sourceMode === SOURCE_MODE.CHATS) {
+      return false;
+    }
+    if (!isChannel && this.sourceMode === SOURCE_MODE.CHANNELS) {
+      return false;
+    }
 
     // ── Channel whitelist (only async work, only when needed) ─────────────
     if (isChannel && this.allowedChannels.length > 0) {
@@ -178,7 +185,9 @@ class WhatsAppListener extends BaseListener {
     const channelId = msg.from;
 
     // Fast path: exact channel ID match — no network call needed
-    if (this.allowedChannels.includes(channelId)) return true;
+    if (this.allowedChannels.includes(channelId)) {
+      return true;
+    }
 
     // Slow path: resolve the display name and compare case-insensitively
     try {
@@ -235,7 +244,9 @@ class WhatsAppListener extends BaseListener {
    * @param {string|undefined} msgId
    */
   _markProcessed(msgId) {
-    if (!msgId) return;
+    if (!msgId) {
+      return;
+    }
 
     this._processedIds.add(msgId);
 
@@ -288,7 +299,7 @@ class WhatsAppListener extends BaseListener {
     } catch (err) {
       // Non-fatal — lazy resolution handles it message-by-message
       console.warn(
-        `[WhatsApp] ⚠️  Channel pre-fetch failed — will resolve lazily. ` +
+        '[WhatsApp] ⚠️  Channel pre-fetch failed — will resolve lazily. ' +
         `Reason: ${err.message}`
       );
     }
@@ -325,7 +336,9 @@ class WhatsAppListener extends BaseListener {
     try {
       // ── Routing + dedup ─────────────────────────────────────────────────
       const shouldProcess = await this._shouldProcess(msg);
-      if (!shouldProcess) return;
+      if (!shouldProcess) {
+        return;
+      }
 
       const msgId     = msg.id?._serialized;
       const isChannel = this._isChannelMessage(msg);
@@ -336,10 +349,14 @@ class WhatsAppListener extends BaseListener {
 
       // ── URL extraction ───────────────────────────────────────────────────
       const body = msg.body;
-      if (!body || typeof body !== 'string') return;
+      if (!body || typeof body !== 'string') {
+        return;
+      }
 
       const matches = body.match(URL_REGEX);
-      if (!matches) return;
+      if (!matches) {
+        return;
+      }
 
       const rawUrl = matches[0]; // One URL per message — keeps the pipeline atomic
 
@@ -404,6 +421,15 @@ class WhatsAppListener extends BaseListener {
       this.client.on('qr', (qr) => {
         console.log('[WhatsApp] 📲  Scan the QR code below to authenticate:');
         qrcode.generate(qr, { small: true });
+        try {
+          if (!fs.existsSync('data')) {
+            fs.mkdirSync('data');
+          }
+          fs.writeFileSync(`data/qr-${this.sessionId}.txt`, qr);
+          fs.writeFileSync(`data/status-${this.sessionId}.json`, JSON.stringify({ status: 'SCAN_QR' }));
+        } catch (err) {
+          console.error('[WhatsApp] Failed to write QR code/status file:', err.message);
+        }
       });
 
       // ── Ready ──────────────────────────────────────────────────────────
@@ -411,7 +437,38 @@ class WhatsAppListener extends BaseListener {
         console.log('[WhatsApp] ✅  Client ready.');
         console.log(`[WhatsApp] ⚙️   Source mode: ${this.sourceMode.toUpperCase()}`);
 
-        this.connMgr = initConnectionManager(this.client);
+        try {
+          if (!fs.existsSync('data')) {
+            fs.mkdirSync('data');
+          }
+          const qrPath = `data/qr-${this.sessionId}.txt`;
+          if (fs.existsSync(qrPath)) {
+            fs.unlinkSync(qrPath);
+          }
+
+          // Retrieve connected phone number
+          const phone = this.client.info?.wid?.user || '';
+
+          // Retrieve subscribed channels
+          const allChats = await this.client.getChats().catch(() => []);
+          const channels = [];
+          for (const chat of allChats) {
+            if (chat.id?._serialized?.endsWith('@newsletter')) {
+              channels.push(chat.name?.trim() || chat.id._serialized);
+            }
+          }
+
+          fs.writeFileSync(`data/status-${this.sessionId}.json`, JSON.stringify({
+            status: 'CONNECTED',
+            phone: phone,
+            channels: channels
+          }));
+        } catch (err) {
+          console.error('[WhatsApp] Failed to manage status files on ready:', err.message);
+          fs.writeFileSync(`data/status-${this.sessionId}.json`, JSON.stringify({ status: 'CONNECTED' }));
+        }
+
+        this.connMgr = initConnectionManager(this.client, this.sessionId);
 
         try {
           await this._prefetchChannelMetadata();
@@ -431,6 +488,14 @@ class WhatsAppListener extends BaseListener {
       // ── Disconnected ────────────────────────────────────────────────────
       this.client.on('disconnected', (reason) => {
         console.warn('[WhatsApp] ⚠️   Disconnected — reason:', reason);
+        try {
+          if (!fs.existsSync('data')) {
+            fs.mkdirSync('data');
+          }
+          fs.writeFileSync(`data/status-${this.sessionId}.json`, JSON.stringify({ status: 'DISCONNECTED', reason }));
+        } catch (err) {
+          console.error('[WhatsApp] Failed to write status file on disconnect:', err.message);
+        }
         this._emit('disconnected', { reason });
       });
 
@@ -521,12 +586,23 @@ class WhatsAppListener extends BaseListener {
    * @param {string} message - Message body.
    */
   async send(target, message) {
+    const { getConnectionManager } = require('./connection-manager');
+    const connMgr = getConnectionManager();
+    const client  = connMgr ? connMgr.getClient() : this.client;
+
+    if (!client) {
+      throw new Error(
+        '[WhatsAppListener] Cannot send: WhatsApp client is not available. ' +
+        'Ensure initialize() has resolved first.'
+      );
+    }
+
     try {
       const chatId = `${String(target).replace(/\D/g, '')}@c.us`;
 
       await withRetry(
         async () => {
-          await this.client.sendMessage(chatId, message);
+          await client.sendMessage(chatId, message);
         },
         {
           maxRetries: 2,
@@ -555,7 +631,9 @@ class WhatsAppListener extends BaseListener {
 
   _emit(eventName, data) {
     const callback = this.callbacks.get(eventName);
-    if (!callback) return;
+    if (!callback) {
+      return;
+    }
     try {
       callback(data);
     } catch (err) {

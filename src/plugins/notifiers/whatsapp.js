@@ -36,7 +36,9 @@ function normaliseChatId(raw) {
   const str = String(raw).trim();
 
   // Already a fully-qualified chatId — return as-is regardless of suffix
-  if (str.includes('@')) return str;
+  if (str.includes('@')) {
+    return str;
+  }
 
   // Strip everything that isn't a digit, then append the personal chat suffix
   return `${str.replace(/\D/g, '')}${CHAT_ID_SUFFIX.PERSONAL}`;
@@ -55,12 +57,16 @@ function normaliseChatId(raw) {
  */
 function maskChatId(chatId) {
   const atIdx = chatId.indexOf('@');
-  if (atIdx === -1) return '***';
+  if (atIdx === -1) {
+    return '***';
+  }
 
   const id     = chatId.slice(0, atIdx);
   const suffix = chatId.slice(atIdx);
 
-  if (id.length < 7) return `***${suffix}`;
+  if (id.length < 7) {
+    return `***${suffix}`;
+  }
 
   const head   = id.slice(0, 4);
   const tail   = id.slice(-3);
@@ -105,6 +111,7 @@ class WhatsAppNotifier extends BaseNotifier {
     this.phoneNumber = config.phoneNumber  ?? null;
     this.maxRetries  = config.maxRetries   ?? 3;
     this.baseDelayMs = config.baseDelayMs  ?? 1_000;
+    this.sessionId   = config.sessionId    ?? 'default';
   }
 
   // ==========================================================================
@@ -129,7 +136,7 @@ class WhatsAppNotifier extends BaseNotifier {
       );
     }
 
-    const client = connMgr.getClient();
+    const client = connMgr.getClient(this.sessionId);
 
     if (!client) {
       throw makeError(

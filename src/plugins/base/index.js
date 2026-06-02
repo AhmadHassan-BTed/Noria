@@ -56,6 +56,10 @@ class BaseNotifier {
     this.provider = provider;
   }
 
+  async send(_target, _message) {
+    throw new Error(`${this.name}#send() not implemented`);
+  }
+
   format(data) {
     if (this.provider && typeof this.provider.getNotifier === 'function') {
       return this.provider.getNotifier().format(data);
