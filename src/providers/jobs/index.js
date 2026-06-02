@@ -10,7 +10,9 @@ class JobsProvider extends BaseProvider {
   constructor(providerConfig = {}) {
     super(providerConfig);
     this.analyzer = new JobAnalyzer();
+    this.analyzer.setProvider(this);
     this.notifier = new JobNotifier();
+    this.notifier.setProvider(this);
   }
 
   getAnalyzer() {

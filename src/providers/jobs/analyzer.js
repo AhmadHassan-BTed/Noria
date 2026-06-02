@@ -4,14 +4,14 @@ const { BaseAnalyzer } = require('../../plugins/base');
 const { config } = require('../../config');
 const { JOB_RESPONSE_SCHEMA } = require('./schema');
 
-function buildJobPrompt(text, applicantProfile) {
-  return `
+function buildJobPrompt(text, applicantProfile, messageText) {
+  let prompt = `
 You are an advanced recruitment scoring engine for evaluating Job opportunities.
 Evaluate raw web content against the applicant profile and generate a score from 0-100.
 
 ════════════════════════════════════════════
 APPLICANT PROFILE
-  ════════════════════════════════════════════
+════════════════════════════════════════════
 Name           : ${applicantProfile.name}
 Nationality    : ${applicantProfile.nationality}
 Academic tier  : ${applicantProfile.degreeTier}
@@ -30,12 +30,25 @@ SCORING CRITERIA (0-100 PTS)
 CRITICAL PENALTIES:
 - Requires local work authorization without sponsorship support → force score to 0
 - Requires >5 years of experience (Senior/Lead/Architect only) → force score to 20 maximum
+`;
 
+  if (messageText) {
+    prompt += `
+════════════════════════════════════════════
+WHATSAPP MESSAGE CONTEXT
+════════════════════════════════════════════
+${messageText}
+`;
+  }
+
+  prompt += `
 ════════════════════════════════════════════
 PAGE CONTENT
 ════════════════════════════════════════════
 ${text}
-`.trim();
+`;
+
+  return prompt.trim();
 }
 
 class JobAnalyzer extends BaseAnalyzer {
@@ -48,7 +61,7 @@ class JobAnalyzer extends BaseAnalyzer {
     this.provider = provider;
   }
 
-  async analyze(content, _context = {}) {
+  async analyze(content, context = {}) {
     if (!this.provider) {
       throw new Error('JobAnalyzer: Provider not set');
     }
@@ -61,7 +74,7 @@ class JobAnalyzer extends BaseAnalyzer {
       researchFocus: config.get('APPLICANT_RESEARCH_FOCUS'),
     };
 
-    const prompt = buildJobPrompt(content, applicantProfile);
+    const prompt = buildJobPrompt(content, applicantProfile, context.messageText);
 
     return {
       prompt,

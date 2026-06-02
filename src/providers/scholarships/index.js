@@ -10,7 +10,9 @@ class ScholarshipsProvider extends BaseProvider {
   constructor(providerConfig = {}) {
     super(providerConfig);
     this.analyzer = new ScholarshipAnalyzer();
+    this.analyzer.setProvider(this);
     this.notifier = new ScholarshipNotifier();
+    this.notifier.setProvider(this);
   }
 
   getAnalyzer() {

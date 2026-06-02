@@ -4,8 +4,8 @@ const { BaseAnalyzer } = require('../../plugins/base');
 const { config } = require('../../config');
 const { SCHOLARSHIP_RESPONSE_SCHEMA } = require('./schema');
 
-function buildScholarshipPrompt(text, applicantProfile) {
-  return `
+function buildScholarshipPrompt(text, applicantProfile, messageText) {
+  let prompt = `
 You are an advanced academic scoring engine for scholarship evaluation.
 Evaluate raw web content against the applicant profile and generate a score from 0-100.
 
@@ -31,12 +31,25 @@ SCORING CRITERIA (0-100 PTS)
 CRITICAL PENALTIES:
 - Excludes ${applicantProfile.nationality} citizens → force score to 0
 - Exclusively Bachelor/undergraduate only → force score to 0
+`;
 
+  if (messageText) {
+    prompt += `
+════════════════════════════════════════════
+WHATSAPP MESSAGE CONTEXT
+════════════════════════════════════════════
+${messageText}
+`;
+  }
+
+  prompt += `
 ════════════════════════════════════════════
 PAGE CONTENT
 ════════════════════════════════════════════
 ${text}
-`.trim();
+`;
+
+  return prompt.trim();
 }
 
 class ScholarshipAnalyzer extends BaseAnalyzer {
@@ -49,7 +62,7 @@ class ScholarshipAnalyzer extends BaseAnalyzer {
     this.provider = provider;
   }
 
-  async analyze(content, _context = {}) {
+  async analyze(content, context = {}) {
     if (!this.provider) {
       throw new Error('ScholarshipAnalyzer: Provider not set');
     }
@@ -62,7 +75,7 @@ class ScholarshipAnalyzer extends BaseAnalyzer {
       researchFocus: config.get('APPLICANT_RESEARCH_FOCUS'),
     };
 
-    const prompt = buildScholarshipPrompt(content, applicantProfile);
+    const prompt = buildScholarshipPrompt(content, applicantProfile, context.messageText);
 
     return {
       prompt,

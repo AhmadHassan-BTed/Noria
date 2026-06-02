@@ -152,11 +152,14 @@ class PipelineOrchestrator {
               ? payload.url
               : undefined;
 
+        const messageText = payload && typeof payload === 'object' ? payload.messageText : undefined;
+
         this.broker.emit(EventTypes.SCRAPER.START, {
           pipelineName,
           instanceId,
           provider,
           url,
+          messageText,
         });
       });
     }
@@ -171,7 +174,7 @@ class PipelineOrchestrator {
         return;
       }
 
-      const { url } = event;
+      const { url, messageText } = event;
       console.log(`[Pipeline:${instanceId}] Starting scraper for URL: ${url}`);
 
       try {
@@ -220,6 +223,7 @@ class PipelineOrchestrator {
           provider,
           url,
           text: validatedPayload.text,
+          messageText,
         });
       } catch (err) {
         console.error(`[Pipeline:${instanceId}] Scrape stage failed:`, err.message);
@@ -242,7 +246,7 @@ class PipelineOrchestrator {
         return;
       }
 
-      const { url, text } = event;
+      const { url, text, messageText } = event;
       console.log(`[Pipeline:${instanceId}] Starting analyzer for URL: ${url}`);
 
       try {
@@ -251,7 +255,7 @@ class PipelineOrchestrator {
         }
 
         // A. Analyze the content using the active analyzer plugin
-        const validatedResponse = await services.analyzer.analyze(text, { url });
+        const validatedResponse = await services.analyzer.analyze(text, { url, messageText });
 
         // Add original URL to results
         validatedResponse.url = url;

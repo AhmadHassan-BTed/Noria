@@ -54,6 +54,15 @@ describe('Jobs Opportunity Provider Layer', () => {
       const incomplete = new JobAnalyzer();
       await expect(incomplete.analyze('content')).rejects.toThrow('JobAnalyzer: Provider not set');
     });
+
+    test('should include WHATSAPP MESSAGE CONTEXT in prompt when messageText is provided in context', async () => {
+      const text = 'Opportunity details';
+      const messageText = 'Check this out!';
+      const result = await analyzer.analyze(text, { messageText });
+
+      expect(result.prompt).toContain('WHATSAPP MESSAGE CONTEXT');
+      expect(result.prompt).toContain(messageText);
+    });
   });
 
   describe('JobNotifier', () => {

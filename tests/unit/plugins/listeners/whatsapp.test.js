@@ -390,6 +390,7 @@ describe('WhatsAppListener', () => {
         channelName: null,
         messageId: 'msg125',
         timestamp: expect.any(Date),
+        messageText: 'Check out this website: https://scholarships.org/apply-now right here!',
       });
     });
 
@@ -412,6 +413,7 @@ describe('WhatsAppListener', () => {
         channelName: 'Google Jobs',
         messageId: 'msg-ch-1',
         timestamp: expect.any(Date),
+        messageText: 'Apply at https://careers.google.com/jobs',
       });
     });
 

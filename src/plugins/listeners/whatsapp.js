@@ -451,6 +451,7 @@ class WhatsAppListener extends BaseListener {
         channelName: isChannel ? channelName : null,
         messageId:   msgId   ?? null,
         timestamp:   new Date(),
+        messageText: body,
       });
 
     } catch (err) {
