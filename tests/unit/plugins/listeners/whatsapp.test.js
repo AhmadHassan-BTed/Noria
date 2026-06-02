@@ -339,6 +339,112 @@ describe('WhatsAppListener', () => {
     });
   });
 
+  describe('Group Whitelist & Name Resolution', () => {
+    test('should allow whitelisted group by exact ID', async () => {
+      listener = new WhatsAppListener({
+        sourceMode: 'groups',
+        allowedGroups: ['target-group@g.us'],
+      });
+
+      const msg = {
+        id: { _serialized: 'msg-grp' },
+        from: 'target-group@g.us',
+      };
+
+      expect(await listener._shouldProcess(msg)).toBe(true);
+    });
+
+    test('should allow whitelisted group by resolved display name', async () => {
+      listener = new WhatsAppListener({
+        sourceMode: 'groups',
+        allowedGroups: ['Scholarship Group'],
+      });
+
+      const getChatMock = jest.fn().mockResolvedValue({
+        name: 'Scholarship Group',
+      });
+      const msg = {
+        id: { _serialized: 'msg-grp' },
+        from: 'another-group@g.us',
+        getChat: getChatMock,
+      };
+
+      expect(await listener._shouldProcess(msg)).toBe(true);
+      expect(getChatMock).toHaveBeenCalled();
+    });
+  });
+
+  describe('Chat Whitelist & Name Resolution', () => {
+    test('should allow whitelisted chat by exact ID', async () => {
+      listener = new WhatsAppListener({
+        sourceMode: 'individual',
+        allowedChats: ['923217744858@c.us'],
+      });
+
+      const msg = {
+        id: { _serialized: 'msg-chat' },
+        from: '923217744858@c.us',
+      };
+
+      expect(await listener._shouldProcess(msg)).toBe(true);
+    });
+
+    test('should allow whitelisted chat by phone number', async () => {
+      listener = new WhatsAppListener({
+        sourceMode: 'individual',
+        allowedChats: ['923217744858'],
+      });
+
+      const msg = {
+        id: { _serialized: 'msg-chat' },
+        from: '923217744858@c.us',
+      };
+
+      expect(await listener._shouldProcess(msg)).toBe(true);
+    });
+
+    test('should allow whitelisted chat by resolved display name', async () => {
+      listener = new WhatsAppListener({
+        sourceMode: 'individual',
+        allowedChats: ['John Doe'],
+      });
+
+      const getChatMock = jest.fn().mockResolvedValue({
+        name: 'John Doe',
+      });
+      const msg = {
+        id: { _serialized: 'msg-chat' },
+        from: '923217744858@c.us',
+        getChat: getChatMock,
+      };
+
+      expect(await listener._shouldProcess(msg)).toBe(true);
+      expect(getChatMock).toHaveBeenCalled();
+    });
+  });
+
+  describe('Background Groups and Chats Discovery', () => {
+    test('should discover groups and chats in parallel and save to status file', async () => {
+      const mockGetChats = jest.fn().mockResolvedValue([
+        { id: { _serialized: 'group1@g.us', user: 'group1' }, name: 'My Group', isGroup: true },
+        { id: { _serialized: 'user1@c.us', user: 'user1', server: 'c.us' }, name: 'My Friend', isGroup: false },
+      ]);
+      mockClient.getChats = mockGetChats;
+
+      const updateSpy = jest.spyOn(listener, '_updateStatusFile').mockImplementation(() => {});
+
+      await listener._discoverGroupsAndChats();
+      // Wait for background events to execute
+      await new Promise(r => setTimeout(r, 20));
+
+      expect(mockGetChats).toHaveBeenCalled();
+      expect(updateSpy).toHaveBeenCalledWith({ groups: ['My Group'] });
+      expect(updateSpy).toHaveBeenCalledWith({ chats: ['My Friend'] });
+      expect(listener._groupCache.get('group1@g.us').name).toBe('My Group');
+      expect(listener._chatCache.get('user1@c.us').name).toBe('My Friend');
+    });
+  });
+
   describe('Deduplication Cache Size Control', () => {
     test('should enforce MAX_DEDUP_CACHE_SIZE', () => {
       for (let i = 0; i < 2005; i++) {

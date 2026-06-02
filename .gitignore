@@ -10,8 +10,7 @@ coverage/
 .wwebjs_auth/
 *.tmp
 .cache/
-data/
 __pycache__/
 *.pyc
-
-
+.wwebjs_cache/
+data/

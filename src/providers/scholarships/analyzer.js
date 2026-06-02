@@ -31,6 +31,7 @@ SCORING CRITERIA (0-100 PTS)
 CRITICAL PENALTIES:
 - Excludes ${applicantProfile.nationality} citizens → force score to 0
 - Exclusively Bachelor/undergraduate only → force score to 0
+- If the degree program's academic discipline is fundamentally unrelated to the applicant's target fields (${applicantProfile.targetFields}), immediately force the total match_score to 0. Do not allow funding, location, or language metrics to compensate for an incompatible degree discipline (e.g., Global Affairs, Arts, Humanities).
 `;
 
   if (messageText) {

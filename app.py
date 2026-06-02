@@ -1006,18 +1006,38 @@ if editing_profile is None:
                                     # Scans running on this device
                                     device_scans = [name for name, info in running_instances.items() if info.get("profileId") == p_id and info.get("phone") == dev_phone]
                                     
-                                    # Dynamic Channel Sync from active scans
+                                    # Dynamic Channel, Group, and Chat Sync from active scans
                                     channels_list = dev_info.get("channels", [])
+                                    groups_list = dev_info.get("groups", [])
+                                    chats_list = dev_info.get("chats", [])
+                                    profile_changed = False
+                                    
                                     for scan_name in device_scans:
                                         scan_info = running_instances[scan_name]
                                         status_info = get_session_status(scan_info["sessionId"])
-                                        discovered = status_info.get("channels", [])
-                                        if len(discovered) > len(channels_list):
-                                            channels_list = discovered
-                                            dev_info["channels"] = discovered
-                                            save_profiles(profiles)
+                                        
+                                        discovered_channels = status_info.get("channels", [])
+                                        if len(discovered_channels) > len(channels_list):
+                                            channels_list = discovered_channels
+                                            dev_info["channels"] = discovered_channels
+                                            profile_changed = True
+                                            
+                                        discovered_groups = status_info.get("groups", [])
+                                        if len(discovered_groups) > len(groups_list):
+                                            groups_list = discovered_groups
+                                            dev_info["groups"] = discovered_groups
+                                            profile_changed = True
+                                            
+                                        discovered_chats = status_info.get("chats", [])
+                                        if len(discovered_chats) > len(chats_list):
+                                            chats_list = discovered_chats
+                                            dev_info["chats"] = discovered_chats
+                                            profile_changed = True
+                                            
+                                    if profile_changed:
+                                        save_profiles(profiles)
                                     
-                                    st.markdown(f"**Subscribed Channels:** `{len(channels_list)}`")
+                                    st.markdown(f"**Subscribed Channels:** `{len(channels_list)}` | **Groups:** `{len(groups_list)}` | **Direct Chats:** `{len(chats_list)}`")
                                     
                                     if not device_scans:
                                         st.info("No active scans on this device.")
@@ -1251,11 +1271,20 @@ if editing_profile is None:
                         st.markdown(f"#### 🏷️ Configure & Activate Scan: `{active_focus}`")
                         det_cols = st.columns([3, 1])
                         with det_cols[0]:
+                            source_mode_disp = scan_cfg.get("sourceMode", "individual,groups,channels")
+                            target_phone_disp = p_info.get("target_phone") or "Default (Self/Scanning Device)"
                             st.markdown(f"""
                             * **Pipeline Category:** {scan_cfg['category']}
                             * **Pipeline Template:** `{scan_cfg['template']}`
-                            * **Channels to Monitor:** `{scan_cfg['channels'] or 'All subscribed links'}`
+                            * **Message Sources:** `{source_mode_disp}`
+                            * **Notification Target:** `{target_phone_disp}`
                             """)
+                            if "individual" in source_mode_disp:
+                                st.markdown(f"* **Chats Whitelist:** `{scan_cfg.get('chats') or 'All direct chats'}`")
+                            if "groups" in source_mode_disp:
+                                st.markdown(f"* **Groups Whitelist:** `{scan_cfg.get('groups') or 'All groups'}`")
+                            if "channels" in source_mode_disp:
+                                st.markdown(f"* **Channels Whitelist:** `{scan_cfg.get('channels') or 'All channels'}`")
                             
                             # Check if scan is active on any device
                             matching_instances = [name for name, info in running_instances.items() if info.get("profileId") == p_id and info.get("template") == scan_cfg["template"] and (name == active_focus or name.startswith(active_focus + "_"))]
@@ -1311,9 +1340,20 @@ if editing_profile is None:
                                             "--instance", actual_scan_name,
                                             "--sessionId", device_sess_id
                                         ]
-                                        if scan_cfg["channels"]:
+                                        
+                                        # Pass sourceMode, channels, groups, and chats if present
+                                        src_mode = scan_cfg.get("sourceMode")
+                                        if src_mode:
+                                            cmd.extend(["--sourceMode", src_mode])
+                                        if scan_cfg.get("channels"):
                                             cmd.extend(["--channels", scan_cfg["channels"]])
-                                        cmd.extend(["--phone", selected_device_phone])
+                                        if scan_cfg.get("groups"):
+                                            cmd.extend(["--groups", scan_cfg["groups"]])
+                                        if scan_cfg.get("chats"):
+                                            cmd.extend(["--chats", scan_cfg["chats"]])
+                                            
+                                        notification_target = p_info.get("target_phone") or selected_device_phone
+                                        cmd.extend(["--phone", notification_target])
 
                                         custom_env = os.environ.copy()
                                         custom_env.update({
@@ -1353,8 +1393,11 @@ if editing_profile is None:
                                                 "sessionId": device_sess_id,
                                                 "profileId": p_id,
                                                 "profileName": p_info["name"],
-                                                "channels": scan_cfg["channels"],
-                                                "phone": selected_device_phone,
+                                                "channels": scan_cfg.get("channels", ""),
+                                                "groups": scan_cfg.get("groups", ""),
+                                                "chats": scan_cfg.get("chats", ""),
+                                                "sourceMode": scan_cfg.get("sourceMode", "individual,groups,channels"),
+                                                "phone": notification_target,
                                                 "startedAt": time.strftime("%Y-%m-%d %H:%M:%S")
                                             }
                                             save_running_processes(running_instances)
@@ -1372,17 +1415,23 @@ if editing_profile is None:
                     with st.container(border=True):
                         st.markdown("### 🚀 Create Configured Scan Pill")
                         
-                        # Aggregate verified channels across all linked devices
+                        # Aggregate verified channels, groups, and chats across all linked devices
                         combined_verified_channels = []
+                        combined_verified_groups = []
+                        combined_verified_chats = []
                         for dev_phone, dev_info in devices.items():
                             combined_verified_channels.extend(dev_info.get("channels", []))
+                            combined_verified_groups.extend(dev_info.get("groups", []))
+                            combined_verified_chats.extend(dev_info.get("chats", []))
                         combined_verified_channels = sorted(list(set(combined_verified_channels)))
+                        combined_verified_groups = sorted(list(set(combined_verified_groups)))
+                        combined_verified_chats = sorted(list(set(combined_verified_chats)))
                         
                         scan_mode = st.radio(
-                            "Choose Scan Configuration Method",
-                            ["Select Predefined Scan", "Create Custom Scan"],
-                            horizontal=True,
-                            key=f"scan_mode_{p_id}"
+                             "Choose Scan Configuration Method",
+                             ["Select Predefined Scan", "Create Custom Scan"],
+                             horizontal=True,
+                             key=f"scan_mode_{p_id}"
                         )
                         
                         if scan_mode == "Select Predefined Scan":
@@ -1404,6 +1453,11 @@ if editing_profile is None:
                             inline_template = selected_scan_info["template"]
                             inline_scan_name = selected_predef_key
                             inline_channels = selected_scan_info["channels"]
+                            inline_groups = ""
+                            inline_chats = ""
+                            chat_mode = "Disabled"
+                            group_mode = "Disabled"
+                            channel_mode = "Selected Only"
                             
                         else:
                             inline_category = st.selectbox(
@@ -1421,36 +1475,88 @@ if editing_profile is None:
                                 help="A unique name to identify this scan instance."
                             ).strip().replace(" ", "_")
                             
-                            channel_input_mode = "Verified Selection"
-                            if combined_verified_channels:
-                                channel_input_mode = st.radio(
-                                    "Channels Input Mode",
-                                    ["Verified Selection", "Monitor Custom Channels"],
-                                    horizontal=True,
-                                    key=f"channel_mode_{p_id}"
+                            st.markdown("##### ⚙️ Configure Message Sources")
+                            src_col1, src_col2, src_col3 = st.columns(3)
+                            with src_col1:
+                                chat_mode = st.selectbox(
+                                    "💬 Individual Chats",
+                                    ["All", "Selected Only", "Disabled"],
+                                    index=0,
+                                    key=f"chat_mode_{p_id}",
+                                    help="Configure direct messages to scan."
                                 )
-                            else:
-                                channel_input_mode = "Monitor Custom Channels"
-                                if devices:
-                                    st.info("No verified subscribed channels found on paired devices. Enter custom channels manually below.")
+                            with src_col2:
+                                group_mode = st.selectbox(
+                                    "👥 Groups",
+                                    ["All", "Selected Only", "Disabled"],
+                                    index=0,
+                                    key=f"group_mode_{p_id}",
+                                    help="Configure group chats to scan."
+                                )
+                            with src_col3:
+                                channel_mode = st.selectbox(
+                                    "📡 Channels",
+                                    ["All", "Selected Only", "Disabled"],
+                                    index=0,
+                                    key=f"channel_mode_{p_id}",
+                                    help="Configure channel posts to scan."
+                                )
+
+                            # Whitelist fields
+                            inline_chats = ""
+                            inline_groups = ""
+                            inline_channels = ""
+
+                            if chat_mode == "Selected Only":
+                                if combined_verified_chats:
+                                    selected_chats = st.multiselect(
+                                        "Select Chats to Monitor",
+                                        options=combined_verified_chats,
+                                        key=f"inline_chats_sel_{p_id}",
+                                        help="Select direct chats known to your devices."
+                                    )
+                                    inline_chats = ", ".join(selected_chats)
                                 else:
-                                    st.info("No paired devices found. Enter custom channels manually below.")
-                                
-                            if channel_input_mode == "Verified Selection":
-                                selected_channels = st.multiselect(
-                                    "Select Subscribed WhatsApp Channels to Monitor",
-                                    options=combined_verified_channels,
-                                    key=f"inline_multiselect_{p_id}",
-                                    help="Select one or more verified channels retrieved from your scanned devices."
-                                )
-                                inline_channels = ", ".join(selected_channels)
-                            else:
-                                inline_channels = st.text_area(
-                                    "WhatsApp Channels to Monitor (Comma separated)",
-                                    placeholder="e.g. Scholarship Alerts, 923009876543@newsletter",
-                                    key=f"inline_channels_{p_id}",
-                                    help="Specify names or IDs of subscribed WhatsApp Channels manually."
-                                )
+                                    inline_chats = st.text_area(
+                                        "Specify Chats to Monitor (Comma separated)",
+                                        placeholder="e.g. 923217744858, John Doe",
+                                        key=f"inline_chats_text_{p_id}",
+                                        help="Specify names or phone numbers manually."
+                                    )
+
+                            if group_mode == "Selected Only":
+                                if combined_verified_groups:
+                                    selected_groups = st.multiselect(
+                                        "Select Groups to Monitor",
+                                        options=combined_verified_groups,
+                                        key=f"inline_groups_sel_{p_id}",
+                                        help="Select groups known to your devices."
+                                    )
+                                    inline_groups = ", ".join(selected_groups)
+                                else:
+                                    inline_groups = st.text_area(
+                                        "Specify Groups to Monitor (Comma separated)",
+                                        placeholder="e.g. Scholarship Group, 120363023456789@g.us",
+                                        key=f"inline_groups_text_{p_id}",
+                                        help="Specify names or group IDs manually."
+                                    )
+
+                            if channel_mode == "Selected Only":
+                                if combined_verified_channels:
+                                    selected_channels = st.multiselect(
+                                        "Select Channels to Monitor",
+                                        options=combined_verified_channels,
+                                        key=f"inline_channels_sel_{p_id}",
+                                        help="Select channels known to your devices."
+                                    )
+                                    inline_channels = ", ".join(selected_channels)
+                                else:
+                                    inline_channels = st.text_area(
+                                        "WhatsApp Channels to Monitor (Comma separated)",
+                                        placeholder="e.g. Scholarship Alerts, 120363023456789@newsletter",
+                                        key=f"inline_channels_text_{p_id}",
+                                        help="Specify channel names or IDs manually."
+                                    )
                                 
                         btn_cols = st.columns([5, 1, 1])
                         with btn_cols[1]:
@@ -1466,11 +1572,33 @@ if editing_profile is None:
                                     if p_id not in created_scans:
                                         created_scans[p_id] = {}
                                     
+                                    if scan_mode == "Select Predefined Scan":
+                                        source_mode_str = "channels"
+                                        final_chats = ""
+                                        final_groups = ""
+                                        final_channels = inline_channels
+                                    else:
+                                        src_mode_list = []
+                                        if chat_mode != "Disabled":
+                                            src_mode_list.append("individual")
+                                        if group_mode != "Disabled":
+                                            src_mode_list.append("groups")
+                                        if channel_mode != "Disabled":
+                                            src_mode_list.append("channels")
+                                        source_mode_str = ",".join(src_mode_list) if src_mode_list else "individual,groups,channels"
+                                        
+                                        final_chats = inline_chats if chat_mode == "Selected Only" else ""
+                                        final_groups = inline_groups if group_mode == "Selected Only" else ""
+                                        final_channels = inline_channels if channel_mode == "Selected Only" else ""
+
                                     created_scans[p_id][inline_scan_name] = {
                                         "name": inline_scan_name,
                                         "category": inline_category,
                                         "template": inline_template,
-                                        "channels": inline_channels
+                                        "sourceMode": source_mode_str,
+                                        "channels": final_channels,
+                                        "groups": final_groups,
+                                        "chats": final_chats
                                     }
                                     save_created_scans(created_scans)
                                     st.success(f"Scan pill '{inline_scan_name}' added to pool successfully.")
@@ -1523,6 +1651,72 @@ else:
                 type="password"
             )
             
+            st.markdown("### 🔔 Notification Settings")
+            # Parse country code and number from target_phone
+            default_cc = "+92"
+            default_phone_num = ""
+            default_custom_cc = "+"
+            if not is_new:
+                target_phone_val = p_info.get("target_phone", "")
+                if target_phone_val:
+                    target_phone_val = target_phone_val.replace(" ", "").replace("-", "")
+                    # Match standard codes
+                    for cc in ["+92", "+1", "+44", "+91", "+971", "+966", "+49", "+61"]:
+                        if target_phone_val.startswith(cc):
+                            default_cc = cc
+                            default_phone_num = target_phone_val[len(cc):]
+                            break
+                        elif target_phone_val.startswith(cc[1:]):
+                            default_cc = cc
+                            default_phone_num = target_phone_val[len(cc)-1:]
+                            break
+                    else:
+                        if target_phone_val.startswith("+"):
+                            import re
+                            m = re.match(r"^(\+\d{1,4})(.*)$", target_phone_val)
+                            if m:
+                                default_cc = "Other"
+                                default_custom_cc = m.group(1)
+                                default_phone_num = m.group(2)
+                            else:
+                                default_cc = "Other"
+                                default_custom_cc = "+"
+                                default_phone_num = target_phone_val
+                        else:
+                            if target_phone_val.startswith("92") and len(target_phone_val) > 10:
+                                default_cc = "+92"
+                                default_phone_num = target_phone_val[2:]
+                            else:
+                                default_cc = "+92"
+                                default_phone_num = target_phone_val
+            
+            cc_options = ["+92", "+1", "+44", "+91", "+971", "+966", "+49", "+61", "Other"]
+            cc_index = cc_options.index(default_cc) if default_cc in cc_options else 8
+            
+            cc_col, num_col = st.columns([1, 2])
+            with cc_col:
+                selected_cc = st.selectbox(
+                    "Code",
+                    options=cc_options,
+                    index=cc_index,
+                    key=f"profile_cc_{editing_profile}"
+                )
+                if selected_cc == "Other":
+                    custom_cc = st.text_input("Code Value", value=default_custom_cc, key=f"profile_custom_cc_{editing_profile}")
+                    country_code = custom_cc.strip()
+                else:
+                    country_code = selected_cc
+            with num_col:
+                phone_input = st.text_input(
+                    "Target Phone",
+                    value=default_phone_num,
+                    placeholder="e.g. 3225522383",
+                    key=f"profile_phone_{editing_profile}",
+                    help="Phone number to receive matching opportunity notifications via WhatsApp."
+                ).strip()
+            
+            target_phone = f"{country_code}{phone_input}".replace(" ", "").replace("-", "")
+            
         with form_col2:
             st.markdown("### 🧑‍💼 Applicant Evaluation Parameters")
             app_name = st.text_input("Full Name", value=default_app_name)
@@ -1558,7 +1752,9 @@ else:
                                 "applicant_nationality": app_nationality,
                                 "applicant_degree_tier": app_degree,
                                 "applicant_target_fields": app_fields,
-                                "applicant_focus": app_focus
+                                "applicant_focus": app_focus,
+                                "target_phone": target_phone,
+                                "devices": {}
                             }
                             save_profiles(profiles)
                             st.toast(f"Profile '{profile_display_name}' created.")
@@ -1566,6 +1762,7 @@ else:
                             time.sleep(1)
                             st.rerun()
                 else:
+                    existing_devices = profiles[editing_profile].get("devices", {})
                     profiles[editing_profile] = {
                         "id": editing_profile,
                         "name": default_name,
@@ -1575,7 +1772,9 @@ else:
                         "applicant_nationality": app_nationality,
                         "applicant_degree_tier": app_degree,
                         "applicant_target_fields": app_fields,
-                        "applicant_focus": app_focus
+                        "applicant_focus": app_focus,
+                        "target_phone": target_phone,
+                        "devices": existing_devices
                     }
                     save_profiles(profiles)
                     st.toast("Profile changes saved.")

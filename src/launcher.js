@@ -128,10 +128,10 @@ async function launch() {
     }
   }
 
-  const { template, instance, sessionId, channels, phone, sourceMode } = args;
+  const { template, instance, sessionId, channels, phone, sourceMode, groups, chats } = args;
 
   if (!template || !instance) {
-    console.error('Usage: node src/launcher.js --template <name> --instance <id> [--sessionId <id>] [--channels <list>] [--phone <num>] [--sourceMode <mode>]');
+    console.error('Usage: node src/launcher.js --template <name> --instance <id> [--sessionId <id>] [--channels <list>] [--phone <num>] [--sourceMode <mode>] [--groups <list>] [--chats <list>]');
     process.exit(1);
   }
 
@@ -143,6 +143,8 @@ async function launch() {
   console.log(`  Instance  : ${instance}`);
   console.log(`  Session ID: ${currentSessionId}`);
   console.log(`  Channels  : ${channels || 'None (watch all)'}`);
+  console.log(`  Groups    : ${groups || 'None (watch all)'}`);
+  console.log(`  Chats     : ${chats || 'None (watch all)'}`);
   console.log(`  Phone     : ${phone || 'Default'}`);
   console.log(`  SourceMode: ${sourceMode || 'auto (channels if whitelist, else chats)'}`);
   console.log('');
@@ -175,10 +177,20 @@ async function launch() {
     ? channels.split(',').map((c) => c.trim()).filter(Boolean)
     : [];
 
+  const allowedGroups = groups
+    ? groups.split(',').map((g) => g.trim()).filter(Boolean)
+    : [];
+
+  const allowedChats = chats
+    ? chats.split(',').map((c) => c.trim()).filter(Boolean)
+    : [];
+
   const customConfig = {
     listen: {
       sessionId: currentSessionId,
       allowedChannels: allowedChannels,
+      allowedGroups: allowedGroups,
+      allowedChats: allowedChats,
       sourceMode: sourceMode || (allowedChannels.length > 0 ? 'both' : 'chats'),
     },
     notify: {

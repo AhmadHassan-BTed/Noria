@@ -37,6 +37,10 @@ const SCHOLARSHIP_PENALTIES = [
     deduction: 'match_score forced to 0',
     condition: 'Program is exclusively undergraduate/Bachelor degree',
   },
+  {
+    deduction: 'match_score forced to 0',
+    condition: "Degree program's academic discipline is fundamentally unrelated to the applicant's target fields",
+  },
 ];
 
 module.exports = {

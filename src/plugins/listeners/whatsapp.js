@@ -121,6 +121,14 @@ class WhatsAppListener extends BaseListener {
       .map((c) => String(c).trim())
       .filter(Boolean);
 
+    this.allowedGroups = (config.allowedGroups ?? [])
+      .map((g) => String(g).trim())
+      .filter(Boolean);
+
+    this.allowedChats = (config.allowedChats ?? [])
+      .map((c) => String(c).trim())
+      .filter(Boolean);
+
     // ── Session state ─────────────────────────────────────────────────────
     this.sessionId = config.sessionId ?? 'default';
     this.logger    = new SessionLogger(this.sessionId);
@@ -131,6 +139,8 @@ class WhatsAppListener extends BaseListener {
      * Structure: Map<channelId, { name: string, cachedAt: number }>
      */
     this._channelCache   = new Map();
+    this._groupCache     = new Map();
+    this._chatCache      = new Map();
     this._processedIds   = new Set(); // Dedup ring buffer
     this._channelFetcher = null;      // Initialised inside initialize()
 
@@ -197,18 +207,9 @@ class WhatsAppListener extends BaseListener {
 
     // Progress updates to status file
     this._channelFetcher.on('progress', (data) => {
-      let currStatus = { status: 'CONNECTED', phone: '', wid: '' };
-      try {
-        const statusPath = path.join('data', `status-${this.sessionId}.json`);
-        if (fs.existsSync(statusPath)) {
-          currStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
-        }
-      } catch (err) { /* non-fatal */ }
-
       const channels = this._channelFetcher.getAll().map((c) => c.name || c.id);
 
-      this._writeData(`status-${this.sessionId}.json`, {
-        ...currStatus,
+      this._updateStatusFile({
         discoveryStatus: data.percent === 100 ? 'COMPLETED' : 'DISCOVERING',
         discoveryProgress: data.percent,
         discoveryMessage: data.message,
@@ -236,6 +237,63 @@ class WhatsAppListener extends BaseListener {
     }
 
     return found;
+  }
+
+  _updateStatusFile(updates) {
+    let currStatus = {};
+    try {
+      const statusPath = path.join('data', `status-${this.sessionId}.json`);
+      if (fs.existsSync(statusPath)) {
+        currStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+      }
+    } catch (err) { /* non-fatal */ }
+
+    const merged = {
+      ...currStatus,
+      ...updates
+    };
+
+    this._writeData(`status-${this.sessionId}.json`, merged);
+  }
+
+  async _discoverGroupsAndChats() {
+    this._discoverGroupsAsync().catch((err) => {
+      console.warn('[WhatsApp WARN] Background groups fetch error:', err.message);
+    });
+
+    this._discoverChatsAsync().catch((err) => {
+      console.warn('[WhatsApp WARN] Background chats fetch error:', err.message);
+    });
+  }
+
+  async _discoverGroupsAsync() {
+    this.logger.info('GROUPS_DISCOVERY', 'Starting background group discovery...');
+    const chats = await this.client.getChats();
+    const groups = chats
+      .filter(c => c.isGroup === true && c.id && c.id._serialized)
+      .map(c => {
+        const name = c.name?.trim() || c.id.user || c.id._serialized;
+        this._groupCache.set(c.id._serialized, { name, cachedAt: Date.now() });
+        return name;
+      });
+
+    this._updateStatusFile({ groups });
+    this.logger.info('GROUPS_DISCOVERY', `Completed group discovery. Found ${groups.length} groups.`);
+  }
+
+  async _discoverChatsAsync() {
+    this.logger.info('CHATS_DISCOVERY', 'Starting background individual chats discovery...');
+    const chats = await this.client.getChats();
+    const individualChats = chats
+      .filter(c => c.isGroup === false && !c.id._serialized.endsWith(CHAT_ID_SUFFIX.CHANNEL) && c.id && c.id._serialized)
+      .map(c => {
+        const name = c.name?.trim() || c.id.user || c.id._serialized;
+        this._chatCache.set(c.id._serialized, { name, cachedAt: Date.now() });
+        return name;
+      });
+
+    this._updateStatusFile({ chats: individualChats });
+    this.logger.info('CHATS_DISCOVERY', `Completed individual chats discovery. Found ${individualChats.length} chats.`);
   }
 
   // ==========================================================================
@@ -279,6 +337,18 @@ class WhatsAppListener extends BaseListener {
       return this._isAllowedChannel(msg);
     }
 
+    // Group whitelist (only applies to group messages)
+    const isGroup = this._classifyOrigin(msg) === 'groups';
+    if (isGroup && this.allowedGroups.length > 0) {
+      return this._isAllowedGroup(msg);
+    }
+
+    // Individual chat whitelist (only applies to individual messages)
+    const isIndividual = this._classifyOrigin(msg) === 'individual';
+    if (isIndividual && this.allowedChats.length > 0) {
+      return this._isAllowedChat(msg);
+    }
+
     return true;
   }
 
@@ -307,6 +377,51 @@ class WhatsAppListener extends BaseListener {
     } catch (err) {
       console.warn(
         `[WhatsApp] ⚠️  Cannot resolve channel name for ${channelId} — skipped. ` +
+        `Reason: ${err.message}`
+      );
+      return false;
+    }
+  }
+
+  /** Fails CLOSED: skips message if group metadata cannot be resolved. */
+  async _isAllowedGroup(msg) {
+    const groupId = msg.from;
+
+    // Fast path: exact ID match
+    if (this.allowedGroups.includes(groupId)) return true;
+
+    // Slow path: resolve via cache → msg.getChat()
+    try {
+      const name = await this._resolveGroupName(groupId, msg);
+      return this.allowedGroups.some(
+        (g) => g.toLowerCase() === name.toLowerCase()
+      );
+    } catch (err) {
+      console.warn(
+        `[WhatsApp] ⚠️  Cannot resolve group name for ${groupId} — skipped. ` +
+        `Reason: ${err.message}`
+      );
+      return false;
+    }
+  }
+
+  /** Fails CLOSED: skips message if individual metadata cannot be resolved. */
+  async _isAllowedChat(msg) {
+    const chatId = msg.from;
+    const phone = chatId.split('@')[0];
+
+    // Fast path: exact ID or phone match
+    if (this.allowedChats.includes(chatId) || this.allowedChats.includes(phone)) return true;
+
+    // Slow path: resolve via cache → msg.getChat()
+    try {
+      const name = await this._resolveChatName(chatId, msg);
+      return this.allowedChats.some(
+        (c) => c.toLowerCase() === name.toLowerCase()
+      );
+    } catch (err) {
+      console.warn(
+        `[WhatsApp] ⚠️  Cannot resolve chat name for ${chatId} — skipped. ` +
         `Reason: ${err.message}`
       );
       return false;
@@ -344,6 +459,28 @@ class WhatsAppListener extends BaseListener {
     const chat = await msg.getChat();
     const name = chat.name?.trim() ?? '';
     this._channelCache.set(channelId, { name, cachedAt: Date.now() });
+    return name;
+  }
+
+  async _resolveGroupName(groupId, msg) {
+    const cached = this._groupCache.get(groupId);
+    if (cached && (Date.now() - cached.cachedAt) < CHANNEL_CACHE_TTL_MS) {
+      return cached.name;
+    }
+    const chat = await msg.getChat();
+    const name = chat.name?.trim() ?? '';
+    this._groupCache.set(groupId, { name, cachedAt: Date.now() });
+    return name;
+  }
+
+  async _resolveChatName(chatId, msg) {
+    const cached = this._chatCache.get(chatId);
+    if (cached && (Date.now() - cached.cachedAt) < CHANNEL_CACHE_TTL_MS) {
+      return cached.name;
+    }
+    const chat = await msg.getChat();
+    const name = chat.name?.trim() ?? '';
+    this._chatCache.set(chatId, { name, cachedAt: Date.now() });
     return name;
   }
 
@@ -609,6 +746,8 @@ class WhatsAppListener extends BaseListener {
           phone,
           wid,
           channels: [],
+          groups: [],
+          chats: [],
           discoveryStatus: 'DISCOVERING',
           discoveryProgress: 0,
           discoveryMessage: 'Spawning background channel fetcher...'
@@ -623,6 +762,12 @@ class WhatsAppListener extends BaseListener {
           })
           .catch((err) => {
             console.warn('[WhatsApp WARN] [Background Fetch] ⚠️ Background channel fetch error:', err.message);
+          });
+
+        // Discover groups and chats asynchronously in parallel (non-blocking!)
+        this._discoverGroupsAndChats()
+          .catch((err) => {
+            console.warn('[WhatsApp WARN] Background groups/chats fetch error:', err.message);
           });
 
         resolve();
