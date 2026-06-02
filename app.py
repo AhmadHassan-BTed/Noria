@@ -302,7 +302,32 @@ def render_device_linker_fragment(p_id, p_info, profiles):
             st.info("Loading QR Code from server...")
             
     else:
-        st.info("Initializing Linker socket connection...")
+        # Increment progress dynamically to animate initialization progress
+        curr_progress = st.session_state.get("linker_progress", 5)
+        if curr_progress < 95:
+            curr_progress += 15
+            if curr_progress > 95:
+                curr_progress = 95
+            st.session_state.linker_progress = curr_progress
+
+        if curr_progress <= 20:
+            step_msg = "Launching sandboxed Chrome headless engine..."
+        elif curr_progress <= 45:
+            step_msg = "Initializing secure WhatsApp connection socket..."
+        elif curr_progress <= 70:
+            step_msg = "Synchronizing keys and authentication listeners..."
+        elif curr_progress <= 90:
+            step_msg = "Awaiting secure QR token payload..."
+        else:
+            step_msg = "Generating visual pairing QR code..."
+
+        st.info(step_msg)
+        st.progress(curr_progress / 100.0)
+        st.markdown(f"""
+        <div style="font-size: 0.82rem; color: #718096; text-align: right; margin-top: -8px; font-weight: 500;">
+          Connection Progress: {curr_progress}%
+        </div>
+        """, unsafe_allow_html=True)
         
     # Cancel button
     if st.button("Cancel Pairing", key=f"cancel_pair_{p_id}", use_container_width=True):
@@ -702,6 +727,7 @@ if editing_profile is None:
                                 
                                 st.session_state.linking_profile = p_id
                                 st.session_state.linker_sess_id = linker_sess_id
+                                st.session_state.linker_progress = 5
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"Failed to spawn linker socket: {e}")
