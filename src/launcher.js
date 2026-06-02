@@ -39,7 +39,7 @@ async function launch() {
 
   // Load template from pipelines directory
   const pipelinePath = `./pipelines/${template}.yaml`;
-  orchestrator.loadPipelineFromYAML(pipelinePath);
+  const config = orchestrator.loadPipelineFromYAML(pipelinePath);
 
   // Parse allowed channels
   const allowedChannels = channels
@@ -58,8 +58,8 @@ async function launch() {
     },
   };
 
-  await orchestrator.initializePipeline(template, customConfig, instance);
-  orchestrator.wirePipelineEvents(template, instance);
+  await orchestrator.initializePipeline(config.name, customConfig, instance);
+  orchestrator.wirePipelineEvents(config.name, instance);
 
   console.log(`[Launcher] Pipeline instance ${instance} is running.`);
 }
