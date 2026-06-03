@@ -22,6 +22,7 @@ except ImportError:
 # =============================================================================
 # Streamlit Page Config & Custom Styling (Apple Aesthetics)
 # =============================================================================
+# Streamlit Page Config & Custom Styling (WhatsApp Dark Theme)
 st.set_page_config(
     page_title="Noria — Control Center",
     page_icon="📡",
@@ -29,12 +30,266 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Minimalist CSS to make sidebar navigation buttons full-width and left-aligned
+# Premium Custom CSS to enforce the WhatsApp Dark Theme (#212121 / #25D366 / #FFFFFF)
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+    /* Global style overrides */
+    html, body, [class*="css"], .stApp {
+        font-family: 'Inter', sans-serif !important;
+        background-color: #212121 !important;
+        color: #FFFFFF !important;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Outfit', sans-serif !important;
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+    }
+
+    /* Subheader and special section spacing */
+    .stSubheader h3 {
+        border-bottom: 2px solid #2D2D2D;
+        padding-bottom: 8px;
+        margin-top: 24px;
+        margin-bottom: 16px;
+    }
+
+    /* Sidebar container styling */
+    [data-testid="stSidebar"] {
+        background-color: #1A1A1A !important;
+        border-right: 1px solid #2D2D2D !important;
+    }
+
+    [data-testid="stSidebar"] * {
+        color: #FFFFFF !important;
+    }
+
+    /* Sidebar button navigation */
     [data-testid="stSidebar"] div.stButton > button {
         width: 100% !important;
         text-align: left !important;
+        border-radius: 10px !important;
+        border: 1px solid #2D2D2D !important;
+        background-color: #212121 !important;
+        color: #FFFFFF !important;
+        margin-bottom: 8px !important;
+        padding: 10px 16px !important;
+        font-weight: 500 !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    [data-testid="stSidebar"] div.stButton > button:hover {
+        border-color: #25D366 !important;
+        color: #25D366 !important;
+        background-color: #2D2D2D !important;
+        box-shadow: 0 2px 8px rgba(37, 211, 102, 0.15) !important;
+    }
+
+    /* Sidebar active primary buttons */
+    [data-testid="stSidebar"] div.stButton > button[kind="primary"] {
+        background-color: #25D366 !important;
+        color: #121212 !important;
+        border: 1px solid #25D366 !important;
+        font-weight: 600 !important;
+    }
+
+    [data-testid="stSidebar"] div.stButton > button[kind="primary"]:hover {
+        background-color: #20ba5a !important;
+        color: #121212 !important;
+        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3) !important;
+    }
+
+    /* General containers & cards */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border: 1px solid #2D2D2D !important;
+        border-radius: 14px !important;
+        background-color: #2B2B2B !important;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25) !important;
+        padding: 24px !important;
+        margin-bottom: 20px !important;
+        transition: border-color 0.2s ease-in-out !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        border-color: #333333 !important;
+    }
+
+    /* Nested containers (subsections / sub-cards) styling to differ in shade */
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: #1A1A1A !important;
+        border-color: #2D2D2D !important;
+        box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+        padding: 20px !important;
+        margin-top: 10px !important;
+        margin-bottom: 10px !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        border-color: #25D366 !important;
+        box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(37, 211, 102, 0.1) !important;
+    }
+
+    /* Grandchild nested containers (Level 3 sub-cards) styling */
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: #101010 !important;
+        border-color: #2D2D2D !important;
+        box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+        padding: 16px !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        border-color: #25D366 !important;
+        box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(37, 211, 102, 0.15) !important;
+    }
+
+    /* Buttons global overrides */
+    button {
+        border-radius: 8px !important;
+        font-weight: 500 !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    button[kind="primary"] {
+        background-color: #25D366 !important;
+        color: #121212 !important;
+        border: 1px solid #25D366 !important;
+    }
+
+    button[kind="primary"]:hover {
+        background-color: #20ba5a !important;
+        color: #121212 !important;
+        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3) !important;
+        transform: translateY(-1px);
+    }
+
+    button[kind="secondary"] {
+        background-color: #2D2D2D !important;
+        color: #FFFFFF !important;
+        border: 1px solid #3E3E3E !important;
+    }
+
+    button[kind="secondary"]:hover {
+        border-color: #25D366 !important;
+        color: #25D366 !important;
+        background-color: #333333 !important;
+        box-shadow: 0 2px 8px rgba(37, 211, 102, 0.1) !important;
+    }
+
+    /* Input & form fields styling */
+    div[data-baseweb="input"], div[data-baseweb="textarea"], div[data-baseweb="select"] {
+        background-color: #1A1A1A !important;
+        border: 1px solid #2D2D2D !important;
+        border-radius: 8px !important;
+        color: #FFFFFF !important;
+    }
+
+    /* Inputs inside Level 2 container should be darker */
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="input"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="textarea"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="select"] {
+        background-color: #101010 !important;
+    }
+
+    input, textarea, select {
+        color: #FFFFFF !important;
+        background-color: transparent !important;
+    }
+
+    div[data-baseweb="input"]:focus-within, div[data-baseweb="textarea"]:focus-within, div[data-baseweb="select"]:focus-within {
+        border-color: #25D366 !important;
+        box-shadow: 0 0 0 1px #25D366 !important;
+    }
+
+    /* Multi-select tag bubble styles */
+    span[role="button"] {
+        background-color: #2D2D2D !important;
+        border: 1px solid #3E3E3E !important;
+        color: #FFFFFF !important;
+    }
+
+    /* Expander styling - dynamic shades */
+    div[data-testid="stExpander"] {
+        background-color: #2B2B2B !important;
+        border: 1px solid #2D2D2D !important;
+        border-radius: 10px !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] {
+        background-color: #1A1A1A !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stExpander"] {
+        background-color: #101010 !important;
+    }
+
+    /* Alerts styling (info, success, warning, error) */
+    div[data-testid="stAlert"] {
+        background-color: #2b2b2b !important;
+        border: 1px solid #2D2D2D !important;
+        border-radius: 10px !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stAlert"] {
+        background-color: #1A1A1A !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stAlert"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stAlert"] {
+        background-color: #101010 !important;
+    }
+
+    /* Logs & Code display */
+    code {
+        color: #25D366 !important;
+        background-color: #121212 !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        font-size: 13.5px !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+    }
+
+    pre {
+        background-color: #121212 !important;
+        border: 1px solid #2D2D2D !important;
+        border-radius: 10px !important;
+        padding: 16px !important;
+        box-shadow: inset 0 2px 8px rgba(0,0,0,0.4) !important;
+    }
+
+    pre code {
+        padding: 0 !important;
+        background-color: transparent !important;
+    }
+
+    /* Toast styling overrides */
+    div[data-testid="stToast"] {
+        background-color: #1A1A1A !important;
+        color: #FFFFFF !important;
+        border-left: 5px solid #25D366 !important;
+    }
+
+    /* Progress bar coloring */
+    div[role="progressbar"] > div {
+        background-color: #25D366 !important;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #212121;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #3E3E3E;
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #25D366;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -601,7 +856,27 @@ if "current_page" not in st.session_state:
 # =============================================================================
 # Sidebar Navigation Panel (Clean SaaS Layout)
 # =============================================================================
-st.sidebar.title("📡 NORIA v2")
+st.sidebar.markdown("""
+<div style="text-align: center; margin-bottom: 20px;">
+    <svg width="160" height="60" viewBox="0 0 220 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;">
+      <path d="M40 70C34 72 20 75 14 77C15 70 17 58 19 53C10 42 10 26 21 15C32 4 50 4 61 15C72 26 72 44 61 55C50 66 42 69 40 70Z" stroke="#25D366" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="38" cy="38" r="4" fill="#25D366"/>
+      <line x1="38" y1="34" x2="38" y2="24" stroke="#25D366" stroke-width="3"/>
+      <rect x="33" y="18" width="10" height="6" rx="2" stroke="#25D366" stroke-width="2"/>
+      <line x1="41.5" y1="36" x2="50" y2="31" stroke="#25D366" stroke-width="3"/>
+      <rect x="48" y="25" width="10" height="6" rx="2" transform="rotate(30 48 25)" stroke="#25D366" stroke-width="2"/>
+      <line x1="41.5" y1="40" x2="50" y2="45" stroke="#25D366" stroke-width="3"/>
+      <rect x="48" y="45" width="10" height="6" rx="2" transform="rotate(-30 48 45)" stroke="#25D366" stroke-width="2"/>
+      <line x1="38" y1="42" x2="38" y2="52" stroke="#25D366" stroke-width="3"/>
+      <rect x="33" y="52" width="10" height="6" rx="2" stroke="#25D366" stroke-width="2"/>
+      <line x1="34.5" y1="40" x2="26" y2="45" stroke="#25D366" stroke-width="3"/>
+      <rect x="18" y="42" width="10" height="6" rx="2" transform="rotate(30 18 42)" stroke="#25D366" stroke-width="2"/>
+      <line x1="34.5" y1="36" x2="26" y2="31" stroke="#25D366" stroke-width="3"/>
+      <rect x="18" y="28" width="10" height="6" rx="2" transform="rotate(-30 18 28)" stroke="#25D366" stroke-width="2"/>
+      <text x="85" y="48" fill="#FFFFFF" font-family="'Outfit', sans-serif" font-weight="700" font-size="34">Noria</text>
+    </svg>
+</div>
+""", unsafe_allow_html=True)
 st.sidebar.caption("SaaS Orchestration Console")
 st.sidebar.write("---")
 
@@ -1007,8 +1282,7 @@ if editing_profile is None:
                         for idx, (dev_phone, dev_info) in enumerate(sorted(devices.items())):
                             col_idx = idx % min(len(devices), 3)
                             with dev_cols[col_idx]:
-                                with st.container(border=True):
-                                    st.markdown(f"#### 📱 +{dev_phone}")
+                                with st.expander(f"📱 +{dev_phone}", expanded=True):
                                     st.caption(f"Linked: {dev_info.get('linkedAt', 'Unknown')}")
                                     
                                     device_sess_id = f"session_{p_id}_dev_{dev_phone}"
