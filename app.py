@@ -176,8 +176,43 @@ st.markdown("""
         border-color: #333333 !important;
     }
 
+    /* SaaS Profile Expanders (Level 1 Collapsible Cards) */
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] {
+        background-color: #2B2B2B !important;
+        border: 1px solid #2D2D2D !important;
+        border-radius: 14px !important;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25) !important;
+        margin-bottom: 20px !important;
+    }
+
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] > details {
+        border: none !important;
+        background: transparent !important;
+    }
+
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] summary {
+        background-color: #2B2B2B !important;
+        color: #FFFFFF !important;
+        font-family: 'Outfit', sans-serif !important;
+        font-weight: 700 !important;
+        font-size: 1.15rem !important;
+        padding: 16px 20px !important;
+        border-radius: 14px !important;
+    }
+
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] summary:hover {
+        color: #25D366 !important;
+    }
+
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] details[open] summary {
+        border-bottom: 1px solid #2D2D2D !important;
+        border-bottom-left-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+    }
+
     /* Nested containers (subsections / sub-cards, Level 2) styling to differ in shade */
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #1A1A1A !important;
         border-color: #2D2D2D !important;
         box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
@@ -186,14 +221,15 @@ st.markdown("""
         margin-bottom: 10px !important;
     }
 
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #25D366 !important;
         box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(37, 211, 102, 0.1) !important;
     }
 
     /* Grandchild nested containers (Level 3 sub-cards) styling */
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #101010 !important;
         border-color: #2D2D2D !important;
         box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5) !important;
@@ -201,7 +237,7 @@ st.markdown("""
     }
 
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #25D366 !important;
         box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(37, 211, 102, 0.15) !important;
     }
@@ -249,8 +285,11 @@ st.markdown("""
 
     /* Inputs inside Level 2 container should be darker */
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="input"],
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="input"],
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="textarea"],
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="select"] {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="textarea"],
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="select"],
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="select"] {
         background-color: #101010 !important;
     }
 
@@ -1202,11 +1241,12 @@ if editing_profile is None:
     else:
         # Display all profiles as dynamic native cards
         for p_id, p_info in sorted(profiles.items()):
-            with st.container(border=True):
+            # Render profiles as collapsible expander cards
+            with st.expander(f"👤 {p_info['name']}", expanded=True):
                 # Profile Card Header & Quick Actions
                 card_header_cols = st.columns([3, 1, 1, 1])
                 with card_header_cols[0]:
-                    st.markdown(f"### 👤 {p_info['name']}")
+                    st.write("") # Spacer since title is in expander header
                 with card_header_cols[1]:
                     if st.button("🧹 Clear Cache", key=f"clear_cache_profile_{p_id}", use_container_width=True):
                         profile_scans = [
@@ -1347,7 +1387,8 @@ if editing_profile is None:
                         for idx, (dev_phone, dev_info) in enumerate(sorted(devices.items())):
                             col_idx = idx % min(len(devices), 3)
                             with dev_cols[col_idx]:
-                                with st.expander(f"📱 +{dev_phone}", expanded=True):
+                                with st.container(border=True):
+                                    st.markdown(f"#### 📱 +{dev_phone}")
                                     st.caption(f"Linked: {dev_info.get('linkedAt', 'Unknown')}")
                                     
                                     device_sess_id = f"session_{p_id}_dev_{dev_phone}"
