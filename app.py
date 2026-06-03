@@ -116,6 +116,21 @@ st.markdown("""
         border-color: #333333 !important;
     }
 
+    /* Nested containers (subsections / sub-cards) styling to differ in shade */
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: #1A1A1A !important;
+        border-color: #2D2D2D !important;
+        box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+        padding: 20px !important;
+        margin-top: 10px !important;
+        margin-bottom: 10px !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        border-color: #25D366 !important;
+        box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(37, 211, 102, 0.1) !important;
+    }
+
     /* Buttons global overrides */
     button {
         border-radius: 8px !important;
