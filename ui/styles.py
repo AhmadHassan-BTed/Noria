@@ -195,10 +195,12 @@ def apply_custom_styles():
             transition: color 0.2s ease-in-out !important;
         }
 
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] summary:hover,
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] summary:hover * {
+        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] summary:hover {
             color: var(--whatsapp-green) !important;
-            fill: var(--whatsapp-green) !important;
+        }
+        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] summary:hover svg {
+            color: var(--whatsapp-green) !important;
+            fill: currentColor !important;
         }
 
         div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] details[open] summary {
