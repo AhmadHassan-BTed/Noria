@@ -105,42 +105,51 @@ st.markdown("""
         line-height: 1.5 !important;
     }
 
-    /* Sidebar button navigation */
+    /* Sidebar button navigation (Inactive secondary) */
     [data-testid="stSidebar"] div.stButton > button {
         width: 100% !important;
         text-align: left !important;
-        border-radius: 8px !important;
-        border: 1px solid rgba(255, 255, 255, 0.05) !important;
-        background-color: rgba(255, 255, 255, 0.02) !important;
-        color: #B0B3B8 !important;
+        border-radius: 6px !important;
+        border: 1px solid transparent !important;
+        border-left: 4px solid transparent !important;
+        background-color: transparent !important;
+        color: #8E9297 !important;
         margin-bottom: 8px !important;
-        padding: 12px 18px !important;
+        padding: 12px 16px !important;
         font-weight: 500 !important;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        font-size: 14px !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
     [data-testid="stSidebar"] div.stButton > button:hover {
-        border-color: rgba(37, 211, 102, 0.4) !important;
-        color: #25D366 !important;
-        background-color: rgba(37, 211, 102, 0.05) !important;
+        border-color: rgba(255, 255, 255, 0.05) !important;
+        border-left: 4px solid rgba(37, 211, 102, 0.5) !important;
+        color: #FFFFFF !important;
+        background-color: rgba(255, 255, 255, 0.02) !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
         transform: translateX(4px) !important;
     }
 
-    /* Sidebar active primary buttons */
+    /* Sidebar active primary navigation buttons */
     [data-testid="stSidebar"] div.stButton > button[kind="primary"] {
-        background: linear-gradient(90deg, #25D366 0%, #20ba5a 100%) !important;
-        color: #121212 !important;
-        border: 1px solid #25D366 !important;
+        background-color: rgba(37, 211, 102, 0.06) !important;
+        color: #25D366 !important;
+        border: 1px solid rgba(37, 211, 102, 0.15) !important;
+        border-left: 4px solid #25D366 !important;
+        border-radius: 6px !important;
         font-weight: 600 !important;
-        box-shadow: 0 4px 15px rgba(37, 211, 102, 0.2) !important;
+        font-size: 14px !important;
+        box-shadow: inset 0 0 10px rgba(37, 211, 102, 0.05), 0 4px 12px rgba(0, 0, 0, 0.2) !important;
         transform: translateX(4px) !important;
     }
 
     [data-testid="stSidebar"] div.stButton > button[kind="primary"]:hover {
-        background: linear-gradient(90deg, #20ba5a 0%, #1c9d4b 100%) !important;
-        color: #121212 !important;
-        box-shadow: 0 6px 20px rgba(37, 211, 102, 0.35) !important;
+        background-color: rgba(37, 211, 102, 0.1) !important;
+        color: #25D366 !important;
+        border-color: rgba(37, 211, 102, 0.25) !important;
+        border-left: 4px solid #25D366 !important;
+        box-shadow: inset 0 0 10px rgba(37, 211, 102, 0.08), 0 4px 15px rgba(37, 211, 102, 0.15) !important;
+        transform: translateX(4px) !important;
     }
 
     /* General containers & cards */
@@ -916,9 +925,9 @@ st.sidebar.markdown("""
     </svg>
     <span style="color: #FFFFFF; font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 28px; letter-spacing: 0.5px;">Noria</span>
 </div>
+<div style="font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #8E9297; text-align: center; margin-bottom: 20px;">SaaS Orchestration Console</div>
+<div style="height: 1px; background: rgba(255, 255, 255, 0.05); margin: 20px 0;"></div>
 """, unsafe_allow_html=True)
-st.sidebar.caption("SaaS Orchestration Console")
-st.sidebar.write("---")
 
 # Styled Sidebar Buttons for Navigation
 if st.sidebar.button("👤 Applicant Profiles", use_container_width=True, type="primary" if st.session_state.current_page == "Profiles" else "secondary"):
@@ -929,8 +938,15 @@ if st.sidebar.button("📡 Opportunity Scans", use_container_width=True, type="p
     st.session_state.current_page = "Scans"
     st.rerun()
 
-st.sidebar.write("---")
-st.sidebar.info("Manage independent customer profiles, API keys, and launch dynamic opportunity scans entirely from the unified profile directory.")
+st.sidebar.markdown("""
+<div style="height: 1px; background: rgba(255, 255, 255, 0.05); margin: 25px 0 20px 0;"></div>
+<div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 3px solid #25D366; border-radius: 8px; padding: 14px;">
+    <div style="font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #25D366; margin-bottom: 6px;">Unified Control</div>
+    <div style="font-family: 'Inter', sans-serif; font-size: 12.5px; line-height: 1.5; color: #8E9297;">
+        Manage independent customer profiles, API keys, and launch dynamic opportunity scans entirely from the unified profile directory.
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # =============================================================================
 # Main View: SaaS Applicant Profiles Directory
