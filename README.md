@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="hero-banner.svg" alt="Noria Hero Banner" width="100%" />
+  <img src="docs/images/hero-banner.svg" alt="Noria Hero Banner" width="100%" />
 </p>
 
 <p align="center">
