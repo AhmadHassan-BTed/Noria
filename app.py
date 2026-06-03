@@ -50,7 +50,6 @@ st.markdown("""
 
     header[data-testid="stHeader"] * {
         color: #FFFFFF !important;
-        fill: #FFFFFF !important;
     }
 
     div[data-testid="stDecoration"] {
