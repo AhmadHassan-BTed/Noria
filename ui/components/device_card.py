@@ -341,9 +341,10 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                         if profile_changed:
                             save_profiles(profiles)
                         
-                        # Calculate active scans and matches statistics
+                        # Calculate active scans, matches, rejects, and total statistics
                         scans_count = len(device_scans)
                         matches_count = 0
+                        total_count = 0
                         for scan_name in device_scans:
                             log_path = f"data/daemon-{scan_name}.log"
                             if os.path.exists(log_path):
@@ -351,13 +352,19 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                                     with open(log_path, "r", encoding="utf-8", errors="replace") as f:
                                         content = f.read()
                                         matches_count += content.count("Match found!")
+                                        total_count += content.count("Analysis match score")
                                 except Exception:
                                     pass
+                        
+                        rejects_count = max(0, total_count - matches_count)
 
                         st.markdown(f"""
                         <div style="background-color: var(--bg-level-3); border: 1px solid var(--border-level-3); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; text-align: center;">
                             <span style="color: var(--text-color); font-family: \'Outfit\', sans-serif; font-weight: 600; font-size: 14px;">
-                                📡 Running Scans: <span style="color: var(--whatsapp-green);">{scans_count}</span> &nbsp;|&nbsp; 🔍 Matches: <span style="color: var(--whatsapp-green);">{matches_count}</span>
+                                📡 Running Scans: <span style="color: var(--whatsapp-green);">{scans_count}</span> &nbsp;|&nbsp; 
+                                🔍 Matches: <span style="color: var(--whatsapp-green);">{matches_count}</span> &nbsp;|&nbsp; 
+                                ❌ Rejects: <span style="color: var(--whatsapp-green);">{rejects_count}</span> &nbsp;|&nbsp; 
+                                📊 Total: <span style="color: var(--whatsapp-green);">{total_count}</span>
                             </span>
                         </div>
                         """, unsafe_allow_html=True)
