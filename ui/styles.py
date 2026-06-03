@@ -420,3 +420,27 @@ def apply_custom_styles():
         }
     </style>
     """, unsafe_allow_html=True)
+
+    # Inject client-side JS to automatically repair malformed localStorage UUID entries
+    # that cause Streamlit's MetricsManager.getAnonymousId to throw JSON.parse exceptions.
+    st.markdown("""
+    <script>
+    (function() {
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key) continue;
+                const val = localStorage.getItem(key);
+                if (val && !val.startsWith('{') && !val.startsWith('[') && !val.startsWith('"')) {
+                    // Check if it looks like a raw string or UUID and is a streamlit/metrics/user key
+                    if (key.includes('streamlit') || key.includes('metrics') || key.includes('ajs') || key.includes('user') || key.includes('id')) {
+                        localStorage.removeItem(key);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Local storage cleanup failed: ", e);
+        }
+    })();
+    </script>
+    """, unsafe_allow_html=True)
