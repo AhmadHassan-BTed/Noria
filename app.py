@@ -172,6 +172,13 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
+    /* Inputs inside Level 2 container should be darker */
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="input"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="textarea"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="select"] {
+        background-color: #121212 !important;
+    }
+
     input, textarea, select {
         color: #FFFFFF !important;
         background-color: transparent !important;
@@ -189,11 +196,34 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* Expander styling */
+    /* Expander styling - dynamic shades */
     div[data-testid="stExpander"] {
-        background-color: #212121 !important;
+        background-color: #2B2B2B !important;
         border: 1px solid #2D2D2D !important;
         border-radius: 10px !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] {
+        background-color: #1E1E1E !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] {
+        background-color: #121212 !important;
+    }
+
+    /* Alerts styling (info, success, warning, error) */
+    div[data-testid="stAlert"] {
+        background-color: #2b2b2b !important;
+        border: 1px solid #2D2D2D !important;
+        border-radius: 10px !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stAlert"] {
+        background-color: #1E1E1E !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stAlert"] {
+        background-color: #121212 !important;
     }
 
     /* Logs & Code display */
