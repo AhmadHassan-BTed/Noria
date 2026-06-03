@@ -220,7 +220,8 @@ st.markdown("""
         background-color: #1A1A1A !important;
     }
 
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] {
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stExpander"] {
         background-color: #101010 !important;
     }
 
@@ -235,7 +236,8 @@ st.markdown("""
         background-color: #1A1A1A !important;
     }
 
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stAlert"] {
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stAlert"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stAlert"] {
         background-color: #101010 !important;
     }
 
@@ -1280,8 +1282,7 @@ if editing_profile is None:
                         for idx, (dev_phone, dev_info) in enumerate(sorted(devices.items())):
                             col_idx = idx % min(len(devices), 3)
                             with dev_cols[col_idx]:
-                                with st.container(border=True):
-                                    st.markdown(f"#### 📱 +{dev_phone}")
+                                with st.expander(f"📱 +{dev_phone}", expanded=True):
                                     st.caption(f"Linked: {dev_info.get('linkedAt', 'Unknown')}")
                                     
                                     device_sess_id = f"session_{p_id}_dev_{dev_phone}"
