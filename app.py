@@ -162,7 +162,8 @@ st.markdown("""
     }
 
     /* General containers & cards (Level 1) */
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] {
         border: 1px solid #2D2D2D !important;
         border-radius: 14px !important;
         background-color: #2B2B2B !important;
@@ -172,46 +173,59 @@ st.markdown("""
         transition: border-color 0.2s ease-in-out !important;
     }
 
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"]:hover {
         border-color: #333333 !important;
     }
 
-    /* SaaS Device Expanders (Level 2 Collapsible Cards) */
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] {
-        background-color: #1A1A1A !important;
-        border: 1px solid #2D2D2D !important;
-        border-radius: 10px !important;
-        box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
-        margin-top: 10px !important;
-        margin-bottom: 10px !important;
-    }
-
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] > details {
+    /* General Level 1 Expander details styling */
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] > details {
         border: none !important;
         background: transparent !important;
     }
 
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] summary {
-        background-color: #1A1A1A !important;
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] summary {
+        background-color: #2B2B2B !important;
         color: #FFFFFF !important;
         font-family: 'Outfit', sans-serif !important;
-        font-weight: 600 !important;
-        font-size: 1rem !important;
-        padding: 10px 14px !important;
-        border-radius: 10px !important;
+        font-weight: 700 !important;
+        font-size: 1.15rem !important;
+        padding: 16px 20px !important;
+        border-radius: 14px !important;
+        transition: color 0.2s ease-in-out !important;
     }
 
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] summary:hover {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] summary:hover {
         color: #25D366 !important;
     }
 
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] details[open] summary {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] details[open] summary {
         border-bottom: 1px solid #2D2D2D !important;
         border-bottom-left-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
     }
 
+    /* Style for device header toggle buttons to look like expanders */
+    div[class*="st-key-dev_hdr_btn"] button {
+        background-color: #1A1A1A !important;
+        color: #FFFFFF !important;
+        border: 1px solid #2D2D2D !important;
+        border-radius: 10px !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+        font-family: 'Outfit', sans-serif !important;
+        font-weight: 600 !important;
+        padding: 10px 14px !important;
+        margin-bottom: -10px !important;
+    }
+    div[class*="st-key-dev_hdr_btn"] button:hover {
+        color: #25D366 !important;
+        border-color: #25D366 !important;
+        background-color: #222222 !important;
+    }
+
     /* Nested containers (subsections / sub-cards, Level 2) styling to differ in shade */
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"],
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #1A1A1A !important;
         border-color: #2D2D2D !important;
@@ -221,26 +235,26 @@ st.markdown("""
         margin-bottom: 10px !important;
     }
 
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #25D366 !important;
         box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(37, 211, 102, 0.1) !important;
     }
 
     /* Grandchild nested containers (Level 3 sub-cards) styling */
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #101010 !important;
         border-color: #2D2D2D !important;
         box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5) !important;
         padding: 16px !important;
     }
 
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #25D366 !important;
         box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(37, 211, 102, 0.15) !important;
     }
-
     /* Buttons global overrides */
     button {
         border-radius: 8px !important;
@@ -1255,17 +1269,9 @@ if editing_profile is None:
     else:
         # Display all profiles as dynamic native cards
         for p_id, p_info in sorted(profiles.items()):
-            with st.container(border=True):
-                # Profile Card Header & Quick Actions
-                card_header_cols = st.columns([3.5, 1, 1, 1, 1.2])
-                with card_header_cols[0]:
-                    st.markdown(f"### 👤 {p_info['name']}")
-                with card_header_cols[4]:
-                    is_expanded = st.toggle("Expand", value=True, key=f"toggle_profile_{p_id}", label_visibility="collapsed")
-                
-                if not is_expanded:
-                    st.write("") # Spacer line when collapsed
-                    continue
+            with st.expander(f"👤 {p_info['name']}", expanded=True):
+                # Profile Quick Actions (inside expander at the top)
+                card_header_cols = st.columns([5, 1.5, 1.5, 1.5])
                 with card_header_cols[1]:
                     if st.button("🧹 Clear Cache", key=f"clear_cache_profile_{p_id}", use_container_width=True):
                         profile_scans = [
@@ -1406,246 +1412,257 @@ if editing_profile is None:
                         for idx, (dev_phone, dev_info) in enumerate(sorted(devices.items())):
                             col_idx = idx % min(len(devices), 3)
                             with dev_cols[col_idx]:
-                                with st.expander(f"📱 +{dev_phone}", expanded=True):
-                                    st.caption(f"Linked: {dev_info.get('linkedAt', 'Unknown')}")
-                                    
-                                    device_sess_id = f"session_{p_id}_dev_{dev_phone}"
-                                    status_info = get_session_status(device_sess_id)
-                                    curr_status = status_info.get("status", "UNKNOWN")
-                                    reason = status_info.get("reason", "")
-                                    
-                                    if curr_status in ["SCAN_QR", "auth_failure"]:
-                                        st.error("⚠️ Authentication Expired - Re-link required")
-                                    elif curr_status == "DISCONNECTED":
-                                        if "Stopped" in reason or "user" in reason.lower():
-                                            st.info("💤 Inactive (Standby)")
-                                        else:
-                                            st.warning("⚠️ Offline")
-                                        
-                                    # Scans running on this device
-                                    device_scans = [
-                                        name for name, info in running_instances.items()
-                                        if info.get("profileId") == p_id and (
-                                            info.get("devicePhone") == dev_phone or 
-                                            info.get("sessionId") == f"session_{p_id}_dev_{dev_phone}" or
-                                            (not info.get("devicePhone") and info.get("phone") == dev_phone)
-                                        )
-                                    ]
-                                    
-                                    # Dynamic Channel, Group, and Chat Sync from active scans
-                                    channels_list = dev_info.get("channels", [])
-                                    groups_list = dev_info.get("groups", [])
-                                    chats_list = dev_info.get("chats", [])
-                                    profile_changed = False
-                                    
-                                    for scan_name in device_scans:
-                                        scan_info = running_instances[scan_name]
-                                        status_info = get_session_status(scan_info["sessionId"])
-                                        
-                                        discovered_channels = status_info.get("channels", [])
-                                        if len(discovered_channels) > len(channels_list):
-                                            channels_list = discovered_channels
-                                            dev_info["channels"] = discovered_channels
-                                            profile_changed = True
-                                            
-                                        discovered_groups = status_info.get("groups", [])
-                                        if len(discovered_groups) > len(groups_list):
-                                            groups_list = discovered_groups
-                                            dev_info["groups"] = discovered_groups
-                                            profile_changed = True
-                                            
-                                        discovered_chats = status_info.get("chats", [])
-                                        if len(discovered_chats) > len(chats_list):
-                                            chats_list = discovered_chats
-                                            dev_info["chats"] = discovered_chats
-                                            profile_changed = True
-                                            
-                                    if profile_changed:
-                                        save_profiles(profiles)
-                                    
-                                    st.markdown(f"**Subscribed Channels:** `{len(channels_list)}` | **Groups:** `{len(groups_list)}` | **Direct Chats:** `{len(chats_list)}`")
-                                    
-                                    if not device_scans:
-                                        st.info("No active scans on this device.")
-                                    else:
-                                        st.markdown("**Running Scans:**")
+                                dev_expanded_key = f"dev_expanded_{p_id}_{dev_phone}"
+                                if dev_expanded_key not in st.session_state:
+                                    st.session_state[dev_expanded_key] = True
+                                
+                                is_dev_expanded = st.session_state[dev_expanded_key]
+                                arrow = "▼" if is_dev_expanded else "▶"
+                                if st.button(f"{arrow} 📱 +{dev_phone}", key=f"dev_hdr_btn_{p_id}_{dev_phone}", use_container_width=True):
+                                    st.session_state[dev_expanded_key] = not is_dev_expanded
+                                    st.rerun()
+                                
+                                if is_dev_expanded:
+                                    with st.container(border=True):
+                                        st.caption(f"Linked: {dev_info.get('linkedAt', 'Unknown')}")
+
+                                        device_sess_id = f"session_{p_id}_dev_{dev_phone}"
+                                        status_info = get_session_status(device_sess_id)
+                                        curr_status = status_info.get("status", "UNKNOWN")
+                                        reason = status_info.get("reason", "")
+
+                                        if curr_status in ["SCAN_QR", "auth_failure"]:
+                                            st.error("⚠️ Authentication Expired - Re-link required")
+                                        elif curr_status == "DISCONNECTED":
+                                            if "Stopped" in reason or "user" in reason.lower():
+                                                st.info("💤 Inactive (Standby)")
+                                            else:
+                                                st.warning("⚠️ Offline")
+
+                                        # Scans running on this device
+                                        device_scans = [
+                                            name for name, info in running_instances.items()
+                                            if info.get("profileId") == p_id and (
+                                                info.get("devicePhone") == dev_phone or 
+                                                info.get("sessionId") == f"session_{p_id}_dev_{dev_phone}" or
+                                                (not info.get("devicePhone") and info.get("phone") == dev_phone)
+                                            )
+                                        ]
+
+                                        # Dynamic Channel, Group, and Chat Sync from active scans
+                                        channels_list = dev_info.get("channels", [])
+                                        groups_list = dev_info.get("groups", [])
+                                        chats_list = dev_info.get("chats", [])
+                                        profile_changed = False
+
                                         for scan_name in device_scans:
                                             scan_info = running_instances[scan_name]
-                                            st.markdown(f"🔸 `{scan_name}` (`{scan_info['category']}`)")
-                                            
                                             status_info = get_session_status(scan_info["sessionId"])
-                                            scan_status = status_info.get("status", "UNKNOWN")
-                                            disc_status = status_info.get("discoveryStatus", "COMPLETED")
-                                            
-                                            if scan_status == "CONNECTED" and disc_status == "DISCOVERING":
-                                                disc_progress = status_info.get("discoveryProgress", 0)
-                                                disc_msg = status_info.get("discoveryMessage", "Discovering channels...")
-                                                st.warning(f"🔍 Discovery: {disc_progress}%")
-                                                st.progress(disc_progress / 100.0)
-                                                st.caption(f"_{disc_msg}_")
-                                                
-                                            act_col1, act_col2 = st.columns([1, 1])
-                                            with act_col1:
-                                                if scan_status == "CONNECTED":
-                                                    if disc_status == "DISCOVERING":
-                                                        st.info("Syncing")
+
+                                            discovered_channels = status_info.get("channels", [])
+                                            if len(discovered_channels) > len(channels_list):
+                                                channels_list = discovered_channels
+                                                dev_info["channels"] = discovered_channels
+                                                profile_changed = True
+
+                                            discovered_groups = status_info.get("groups", [])
+                                            if len(discovered_groups) > len(groups_list):
+                                                groups_list = discovered_groups
+                                                dev_info["groups"] = discovered_groups
+                                                profile_changed = True
+
+                                            discovered_chats = status_info.get("chats", [])
+                                            if len(discovered_chats) > len(chats_list):
+                                                chats_list = discovered_chats
+                                                dev_info["chats"] = discovered_chats
+                                                profile_changed = True
+
+                                        if profile_changed:
+                                            save_profiles(profiles)
+
+                                        st.markdown(f"**Subscribed Channels:** `{len(channels_list)}` | **Groups:** `{len(groups_list)}` | **Direct Chats:** `{len(chats_list)}`")
+
+                                        if not device_scans:
+                                            st.info("No active scans on this device.")
+                                        else:
+                                            st.markdown("**Running Scans:**")
+                                            for scan_name in device_scans:
+                                                scan_info = running_instances[scan_name]
+                                                st.markdown(f"🔸 `{scan_name}` (`{scan_info['category']}`)")
+
+                                                status_info = get_session_status(scan_info["sessionId"])
+                                                scan_status = status_info.get("status", "UNKNOWN")
+                                                disc_status = status_info.get("discoveryStatus", "COMPLETED")
+
+                                                if scan_status == "CONNECTED" and disc_status == "DISCOVERING":
+                                                    disc_progress = status_info.get("discoveryProgress", 0)
+                                                    disc_msg = status_info.get("discoveryMessage", "Discovering channels...")
+                                                    st.warning(f"🔍 Discovery: {disc_progress}%")
+                                                    st.progress(disc_progress / 100.0)
+                                                    st.caption(f"_{disc_msg}_")
+
+                                                act_col1, act_col2 = st.columns([1, 1])
+                                                with act_col1:
+                                                    if scan_status == "CONNECTED":
+                                                        if disc_status == "DISCOVERING":
+                                                            st.info("Syncing")
+                                                        else:
+                                                            st.success("Active")
+                                                    elif scan_status == "DISCONNECTED":
+                                                        reason = status_info.get("reason", "Disconnected")
+                                                        st.error(f"Error: {reason}")
                                                     else:
-                                                        st.success("Active")
-                                                elif scan_status == "DISCONNECTED":
-                                                    reason = status_info.get("reason", "Disconnected")
-                                                    st.error(f"Error: {reason}")
+                                                        st.warning("Connecting")
+                                                with act_col2:
+                                                    if st.button("Stop", key=f"stop_sub_{p_id}_{dev_phone}_{scan_name}", use_container_width=True):
+                                                        try:
+                                                            if os.name == 'nt':
+                                                                subprocess.run(['taskkill', '/F', '/T', '/PID', str(scan_info['pid'])], capture_output=True)
+                                                            else:
+                                                                os.kill(scan_info['pid'], signal.SIGTERM)
+
+                                                            del running_instances[scan_name]
+                                                            save_running_processes(running_instances)
+
+                                                            # Write DISCONNECTED status cleanly
+                                                            status_path = f"data/status-{scan_info['sessionId']}.json"
+                                                            try:
+                                                                with open(status_path, "w") as f:
+                                                                    json.dump({
+                                                                        "status": "DISCONNECTED",
+                                                                        "reason": "Stopped by user"
+                                                                    }, f)
+                                                            except Exception:
+                                                                pass
+
+                                                            st.toast(f"Scan '{scan_name}' stopped successfully.")
+                                                            time.sleep(1)
+                                                            st.rerun()
+                                                        except Exception as e:
+                                                            st.error(f"Error: {e}")
+
+                                        st.write("---")
+
+                                        # ── Device Log Viewer ──────────────────────────────────
+                                        device_sess_id = f"session_{p_id}_dev_{dev_phone}"
+                                        show_logs = st.toggle(f"📋 Show Device Logs — +{dev_phone}", value=False, key=f"toggle_logs_{p_id}_{dev_phone}")
+                                        if show_logs:
+                                            with st.container(border=True):
+                                                log_col1, log_col2 = st.columns([3, 1])
+                                                with log_col1:
+                                                    st.caption(f"Session ID: `{device_sess_id}`")
+                                                with log_col2:
+                                                    if st.button("🗑️ Clear Logs", key=f"clear_logs_{p_id}_{dev_phone}", use_container_width=True):
+                                                        if clear_session_logs(device_sess_id):
+                                                            st.toast("Logs cleared successfully.")
+                                                        else:
+                                                            st.toast("No logs to clear.")
+
+                                                # Read and display logs
+                                                log_lines = read_session_logs(device_sess_id, max_lines=100)
+
+                                                if not log_lines:
+                                                    st.info("No logs available for this device. Logs will appear once the device is connected and processing messages.")
                                                 else:
-                                                    st.warning("Connecting")
-                                            with act_col2:
-                                                if st.button("Stop", key=f"stop_sub_{p_id}_{dev_phone}_{scan_name}", use_container_width=True):
+                                                    # Display logs in a scrollable code block
+                                                    log_text = "\n".join(log_lines)
+
+                                                    # Copy logs button using custom HTML/JS
+                                                    import urllib.parse
+                                                    encoded_logs = urllib.parse.quote(log_text)
+                                                    copy_btn_html = f"""
+                                                    <div style="display: flex; justify-content: flex-end; margin-bottom: -10px;">
+                                                        <button id="copyBtn" style="
+                                                            background-color: #2b2b36;
+                                                            color: #f4f4f4;
+                                                            border: 1px solid #444;
+                                                            padding: 6px 12px;
+                                                            border-radius: 6px;
+                                                            cursor: pointer;
+                                                            font-size: 13px;
+                                                            font-family: system-ui, -apple-system, sans-serif;
+                                                            display: flex;
+                                                            align-items: center;
+                                                            gap: 6px;
+                                                            transition: background-color 0.2s;
+                                                        " onclick="copyLogs()">
+                                                            📋 Copy Logs
+                                                        </button>
+                                                        <textarea id="logText" style="display:none;"></textarea>
+                                                    </div>
+                                                    <script>
+                                                    function copyLogs() {{
+                                                        const text = decodeURIComponent("{encoded_logs}");
+                                                        const textArea = document.getElementById("logText");
+                                                        textArea.style.display = "block";
+                                                        textArea.value = text;
+                                                        textArea.select();
+                                                        try {{
+                                                            document.execCommand("copy");
+                                                            const btn = document.getElementById("copyBtn");
+                                                            btn.innerHTML = "✅ Copied!";
+                                                            btn.style.backgroundColor = "#1b4d3e";
+                                                            setTimeout(() => {{
+                                                                btn.innerHTML = "📋 Copy Logs";
+                                                                btn.style.backgroundColor = "#2b2b36";
+                                                            }}, 2000);
+                                                        }} catch (err) {{
+                                                            alert("Could not copy: " + err);
+                                                        }}
+                                                        textArea.style.display = "none";
+                                                    }}
+                                                    </script>
+                                                    """
+                                                    import streamlit.components.v1 as components
+                                                    components.html(copy_btn_html, height=45)
+
+                                                    st.code(log_text, language="text")
+                                                    st.caption(f"Showing last {len(log_lines)} log entries. Logs auto-refresh every 2 seconds.")
+
+                                        st.write("---")
+
+                                        col_cache, col_unlink = st.columns([1, 1])
+                                        with col_cache:
+                                            if st.button("🧹 Clear Cache", key=f"clear_cache_dev_{p_id}_{dev_phone}", use_container_width=True):
+                                                for scan_name in device_scans:
+                                                    flag_path = f"data/clear-cache-{scan_name}.flag"
+                                                    try:
+                                                        with open(flag_path, "w") as f:
+                                                            f.write("clear")
+                                                    except Exception:
+                                                        pass
+                                                st.toast(f"Cache clear requested for active scan(s) on +{dev_phone}.")
+                                        with col_unlink:
+                                            if st.button("Unlink Device", key=f"unlink_{p_id}_{dev_phone}", use_container_width=True):
+                                                for scan_name in device_scans:
                                                     try:
                                                         if os.name == 'nt':
-                                                            subprocess.run(['taskkill', '/F', '/T', '/PID', str(scan_info['pid'])], capture_output=True)
+                                                            subprocess.run(['taskkill', '/F', '/T', '/PID', str(running_instances[scan_name]['pid'])], capture_output=True)
                                                         else:
-                                                            os.kill(scan_info['pid'], signal.SIGTERM)
-                                                        
+                                                            os.kill(running_instances[scan_name]['pid'], signal.SIGTERM)
                                                         del running_instances[scan_name]
-                                                        save_running_processes(running_instances)
-                                                        
-                                                        # Write DISCONNECTED status cleanly
-                                                        status_path = f"data/status-{scan_info['sessionId']}.json"
-                                                        try:
-                                                            with open(status_path, "w") as f:
-                                                                json.dump({
-                                                                    "status": "DISCONNECTED",
-                                                                    "reason": "Stopped by user"
-                                                                }, f)
-                                                        except Exception:
-                                                            pass
-                                                            
-                                                        st.toast(f"Scan '{scan_name}' stopped successfully.")
-                                                        time.sleep(1)
-                                                        st.rerun()
-                                                    except Exception as e:
-                                                        st.error(f"Error: {e}")
-                                    
-                                    st.write("---")
-                                    
-                                    # ── Device Log Viewer ──────────────────────────────────
-                                    device_sess_id = f"session_{p_id}_dev_{dev_phone}"
-                                    show_logs = st.toggle(f"📋 Show Device Logs — +{dev_phone}", value=False, key=f"toggle_logs_{p_id}_{dev_phone}")
-                                    if show_logs:
-                                        with st.container(border=True):
-                                            log_col1, log_col2 = st.columns([3, 1])
-                                            with log_col1:
-                                                st.caption(f"Session ID: `{device_sess_id}`")
-                                            with log_col2:
-                                                if st.button("🗑️ Clear Logs", key=f"clear_logs_{p_id}_{dev_phone}", use_container_width=True):
-                                                    if clear_session_logs(device_sess_id):
-                                                        st.toast("Logs cleared successfully.")
-                                                    else:
-                                                        st.toast("No logs to clear.")
-                                            
-                                            # Read and display logs
-                                            log_lines = read_session_logs(device_sess_id, max_lines=100)
-                                            
-                                            if not log_lines:
-                                                st.info("No logs available for this device. Logs will appear once the device is connected and processing messages.")
-                                            else:
-                                                # Display logs in a scrollable code block
-                                                log_text = "\n".join(log_lines)
-                                                
-                                                # Copy logs button using custom HTML/JS
-                                                import urllib.parse
-                                                encoded_logs = urllib.parse.quote(log_text)
-                                                copy_btn_html = f"""
-                                                <div style="display: flex; justify-content: flex-end; margin-bottom: -10px;">
-                                                    <button id="copyBtn" style="
-                                                        background-color: #2b2b36;
-                                                        color: #f4f4f4;
-                                                        border: 1px solid #444;
-                                                        padding: 6px 12px;
-                                                        border-radius: 6px;
-                                                        cursor: pointer;
-                                                        font-size: 13px;
-                                                        font-family: system-ui, -apple-system, sans-serif;
-                                                        display: flex;
-                                                        align-items: center;
-                                                        gap: 6px;
-                                                        transition: background-color 0.2s;
-                                                    " onclick="copyLogs()">
-                                                        📋 Copy Logs
-                                                    </button>
-                                                    <textarea id="logText" style="display:none;"></textarea>
-                                                </div>
-                                                <script>
-                                                function copyLogs() {{
-                                                    const text = decodeURIComponent("{encoded_logs}");
-                                                    const textArea = document.getElementById("logText");
-                                                    textArea.style.display = "block";
-                                                    textArea.value = text;
-                                                    textArea.select();
-                                                    try {{
-                                                        document.execCommand("copy");
-                                                        const btn = document.getElementById("copyBtn");
-                                                        btn.innerHTML = "✅ Copied!";
-                                                        btn.style.backgroundColor = "#1b4d3e";
-                                                        setTimeout(() => {{
-                                                            btn.innerHTML = "📋 Copy Logs";
-                                                            btn.style.backgroundColor = "#2b2b36";
-                                                        }}, 2000);
-                                                    }} catch (err) {{
-                                                        alert("Could not copy: " + err);
-                                                    }}
-                                                    textArea.style.display = "none";
-                                                }}
-                                                </script>
-                                                """
-                                                import streamlit.components.v1 as components
-                                                components.html(copy_btn_html, height=45)
-                                                
-                                                st.code(log_text, language="text")
-                                                st.caption(f"Showing last {len(log_lines)} log entries. Logs auto-refresh every 2 seconds.")
-                                    
-                                    st.write("---")
-                                    
-                                    col_cache, col_unlink = st.columns([1, 1])
-                                    with col_cache:
-                                        if st.button("🧹 Clear Cache", key=f"clear_cache_dev_{p_id}_{dev_phone}", use_container_width=True):
-                                            for scan_name in device_scans:
-                                                flag_path = f"data/clear-cache-{scan_name}.flag"
+                                                    except Exception:
+                                                        pass
+                                                save_running_processes(running_instances)
+
                                                 try:
-                                                    with open(flag_path, "w") as f:
-                                                        f.write("clear")
+                                                    import shutil
+                                                    shutil.rmtree(f".wwebjs_auth/session-session_{p_id}_dev_{dev_phone}", ignore_errors=True)
                                                 except Exception:
                                                     pass
-                                            st.toast(f"Cache clear requested for active scan(s) on +{dev_phone}.")
-                                    with col_unlink:
-                                        if st.button("Unlink Device", key=f"unlink_{p_id}_{dev_phone}", use_container_width=True):
-                                            for scan_name in device_scans:
+
+                                                # Also clear status and logs on unlink
                                                 try:
-                                                    if os.name == 'nt':
-                                                        subprocess.run(['taskkill', '/F', '/T', '/PID', str(running_instances[scan_name]['pid'])], capture_output=True)
-                                                    else:
-                                                        os.kill(running_instances[scan_name]['pid'], signal.SIGTERM)
-                                                    del running_instances[scan_name]
-                                                except Exception:
+                                                    os.remove(f"data/status-{device_sess_id}.json")
+                                                except FileNotFoundError:
                                                     pass
-                                            save_running_processes(running_instances)
-                                            
-                                            try:
-                                                import shutil
-                                                shutil.rmtree(f".wwebjs_auth/session-session_{p_id}_dev_{dev_phone}", ignore_errors=True)
-                                            except Exception:
-                                                pass
-                                            
-                                            # Also clear status and logs on unlink
-                                            try:
-                                                os.remove(f"data/status-{device_sess_id}.json")
-                                            except FileNotFoundError:
-                                                pass
-                                            clear_session_logs(device_sess_id)
-                                                
-                                            del p_info["devices"][dev_phone]
-                                            save_profiles(profiles)
-                                            st.toast("Device unlinked successfully.")
-                                            time.sleep(1)
-                                            st.rerun()
+                                                clear_session_logs(device_sess_id)
+
+                                                del p_info["devices"][dev_phone]
+                                                save_profiles(profiles)
+                                                st.toast("Device unlinked successfully.")
+                                                time.sleep(1)
+                                                st.rerun()
 
                 render_linked_devices_fragment(p_id, p_info, profiles, running_instances)
                 st.write("---")
