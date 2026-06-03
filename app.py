@@ -1261,7 +1261,7 @@ if editing_profile is None:
                 # Profile Card Header & Quick Actions
                 card_header_cols = st.columns([3, 1, 1, 1])
                 with card_header_cols[0]:
-                    st.write("") # Spacer since title is in expander header
+                    st.markdown(f"### 👤 {p_info['name']}")
                 with card_header_cols[1]:
                     if st.button("🧹 Clear Cache", key=f"clear_cache_profile_{p_id}", use_container_width=True):
                         profile_scans = [
