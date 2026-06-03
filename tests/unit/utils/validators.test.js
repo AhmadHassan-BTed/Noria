@@ -7,6 +7,7 @@ const {
   validateContent,
   MIN_CONTENT_LENGTH,
 } = require('../../../src/utils/validators');
+const { SCHOLARSHIP_RESPONSE_SCHEMA } = require('../../../src/domains/scholarships/schema');
 
 describe('Validators Utility', () => {
   describe('validateUrl', () => {
@@ -92,40 +93,62 @@ describe('Validators Utility', () => {
     };
 
     test('should return response when all fields are valid', () => {
-      const result = validateAnalyzerResponse(validResponse);
+      const result = validateAnalyzerResponse(validResponse, SCHOLARSHIP_RESPONSE_SCHEMA);
       expect(result).toEqual(validResponse);
     });
 
+    test('should throw error if schema is missing', () => {
+      expect(() => validateAnalyzerResponse(validResponse, null)).toThrow(
+        'Schema is required for analyzer response validation'
+      );
+    });
+
     test('should throw error if response is not an object', () => {
-      expect(() => validateAnalyzerResponse(null)).toThrow('Analyzer response invalid: expected object');
+      expect(() => validateAnalyzerResponse(null, SCHOLARSHIP_RESPONSE_SCHEMA)).toThrow(
+        'Analyzer response invalid: expected object'
+      );
     });
 
     test('should throw error if required field is missing or empty', () => {
       const missingField = { ...validResponse };
       delete missingField.match_score;
-      expect(() => validateAnalyzerResponse(missingField)).toThrow("Analyzer response missing required field: 'match_score'");
+      expect(() => validateAnalyzerResponse(missingField, SCHOLARSHIP_RESPONSE_SCHEMA)).toThrow(
+        "Analyzer response missing required field: 'match_score'"
+      );
 
       const emptyField = { ...validResponse, uni_country: '' };
-      expect(() => validateAnalyzerResponse(emptyField)).toThrow("Analyzer response field 'uni_country' is empty or null");
+      expect(() => validateAnalyzerResponse(emptyField, SCHOLARSHIP_RESPONSE_SCHEMA)).toThrow(
+        "Analyzer response field 'uni_country' is empty or null"
+      );
     });
 
     test('should throw error if match_score is not a number or out of bounds', () => {
       const invalidType = { ...validResponse, match_score: '85' };
-      expect(() => validateAnalyzerResponse(invalidType)).toThrow("Analyzer 'match_score' must be a number");
+      expect(() => validateAnalyzerResponse(invalidType, SCHOLARSHIP_RESPONSE_SCHEMA)).toThrow(
+        "Analyzer 'match_score' must be a number"
+      );
 
       const lowScore = { ...validResponse, match_score: -5 };
-      expect(() => validateAnalyzerResponse(lowScore)).toThrow("Analyzer 'match_score' out of range (0-100)");
+      expect(() => validateAnalyzerResponse(lowScore, SCHOLARSHIP_RESPONSE_SCHEMA)).toThrow(
+        "Analyzer 'match_score' out of range (0-100)"
+      );
 
       const highScore = { ...validResponse, match_score: 105 };
-      expect(() => validateAnalyzerResponse(highScore)).toThrow("Analyzer 'match_score' out of range (0-100)");
+      expect(() => validateAnalyzerResponse(highScore, SCHOLARSHIP_RESPONSE_SCHEMA)).toThrow(
+        "Analyzer 'match_score' out of range (0-100)"
+      );
     });
 
     test('should throw error if boolean fields are not boolean', () => {
       const invalidFullyFunded = { ...validResponse, fully_funded: 'yes' };
-      expect(() => validateAnalyzerResponse(invalidFullyFunded)).toThrow("Analyzer 'fully_funded' must be boolean");
+      expect(() =>
+        validateAnalyzerResponse(invalidFullyFunded, SCHOLARSHIP_RESPONSE_SCHEMA)
+      ).toThrow("Analyzer 'fully_funded' must be boolean");
 
       const invalidEnglish = { ...validResponse, english_taught: null };
-      expect(() => validateAnalyzerResponse(invalidEnglish)).toThrow("Analyzer response field 'english_taught' is empty or null");
+      expect(() => validateAnalyzerResponse(invalidEnglish, SCHOLARSHIP_RESPONSE_SCHEMA)).toThrow(
+        "Analyzer response field 'english_taught' is empty or null"
+      );
     });
   });
 
