@@ -341,6 +341,27 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                         if profile_changed:
                             save_profiles(profiles)
                         
+                        # Calculate active scans and matches statistics
+                        scans_count = len(device_scans)
+                        matches_count = 0
+                        for scan_name in device_scans:
+                            log_path = f"data/daemon-{scan_name}.log"
+                            if os.path.exists(log_path):
+                                try:
+                                    with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+                                        content = f.read()
+                                        matches_count += content.count("Match found!")
+                                except Exception:
+                                    pass
+
+                        st.markdown(f"""
+                        <div style="background-color: var(--bg-level-3); border: 1px solid var(--border-level-3); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; text-align: center;">
+                            <span style="color: var(--text-color); font-family: \'Outfit\', sans-serif; font-weight: 600; font-size: 14px;">
+                                📡 Running Scans: <span style="color: var(--whatsapp-green);">{scans_count}</span> &nbsp;|&nbsp; 🔍 Matches: <span style="color: var(--whatsapp-green);">{matches_count}</span>
+                            </span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
                         st.markdown(f"**Subscribed Channels:** `{len(channels_list)}` | **Groups:** `{len(groups_list)}` | **Direct Chats:** `{len(chats_list)}`")
                         
                         if not device_scans:
