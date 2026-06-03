@@ -9,22 +9,21 @@ This document details the architectural design patterns, dynamic validation boun
 Noria separates core business domains from pluggable communication protocols, enforcing absolute isolation (0 coupling, 100% cohesion).
 
 ```
-┌────────────────────────────────────────────────────────┐
-│                      INFRASTRUCTURE                    │
-│   (whatsapp-listener, jina, puppeteer, etc.)           │
-└───────────────────────────┬────────────────────────────┘
-                            │ (implements adapters)
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│                           CORE                         │
-│       (pipeline.js, registry.js, events.js)            │
-└───────────────────────────┬────────────────────────────┘
-                            │ (uses pure functions)
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│                          DOMAINS                       │
-│        (scholarships, jobs evaluation logic)           │
-└────────────────────────────────────────────────────────┘
+           ┌─────────────────────────────────────────┐
+           │            COMPOSITION ROOT             │
+           │    (src/config/plugins.registry.js)     │
+           └────┬───────────────┬───────────────┬────┘
+                │ (wires)       │ (wires)       │ (wires)
+                ▼               ▼               ▼
+        ┌──────────────┐┌──────────────┐┌──────────────┐
+        │INFRASTRUCTURE││     CORE     ││   DOMAINS    │
+        │  (Adapters)  ││(Orchestrator)││(Business Log)│
+        └──────┬───────┘└──────┬───────┘└──────────────┘
+               │               │
+               │ (implements   │ (uses pure
+               │  adapters)    │  functions)
+               ▼               ▼
+               └───────────────┴───────────────────────►
 ```
 
 ### 1. The Core Orchestration Engine (`src/core/`)
@@ -128,7 +127,7 @@ To allow users to force re-evaluation of URLs, a multi-level cache clearing syst
 
 ## 🔍 Dynamic Interface Validation & Registry
 
-To keep the application robust while supporting plug-and-play extensions, the `PluginRegistry` (`src/core/registry.js`) performs strict verification check blocks:
+To keep the application robust while supporting plug-and-play extensions, the central Registry ([registry.js](file:///p:/noria/src/core/registry.js)) bootstrapped by the Composition Root ([plugins.registry.js](file:///p:/noria/src/config/plugins.registry.js)) performs strict verification check blocks:
 
 ### 1. Domain Module Validation
 Every registered domain module must export:

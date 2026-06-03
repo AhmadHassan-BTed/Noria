@@ -29,7 +29,7 @@ Opportunities define careers, yet discovery remains a chaotic manual process. No
 
 ## 🏛️ Clean Architecture & Boundary Separation
 
-Noria enforces strict Hexagonal Architecture principles, separating core business domains from pluggable technical infrastructure. Dependencies flow strictly inward: `Infrastructure → Core → Domain`.
+Noria enforces strict Hexagonal Architecture principles, separating core business domains from pluggable technical infrastructure. Dependencies flow strictly inward, managed through a central registry bootstrapper (`src/config/plugins.registry.js`) acting as the composition root.
 
 ### Module Relationship & Boundaries
 
@@ -38,13 +38,14 @@ graph TD
     classDef core fill:#e1f5fe,stroke:#03a9f4,stroke-width:2px;
     classDef domain fill:#efebe9,stroke:#8d6e63,stroke-width:2px;
     classDef infra fill:#f1f8e9,stroke:#7cb342,stroke-width:2px;
+    classDef config fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
 
     subgraph Domains ["src/domains/ (Pure Business Logic)"]
         Scholarships["scholarships/ <br> (Evaluation Prompt & Layout Template)"]:::domain
         Jobs["jobs/ <br> (Evaluation Prompt & Layout Template)"]:::domain
     end
 
-    subgraph Core ["src/core/ (Pipeline Orchestrator)"]
+    subgraph Core ["src/core/ (Core Orchestrator & Contracts)"]
         Pipeline["pipeline.js <br> (Sequential Orchestrator)"]:::core
         Registry["registry.js <br> (Functional Registry)"]:::core
         Events["events.js <br> (Domain Events)"]:::core
@@ -56,10 +57,15 @@ graph TD
         Messaging["messaging/ <br> (WhatsApp Sender & Listener)"]:::infra
     end
 
+    subgraph Config ["src/config/ (Composition Root / Wiring)"]
+        PluginRegistry["plugins.registry.js <br> (Registry Wiring Bootstrapper)"]:::config
+    end
+
+    PluginRegistry --> Registry
+    PluginRegistry --> Domains
+    PluginRegistry --> Infrastructure
     Pipeline --> Registry
     Pipeline --> Events
-    Registry --> Domains
-    Registry --> Infrastructure
 ```
 
 ---
@@ -108,7 +114,7 @@ sequenceDiagram
 
 ## ⚙️ Registry Validation
 
-Dynamic verification occurs at boot-time inside the `PluginRegistry` (`src/core/registry.js`). Registered modules are validated functionally:
+Dynamic verification occurs at boot-time inside the Registry ([registry.js](file:///p:/noria/src/core/registry.js)), which is bootstrapped and wired up by the Composition Root ([plugins.registry.js](file:///p:/noria/src/config/plugins.registry.js)). Registered modules are validated functionally:
 
 <details>
 <summary><b>🔍 View Enforced Interface Constraints (Collapsible)</b></summary>

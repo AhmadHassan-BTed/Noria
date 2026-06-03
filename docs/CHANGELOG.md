@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.1.0] - 2026-06-03
 
+### Added
+- Created a live Control Center Dashboard using Streamlit (`app.py`) for management and evaluation execution
+- Styled dashboard with a premium WhatsApp dark-theme aesthetic using HSL-tailored slate-charcoal backdrops and WhatsApp green highlights
+- Implemented collapsible phone applicant cards with multi-level shaded styling and warnings/logs toggling
+- Optimized layout and visibility in light/dark system themes to prevent element invisibility or settings icon artifacts
+- Formulated professional typography hierarchy using Outfit and Inter font families
+
 ### Refactored
 - Implemented Clean Hexagonal Architecture separating infrastructure from business rules
 - Extracted pure domain modules (`src/domains/`) containing stateless prompt builders and notification layout templates
