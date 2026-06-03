@@ -42,6 +42,21 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
+    /* Streamlit top header & decoration bar */
+    header[data-testid="stHeader"] {
+        background-color: #212121 !important;
+        border-bottom: 1px solid #2D2D2D !important;
+    }
+
+    header[data-testid="stHeader"] * {
+        color: #FFFFFF !important;
+        fill: #FFFFFF !important;
+    }
+
+    div[data-testid="stDecoration"] {
+        background-image: linear-gradient(90deg, #25D366, #20ba5a) !important;
+    }
+
     h1, h2, h3, h4, h5, h6 {
         font-family: 'Outfit', sans-serif !important;
         color: #FFFFFF !important;
