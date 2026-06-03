@@ -132,14 +132,16 @@ st.markdown("""
     }
 
     /* Grandchild nested containers (Level 3 sub-cards) styling */
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #101010 !important;
         border-color: #2D2D2D !important;
         box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5) !important;
         padding: 16px !important;
     }
 
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #25D366 !important;
         box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(37, 211, 102, 0.15) !important;
     }
@@ -1404,77 +1406,79 @@ if editing_profile is None:
                                     
                                     # ── Device Log Viewer ──────────────────────────────────
                                     device_sess_id = f"session_{p_id}_dev_{dev_phone}"
-                                    with st.expander(f"📋 Device Logs — +{dev_phone}", expanded=False):
-                                        log_col1, log_col2 = st.columns([3, 1])
-                                        with log_col1:
-                                            st.caption(f"Session ID: `{device_sess_id}`")
-                                        with log_col2:
-                                            if st.button("🗑️ Clear Logs", key=f"clear_logs_{p_id}_{dev_phone}", use_container_width=True):
-                                                if clear_session_logs(device_sess_id):
-                                                    st.toast("Logs cleared successfully.")
-                                                else:
-                                                    st.toast("No logs to clear.")
-                                        
-                                        # Read and display logs
-                                        log_lines = read_session_logs(device_sess_id, max_lines=100)
-                                        
-                                        if not log_lines:
-                                            st.info("No logs available for this device. Logs will appear once the device is connected and processing messages.")
-                                        else:
-                                            # Display logs in a scrollable code block
-                                            log_text = "\n".join(log_lines)
+                                    show_logs = st.toggle(f"📋 Show Device Logs — +{dev_phone}", value=False, key=f"toggle_logs_{p_id}_{dev_phone}")
+                                    if show_logs:
+                                        with st.container(border=True):
+                                            log_col1, log_col2 = st.columns([3, 1])
+                                            with log_col1:
+                                                st.caption(f"Session ID: `{device_sess_id}`")
+                                            with log_col2:
+                                                if st.button("🗑️ Clear Logs", key=f"clear_logs_{p_id}_{dev_phone}", use_container_width=True):
+                                                    if clear_session_logs(device_sess_id):
+                                                        st.toast("Logs cleared successfully.")
+                                                    else:
+                                                        st.toast("No logs to clear.")
                                             
-                                            # Copy logs button using custom HTML/JS
-                                            import urllib.parse
-                                            encoded_logs = urllib.parse.quote(log_text)
-                                            copy_btn_html = f"""
-                                            <div style="display: flex; justify-content: flex-end; margin-bottom: -10px;">
-                                                <button id="copyBtn" style="
-                                                    background-color: #2b2b36;
-                                                    color: #f4f4f4;
-                                                    border: 1px solid #444;
-                                                    padding: 6px 12px;
-                                                    border-radius: 6px;
-                                                    cursor: pointer;
-                                                    font-size: 13px;
-                                                    font-family: system-ui, -apple-system, sans-serif;
-                                                    display: flex;
-                                                    align-items: center;
-                                                    gap: 6px;
-                                                    transition: background-color 0.2s;
-                                                " onclick="copyLogs()">
-                                                    📋 Copy Logs
-                                                </button>
-                                                <textarea id="logText" style="display:none;"></textarea>
-                                            </div>
-                                            <script>
-                                            function copyLogs() {{
-                                                const text = decodeURIComponent("{encoded_logs}");
-                                                const textArea = document.getElementById("logText");
-                                                textArea.style.display = "block";
-                                                textArea.value = text;
-                                                textArea.select();
-                                                try {{
-                                                    document.execCommand("copy");
-                                                    const btn = document.getElementById("copyBtn");
-                                                    btn.innerHTML = "✅ Copied!";
-                                                    btn.style.backgroundColor = "#1b4d3e";
-                                                    setTimeout(() => {{
-                                                        btn.innerHTML = "📋 Copy Logs";
-                                                        btn.style.backgroundColor = "#2b2b36";
-                                                    }}, 2000);
-                                                }} catch (err) {{
-                                                    alert("Could not copy: " + err);
+                                            # Read and display logs
+                                            log_lines = read_session_logs(device_sess_id, max_lines=100)
+                                            
+                                            if not log_lines:
+                                                st.info("No logs available for this device. Logs will appear once the device is connected and processing messages.")
+                                            else:
+                                                # Display logs in a scrollable code block
+                                                log_text = "\n".join(log_lines)
+                                                
+                                                # Copy logs button using custom HTML/JS
+                                                import urllib.parse
+                                                encoded_logs = urllib.parse.quote(log_text)
+                                                copy_btn_html = f"""
+                                                <div style="display: flex; justify-content: flex-end; margin-bottom: -10px;">
+                                                    <button id="copyBtn" style="
+                                                        background-color: #2b2b36;
+                                                        color: #f4f4f4;
+                                                        border: 1px solid #444;
+                                                        padding: 6px 12px;
+                                                        border-radius: 6px;
+                                                        cursor: pointer;
+                                                        font-size: 13px;
+                                                        font-family: system-ui, -apple-system, sans-serif;
+                                                        display: flex;
+                                                        align-items: center;
+                                                        gap: 6px;
+                                                        transition: background-color 0.2s;
+                                                    " onclick="copyLogs()">
+                                                        📋 Copy Logs
+                                                    </button>
+                                                    <textarea id="logText" style="display:none;"></textarea>
+                                                </div>
+                                                <script>
+                                                function copyLogs() {{
+                                                    const text = decodeURIComponent("{encoded_logs}");
+                                                    const textArea = document.getElementById("logText");
+                                                    textArea.style.display = "block";
+                                                    textArea.value = text;
+                                                    textArea.select();
+                                                    try {{
+                                                        document.execCommand("copy");
+                                                        const btn = document.getElementById("copyBtn");
+                                                        btn.innerHTML = "✅ Copied!";
+                                                        btn.style.backgroundColor = "#1b4d3e";
+                                                        setTimeout(() => {{
+                                                            btn.innerHTML = "📋 Copy Logs";
+                                                            btn.style.backgroundColor = "#2b2b36";
+                                                        }}, 2000);
+                                                    }} catch (err) {{
+                                                        alert("Could not copy: " + err);
+                                                    }}
+                                                    textArea.style.display = "none";
                                                 }}
-                                                textArea.style.display = "none";
-                                            }}
-                                            </script>
-                                            """
-                                            import streamlit.components.v1 as components
-                                            components.html(copy_btn_html, height=45)
-                                            
-                                            st.code(log_text, language="text")
-                                            st.caption(f"Showing last {len(log_lines)} log entries. Logs auto-refresh every 2 seconds.")
+                                                </script>
+                                                """
+                                                import streamlit.components.v1 as components
+                                                components.html(copy_btn_html, height=45)
+                                                
+                                                st.code(log_text, language="text")
+                                                st.caption(f"Showing last {len(log_lines)} log entries. Logs auto-refresh every 2 seconds.")
                                     
                                     st.write("---")
                                     
