@@ -1,8 +1,13 @@
 <p align="center">
+  <img src="hero-banner.svg" alt="Noria Hero Banner" width="100%" />
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/NORIA-v2.1.0-blue?style=for-the-badge&logo=javascript&logoColor=white" alt="Noria Version" />
   <img src="https://img.shields.io/badge/LICENSED-MIT-yellow?style=for-the-badge" alt="MIT License" />
-  <img src="https://img.shields.io/badge/TESTS-223%20PASSING-brightgreen?style=for-the-badge" alt="Tests" />
+  <img src="https://img.shields.io/badge/TESTS-224%20PASSING-brightgreen?style=for-the-badge" alt="Tests" />
 </p>
+
 
 <h1 align="center">NORIA</h1>
 
