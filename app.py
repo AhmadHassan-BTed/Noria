@@ -36,36 +36,55 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 
+    /* Design System Tokens */
+    :root {
+        --bg-page: #212121;
+        --bg-level-1: #2B2B2B;
+        --bg-level-2: #1E1E1E;
+        --bg-level-3: #121212;
+
+        --border-level-1: #2D2D2D;
+        --border-level-2: #3E3E3E;
+        --border-level-3: #4A4A4A;
+
+        --text-color: #FFFFFF;
+        --text-muted: #8E9297;
+        --whatsapp-green: #25D366;
+        --whatsapp-green-hover: #20ba5a;
+        --whatsapp-green-alpha: rgba(37, 211, 102, 0.06);
+        --whatsapp-green-border: rgba(37, 211, 102, 0.15);
+    }
+
     /* Global style overrides */
     html, body, [class*="css"], .stApp {
         font-family: 'Inter', sans-serif !important;
-        background-color: #212121 !important;
-        color: #FFFFFF !important;
+        background-color: var(--bg-page) !important;
+        color: var(--text-color) !important;
     }
 
     /* Streamlit top header & decoration bar */
     header[data-testid="stHeader"] {
-        background-color: #212121 !important;
-        border-bottom: 1px solid #2D2D2D !important;
+        background-color: var(--bg-page) !important;
+        border-bottom: 1px solid var(--border-level-1) !important;
     }
 
     header[data-testid="stHeader"] * {
-        color: #FFFFFF !important;
+        color: var(--text-color) !important;
     }
 
     div[data-testid="stDecoration"] {
-        background-image: linear-gradient(90deg, #25D366, #20ba5a) !important;
+        background-image: linear-gradient(90deg, var(--whatsapp-green), var(--whatsapp-green-hover)) !important;
     }
 
     h1, h2, h3, h4, h5, h6 {
         font-family: 'Outfit', sans-serif !important;
-        color: #FFFFFF !important;
+        color: var(--text-color) !important;
         font-weight: 700 !important;
     }
 
     /* Subheader and special section spacing */
     .stSubheader h3 {
-        border-bottom: 2px solid #2D2D2D;
+        border-bottom: 2px solid var(--border-level-1);
         padding-bottom: 8px;
         margin-top: 24px;
         margin-bottom: 16px;
@@ -78,7 +97,7 @@ st.markdown("""
     }
 
     [data-testid="stSidebar"] * {
-        color: #FFFFFF !important;
+        color: var(--text-color) !important;
     }
 
     /* Sidebar scrollbar styling */
@@ -94,14 +113,14 @@ st.markdown("""
     [data-testid="stSidebar"] div[data-testid="stAlert"] {
         background: rgba(255, 255, 255, 0.01) !important;
         border: 1px solid rgba(255, 255, 255, 0.04) !important;
-        border-left: 3px solid #25D366 !important;
+        border-left: 3px solid var(--whatsapp-green) !important;
         border-radius: 8px !important;
         padding: 12px 16px !important;
         margin-top: 20px !important;
     }
 
     [data-testid="stSidebar"] div[data-testid="stAlert"] div {
-        color: #B0B3B8 !important;
+        color: var(--text-muted) !important;
         font-size: 13px !important;
         line-height: 1.5 !important;
     }
@@ -114,7 +133,7 @@ st.markdown("""
         border: 1px solid transparent !important;
         border-left: 4px solid transparent !important;
         background-color: transparent !important;
-        color: #8E9297 !important;
+        color: var(--text-muted) !important;
         margin-bottom: 8px !important;
         padding: 12px 16px !important;
         font-weight: 500 !important;
@@ -125,7 +144,7 @@ st.markdown("""
     [data-testid="stSidebar"] div.stButton > button:hover {
         border-color: rgba(255, 255, 255, 0.05) !important;
         border-left: 4px solid rgba(37, 211, 102, 0.5) !important;
-        color: #FFFFFF !important;
+        color: var(--text-color) !important;
         background-color: rgba(255, 255, 255, 0.02) !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
         transform: translateX(4px) !important;
@@ -133,10 +152,10 @@ st.markdown("""
 
     /* Sidebar active primary navigation buttons */
     [data-testid="stSidebar"] div.stButton > button[kind="primary"] {
-        background-color: rgba(37, 211, 102, 0.06) !important;
-        color: #25D366 !important;
-        border: 1px solid rgba(37, 211, 102, 0.15) !important;
-        border-left: 4px solid #25D366 !important;
+        background-color: var(--whatsapp-green-alpha) !important;
+        color: var(--whatsapp-green) !important;
+        border: 1px solid var(--whatsapp-green-border) !important;
+        border-left: 4px solid var(--whatsapp-green) !important;
         border-radius: 6px !important;
         font-weight: 600 !important;
         font-size: 14px !important;
@@ -146,9 +165,9 @@ st.markdown("""
 
     [data-testid="stSidebar"] div.stButton > button[kind="primary"]:hover {
         background-color: rgba(37, 211, 102, 0.1) !important;
-        color: #25D366 !important;
+        color: var(--whatsapp-green) !important;
         border-color: rgba(37, 211, 102, 0.25) !important;
-        border-left: 4px solid #25D366 !important;
+        border-left: 4px solid var(--whatsapp-green) !important;
         box-shadow: inset 0 0 10px rgba(37, 211, 102, 0.08), 0 4px 15px rgba(37, 211, 102, 0.15) !important;
         transform: translateX(4px) !important;
     }
@@ -162,32 +181,34 @@ st.markdown("""
         margin: 0 !important;
     }
 
-    /* General containers & cards (Level 1) */
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] {
-        border: 1px solid #2D2D2D !important;
+    /* -------------------------------------------------------------
+       LEVEL 1 CONTAINERS (Profile Cards, Expander list items)
+       ------------------------------------------------------------- */
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stVerticalBlockBorderWrapper"],
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] {
+        border: 1px solid var(--border-level-1) !important;
         border-radius: 14px !important;
-        background-color: #2B2B2B !important;
+        background-color: var(--bg-level-1) !important;
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25) !important;
         padding: 24px !important;
         margin-bottom: 20px !important;
         transition: border-color 0.2s ease-in-out !important;
     }
 
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"]:hover {
-        border-color: #333333 !important;
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"]:hover {
+        border-color: var(--border-level-2) !important;
     }
 
-    /* General Level 1 Expander details styling */
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] > details {
+    /* Level 1 Expander details & summary styling */
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] > details {
         border: none !important;
         background: transparent !important;
     }
 
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] summary {
-        background-color: #2B2B2B !important;
-        color: #FFFFFF !important;
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] summary {
+        background-color: var(--bg-level-1) !important;
+        color: var(--text-color) !important;
         font-family: 'Outfit', sans-serif !important;
         font-weight: 700 !important;
         font-size: 1.15rem !important;
@@ -196,23 +217,26 @@ st.markdown("""
         transition: color 0.2s ease-in-out !important;
     }
 
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] summary:hover,
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] summary:hover * {
-        color: #25D366 !important;
-        fill: #25D366 !important;
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] summary:hover,
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] summary:hover * {
+        color: var(--whatsapp-green) !important;
+        fill: var(--whatsapp-green) !important;
     }
 
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] details[open] summary {
-        border-bottom: 1px solid #2D2D2D !important;
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] details[open] summary {
+        border-bottom: 1px solid var(--border-level-1) !important;
         border-bottom-left-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
     }
 
+    /* -------------------------------------------------------------
+       LEVEL 2 CONTAINERS (Device cards, Sub-sections inside Level 1)
+       ------------------------------------------------------------- */
     /* Style for device header toggle buttons to look like expanders */
     div[class*="st-key-dev_hdr_btn"] button {
-        background-color: #1F1F1F !important;
-        color: #FFFFFF !important;
-        border: 1px solid #2D2D2D !important;
+        background-color: var(--bg-level-2) !important;
+        color: var(--text-color) !important;
+        border: 1px solid var(--border-level-2) !important;
         border-radius: 10px !important;
         text-align: left !important;
         justify-content: flex-start !important;
@@ -221,17 +245,19 @@ st.markdown("""
         padding: 10px 14px !important;
         margin-bottom: -10px !important;
     }
+
     div[class*="st-key-dev_hdr_btn"] button:hover {
-        color: #25D366 !important;
-        border-color: #25D366 !important;
-        background-color: #282828 !important;
+        color: var(--whatsapp-green) !important;
+        border-color: var(--whatsapp-green) !important;
+        background-color: var(--border-level-1) !important;
     }
 
-    /* Nested containers (subsections / sub-cards, Level 2) styling to differ in shade */
+    /* Nested containers (subsections / sub-cards, Level 2) styling */
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"],
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #141414 !important;
-        border-color: #2D2D2D !important;
+        background-color: var(--bg-level-2) !important;
+        border: 1px solid var(--border-level-2) !important;
+        border-radius: 10px !important;
         box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
         padding: 20px !important;
         margin-top: 10px !important;
@@ -240,24 +266,41 @@ st.markdown("""
 
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        border-color: #25D366 !important;
+        border-color: var(--whatsapp-green) !important;
         box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(37, 211, 102, 0.1) !important;
     }
 
-    /* Grandchild nested containers (Level 3 sub-cards) styling */
+    /* Expanders inside Level 1 (e.g. log expanders) */
+    div[data-testid="stExpander"] div[data-testid="stExpander"] {
+        background-color: var(--bg-level-2) !important;
+        border: 1px solid var(--border-level-2) !important;
+        border-radius: 10px !important;
+    }
+    
+    div[data-testid="stExpander"] div[data-testid="stExpander"] summary {
+        background-color: var(--bg-level-2) !important;
+        border-radius: 10px !important;
+        padding: 10px 14px !important;
+        font-size: 1rem !important;
+    }
+
+    /* -------------------------------------------------------------
+       LEVEL 3 CONTAINERS (Inner alert panels, code displays, log blocks)
+       ------------------------------------------------------------- */
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #0A0A0A !important;
-        border-color: #2D2D2D !important;
+        background-color: var(--bg-level-3) !important;
+        border: 1px solid var(--border-level-3) !important;
         box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5) !important;
         padding: 16px !important;
     }
 
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        border-color: #25D366 !important;
+        border-color: var(--whatsapp-green) !important;
         box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(37, 211, 102, 0.15) !important;
     }
+
     /* Buttons global overrides */
     button {
         border-radius: 8px !important;
@@ -266,13 +309,13 @@ st.markdown("""
     }
 
     button[kind="primary"] {
-        background-color: #25D366 !important;
+        background-color: var(--whatsapp-green) !important;
         color: #121212 !important;
-        border: 1px solid #25D366 !important;
+        border: 1px solid var(--whatsapp-green) !important;
     }
 
     button[kind="primary"]:hover {
-        background-color: #20ba5a !important;
+        background-color: var(--whatsapp-green-hover) !important;
         color: #121212 !important;
         box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3) !important;
         transform: translateY(-1px);
@@ -280,23 +323,23 @@ st.markdown("""
 
     button[kind="secondary"] {
         background-color: #2D2D2D !important;
-        color: #FFFFFF !important;
+        color: var(--text-color) !important;
         border: 1px solid #3E3E3E !important;
     }
 
     button[kind="secondary"]:hover {
-        border-color: #25D366 !important;
-        color: #25D366 !important;
+        border-color: var(--whatsapp-green) !important;
+        color: var(--whatsapp-green) !important;
         background-color: #333333 !important;
         box-shadow: 0 2px 8px rgba(37, 211, 102, 0.1) !important;
     }
 
     /* Input & form fields styling */
     div[data-baseweb="input"], div[data-baseweb="textarea"], div[data-baseweb="select"] {
-        background-color: #1A1A1A !important;
-        border: 1px solid #2D2D2D !important;
+        background-color: var(--bg-level-2) !important;
+        border: 1px solid var(--border-level-1) !important;
         border-radius: 8px !important;
-        color: #FFFFFF !important;
+        color: var(--text-color) !important;
     }
 
     /* Inputs inside Level 2 container should be darker */
@@ -306,62 +349,49 @@ st.markdown("""
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-baseweb="textarea"],
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="select"],
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-baseweb="select"] {
-        background-color: #101010 !important;
+        background-color: var(--bg-level-3) !important;
+        border-color: var(--border-level-2) !important;
     }
 
     input, textarea, select {
-        color: #FFFFFF !important;
+        color: var(--text-color) !important;
         background-color: transparent !important;
     }
 
     div[data-baseweb="input"]:focus-within, div[data-baseweb="textarea"]:focus-within, div[data-baseweb="select"]:focus-within {
-        border-color: #25D366 !important;
-        box-shadow: 0 0 0 1px #25D366 !important;
+        border-color: var(--whatsapp-green) !important;
+        box-shadow: 0 0 0 1px var(--whatsapp-green) !important;
     }
 
     /* Multi-select tag bubble styles */
     span[role="button"] {
         background-color: #2D2D2D !important;
         border: 1px solid #3E3E3E !important;
-        color: #FFFFFF !important;
-    }
-
-    /* Expander styling - dynamic shades */
-    div[data-testid="stExpander"] {
-        background-color: #2B2B2B !important;
-        border: 1px solid #2D2D2D !important;
-        border-radius: 10px !important;
-    }
-
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] {
-        background-color: #1A1A1A !important;
-    }
-
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"],
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stExpander"] {
-        background-color: #101010 !important;
+        color: var(--text-color) !important;
     }
 
     /* Alerts styling (info, success, warning, error) */
     div[data-testid="stAlert"] {
-        background-color: #2b2b2b !important;
-        border: 1px solid #2D2D2D !important;
+        background-color: var(--bg-level-1) !important;
+        border: 1px solid var(--border-level-1) !important;
         border-radius: 10px !important;
     }
 
     div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stAlert"] {
-        background-color: #1A1A1A !important;
+        background-color: var(--bg-level-2) !important;
+        border-color: var(--border-level-2) !important;
     }
 
     div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stAlert"],
     div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stAlert"] {
-        background-color: #101010 !important;
+        background-color: var(--bg-level-3) !important;
+        border-color: var(--border-level-3) !important;
     }
 
     /* Logs & Code display */
     code {
-        color: #25D366 !important;
-        background-color: #121212 !important;
+        color: var(--whatsapp-green) !important;
+        background-color: var(--bg-level-3) !important;
         font-family: 'Courier New', Courier, monospace !important;
         font-size: 13.5px !important;
         padding: 2px 6px !important;
@@ -369,8 +399,8 @@ st.markdown("""
     }
 
     pre {
-        background-color: #121212 !important;
-        border: 1px solid #2D2D2D !important;
+        background-color: var(--bg-level-3) !important;
+        border: 1px solid var(--border-level-2) !important;
         border-radius: 10px !important;
         padding: 16px !important;
         box-shadow: inset 0 2px 8px rgba(0,0,0,0.4) !important;
@@ -383,14 +413,14 @@ st.markdown("""
 
     /* Toast styling overrides */
     div[data-testid="stToast"] {
-        background-color: #1A1A1A !important;
-        color: #FFFFFF !important;
-        border-left: 5px solid #25D366 !important;
+        background-color: var(--bg-level-2) !important;
+        color: var(--text-color) !important;
+        border-left: 5px solid var(--whatsapp-green) !important;
     }
 
     /* Progress bar coloring */
     div[role="progressbar"] > div {
-        background-color: #25D366 !important;
+        background-color: var(--whatsapp-green) !important;
     }
 
     /* Custom scrollbars */
@@ -399,14 +429,14 @@ st.markdown("""
         height: 8px;
     }
     ::-webkit-scrollbar-track {
-        background: #212121;
+        background: var(--bg-page);
     }
     ::-webkit-scrollbar-thumb {
         background: #3E3E3E;
         border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
-        background: #25D366;
+        background: var(--whatsapp-green);
     }
 </style>
 """, unsafe_allow_html=True)
