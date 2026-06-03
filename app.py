@@ -987,12 +987,27 @@ if st.sidebar.button("📡 Opportunity Scans", use_container_width=True, type="p
     st.rerun()
 
 st.sidebar.markdown("""
-<div style="height: 1px; background: rgba(255, 255, 255, 0.05); margin: 25px 0 20px 0;"></div>
-<div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 3px solid #25D366; border-radius: 8px; padding: 14px;">
+<div style="height: 1px; background: rgba(255, 255, 255, 0.05); margin: 20px 0;"></div>
+
+<div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 3px solid #25D366; border-radius: 8px; padding: 14px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
+    <div style="font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #25D366; margin-bottom: 6px;">About</div>
+    <div style="font-family: 'Inter', sans-serif; font-size: 12.5px; line-height: 1.5; color: #8E9297;">
+        An agentic extractor for messaging platforms. Noria receives messages & URLs via chat; scrapes web data to evaluate the content against custom scoring matrices (e.g., jobs, scholarships); and sends a structured summary with a calculated match score directly to the assigned messenger number.
+    </div>
+</div>
+
+<div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 3px solid #25D366; border-radius: 8px; padding: 14px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
     <div style="font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #25D366; margin-bottom: 6px;">Unified Control</div>
     <div style="font-family: 'Inter', sans-serif; font-size: 12.5px; line-height: 1.5; color: #8E9297;">
         Manage independent customer profiles, API keys, and launch dynamic opportunity scans entirely from the unified profile directory.
     </div>
+</div>
+
+<div style="height: 1px; background: rgba(255, 255, 255, 0.05); margin: 20px 0 15px 0;"></div>
+
+<div style="text-align: center; font-family: 'Inter', sans-serif; font-size: 11px; color: #8E9297; padding-bottom: 10px;">
+    Designed & Engineered by <br>
+    <a href="https://github.com/AhmadHassan-BTed" target="_blank" style="color: #25D366; text-decoration: none; font-weight: 600; font-family: 'Outfit', sans-serif; transition: color 0.2s;">Ahmad Hassan (B-Ted)</a>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1002,8 +1017,8 @@ st.sidebar.markdown("""
 profiles = load_profiles()
 
 if st.session_state.current_page == "Scans":
-    st.title("Opportunity Scans Dashboard")
-    st.write("Monitor all active opportunity search pipelines or launch new sandboxed scanning sessions.")
+    st.title("📡 Active Scanning Operations")
+    st.write("Monitor live opportunity extraction pipelines, review discovery diagnostics, and terminate active scans.")
     st.write("---")
     
     # 1. Master List of Active Scans
@@ -1218,8 +1233,8 @@ if st.session_state.current_page == "Scans":
 # =============================================================================
 # Main View: SaaS Applicant Profiles Directory (Default Page)
 # =============================================================================
-st.title("Applicant Profiles")
-st.write("Manage independent customer profiles, configure API keys, and monitor WhatsApp account linking states.")
+st.title("👤 Applicant Profiles Directory")
+st.write("Manage applicant profiles, configure Gemini API keys, pair WhatsApp channels, and orchestrate opportunity evaluation scans.")
 st.write("---")
 
 editing_profile = st.session_state.get("editing_profile", None)
