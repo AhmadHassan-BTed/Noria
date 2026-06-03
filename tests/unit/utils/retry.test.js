@@ -1,6 +1,6 @@
 'use strict';
 
-const { withRetry, isRetryableError } = require('../../../src/utils/retry');
+const { withRetry, isRetryableError, extractRetryDelayMs } = require('../../../src/utils/retry');
 
 describe('Retry Utility', () => {
   describe('isRetryableError', () => {
@@ -102,6 +102,53 @@ describe('Retry Utility', () => {
       })).rejects.toThrow('Bad input');
 
       expect(mockFn).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('extractRetryDelayMs', () => {
+    test('should return null for null or missing error message', () => {
+      expect(extractRetryDelayMs(null)).toBeNull();
+      expect(extractRetryDelayMs(new Error())).toBeNull();
+    });
+
+    test('should extract delay from JSON format', () => {
+      const err = new Error('Some error details with {"retryDelay":"48s"} block.');
+      expect(extractRetryDelayMs(err)).toBe(48000);
+
+      const errMs = new Error('Error details with {"retryDelay":"500ms"} block.');
+      expect(extractRetryDelayMs(errMs)).toBe(500);
+    });
+
+    test('should extract delay from plain text format', () => {
+      const err = new Error('Please retry in 48.184025976s. Some other text.');
+      expect(extractRetryDelayMs(err)).toBeCloseTo(48184, 0);
+
+      const errMs = new Error('Please retry in 100ms. Some other text.');
+      expect(extractRetryDelayMs(errMs)).toBe(100);
+    });
+
+    test('should be used by withRetry to determine backoff delay', async () => {
+      let calls = 0;
+      const rateLimitErr = new Error('Please retry in 1.5s. Exceeded quota.');
+      rateLimitErr.status = 429;
+
+      const mockFn = jest.fn().mockImplementation(async () => {
+        calls++;
+        if (calls < 2) {
+          throw rateLimitErr;
+        }
+        return 'success';
+      });
+
+      const onRetryMock = jest.fn();
+      await withRetry(mockFn, {
+        maxRetries: 2,
+        onRetry: onRetryMock,
+      });
+
+      expect(onRetryMock).toHaveBeenCalledTimes(1);
+      // parsed delay is 1500ms + 1500ms safety buffer = 3000ms
+      expect(onRetryMock.mock.calls[0][0].delay).toBe(3000);
     });
   });
 });

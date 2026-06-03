@@ -606,4 +606,39 @@ describe('WhatsAppListener', () => {
       expect(mockClient.sendMessage).toHaveBeenCalledWith('923001234567@c.us', 'Test Message');
     });
   });
+
+  describe('getMsgChatId & Manual Testing fromMe Logic', () => {
+    test('should ignore fromMe messages that are bot notifications', async () => {
+      global.botSentMessageIds = new Set(['bot-msg-123']);
+      const msg = {
+        id: { _serialized: 'bot-msg-123' },
+        from: '923001234567@c.us',
+        fromMe: true,
+        body: 'MATCH | Some Scholarship\n⚡ Verdict: Yes\n🔗 Apply: https://example.com'
+      };
+      const emitSpy = jest.spyOn(listener, '_emit');
+      await listener._handleMessage(msg);
+      expect(emitSpy).not.toHaveBeenCalled();
+    });
+
+    test('should process fromMe messages that are user manual messages', async () => {
+      global.botSentMessageIds = new Set(['bot-msg-123']);
+      const msg = {
+        id: { _serialized: 'user-manual-msg' },
+        fromMe: true,
+        from: '923217744858@c.us',
+        to: '120363426287153915@g.us', // group
+        body: 'Please test this link: https://scholarships.org/apply-now'
+      };
+      
+      const emitSpy = jest.spyOn(listener, '_emit');
+      await listener._handleMessage(msg);
+      
+      expect(emitSpy).toHaveBeenCalledWith('link_extracted', expect.objectContaining({
+        url: 'https://scholarships.org/apply-now',
+        source: 'group',
+        messageId: 'user-manual-msg'
+      }));
+    });
+  });
 });

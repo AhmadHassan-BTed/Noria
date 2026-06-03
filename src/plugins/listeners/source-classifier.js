@@ -14,36 +14,59 @@
 const { CHAT_ID_SUFFIX } = require('./source-mode');
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * Resolves the target chat JID for both incoming and outgoing messages.
+ *
+ * @param {{ from?: string, to?: string, fromMe?: boolean }} msg
+ * @returns {string}
+ */
+function getMsgChatId(msg) {
+  if (!msg) return '';
+  if (typeof msg.from === 'string' && (msg.from.endsWith(CHAT_ID_SUFFIX.GROUP) || msg.from.endsWith(CHAT_ID_SUFFIX.CHANNEL))) {
+    return msg.from;
+  }
+  if (typeof msg.to === 'string' && (msg.to.endsWith(CHAT_ID_SUFFIX.GROUP) || msg.to.endsWith(CHAT_ID_SUFFIX.CHANNEL))) {
+    return msg.to;
+  }
+  return msg.fromMe ? msg.to : msg.from;
+}
+
+// =============================================================================
 // Classification
 // =============================================================================
 
 /**
  * Returns true if the message originates from a WhatsApp Channel.
  *
- * @param {{ from?: string }} msg
+ * @param {{ from?: string, to?: string, fromMe?: boolean }} msg
  * @returns {boolean}
  */
 function isChannelMessage(msg) {
-  return typeof msg.from === 'string' &&
-         msg.from.endsWith(CHAT_ID_SUFFIX.CHANNEL);
+  const chatId = getMsgChatId(msg);
+  return typeof chatId === 'string' &&
+         chatId.endsWith(CHAT_ID_SUFFIX.CHANNEL);
 }
 
 /**
  * Returns true if the message originates from a WhatsApp Group.
  *
- * @param {{ from?: string }} msg
+ * @param {{ from?: string, to?: string, fromMe?: boolean }} msg
  * @returns {boolean}
  */
 function isGroupMessage(msg) {
-  return typeof msg.from === 'string' &&
-         msg.from.endsWith(CHAT_ID_SUFFIX.GROUP);
+  const chatId = getMsgChatId(msg);
+  return typeof chatId === 'string' &&
+         chatId.endsWith(CHAT_ID_SUFFIX.GROUP);
 }
 
 /**
  * Returns true if the message originates from an individual (1-to-1) chat.
  * This is the fallback — anything that is not a channel or group.
  *
- * @param {{ from?: string }} msg
+ * @param {{ from?: string, to?: string, fromMe?: boolean }} msg
  * @returns {boolean}
  */
 function isIndividualMessage(msg) {
@@ -58,7 +81,7 @@ function isIndividualMessage(msg) {
  *   2. @g.us        → 'groups'
  *   3. anything else → 'individual'
  *
- * @param {{ from?: string }} msg
+ * @param {{ from?: string, to?: string, fromMe?: boolean }} msg
  * @returns {'channels'|'groups'|'individual'}
  */
 function classifyOrigin(msg) {
@@ -75,7 +98,7 @@ function classifyOrigin(msg) {
  * Determines whether a message's origin is included in the set of allowed
  * origins.
  *
- * @param {{ from?: string }} msg
+ * @param {{ from?: string, to?: string, fromMe?: boolean }} msg
  * @param {string[]} allowedOrigins — canonical origin strings
  * @returns {boolean}
  */
@@ -89,6 +112,7 @@ function isSourceAllowed(msg, allowedOrigins) {
 // =============================================================================
 
 module.exports = {
+  getMsgChatId,
   isChannelMessage,
   isGroupMessage,
   isIndividualMessage,

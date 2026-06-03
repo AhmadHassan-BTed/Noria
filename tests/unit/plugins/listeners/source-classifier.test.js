@@ -1,6 +1,5 @@
-'use strict';
-
 const {
+  getMsgChatId,
   isChannelMessage,
   isGroupMessage,
   isIndividualMessage,
@@ -9,6 +8,41 @@ const {
 } = require('../../../../src/plugins/listeners/source-classifier');
 
 describe('source-classifier module', () => {
+  // =========================================================================
+  // getMsgChatId
+  // =========================================================================
+
+  describe('getMsgChatId', () => {
+    test('returns group JID from msg.from if it ends with @g.us', () => {
+      expect(getMsgChatId({ from: '123@g.us', to: '456@c.us' })).toBe('123@g.us');
+    });
+
+    test('returns group JID from msg.to if it ends with @g.us', () => {
+      expect(getMsgChatId({ from: '456@c.us', to: '123@g.us' })).toBe('123@g.us');
+    });
+
+    test('returns channel JID from msg.from if it ends with @newsletter', () => {
+      expect(getMsgChatId({ from: '123@newsletter', to: '456@c.us' })).toBe('123@newsletter');
+    });
+
+    test('returns channel JID from msg.to if it ends with @newsletter', () => {
+      expect(getMsgChatId({ from: '456@c.us', to: '123@newsletter' })).toBe('123@newsletter');
+    });
+
+    test('returns msg.from for incoming individual message (fromMe false)', () => {
+      expect(getMsgChatId({ from: '123@c.us', to: '456@c.us', fromMe: false })).toBe('123@c.us');
+      expect(getMsgChatId({ from: '123@c.us', to: '456@c.us' })).toBe('123@c.us');
+    });
+
+    test('returns msg.to for outgoing individual message (fromMe true)', () => {
+      expect(getMsgChatId({ from: '123@c.us', to: '456@c.us', fromMe: true })).toBe('456@c.us');
+    });
+
+    test('returns empty string if message is undefined or empty', () => {
+      expect(getMsgChatId(null)).toBe('');
+      expect(getMsgChatId({})).toBe(undefined);
+    });
+  });
   // =========================================================================
   // isChannelMessage
   // =========================================================================

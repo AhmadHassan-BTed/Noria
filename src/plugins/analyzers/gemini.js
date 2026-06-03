@@ -50,10 +50,59 @@ class GeminiAnalyzer extends BaseAnalyzer {
     this.model = config.model || 'gemini-2.5-flash';
     this.temperature = config.temperature || 0.1;
     this.maxTokens = 15000;
+    this._supportedModelsCache = null;
   }
 
   setProvider(provider) {
     this.provider = provider;
+  }
+
+  async getSupportedModels() {
+    if (this._supportedModelsCache) {
+      return this._supportedModelsCache;
+    }
+
+    const defaults = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      if (!res.ok) {
+        throw new Error(`Status ${res.status}`);
+      }
+      const data = await res.json();
+      if (data.error) {
+        throw new Error(data.error.message || 'API Error');
+      }
+      
+      const models = data.models
+        .filter(m => m.supportedGenerationMethods.includes('generateContent'))
+        .map(m => m.name.replace('models/', ''))
+        .filter(m => m.includes('gemini'));
+
+      const sorted = [];
+      if (models.includes(this.model)) {
+        sorted.push(this.model);
+      }
+      const priorityOrder = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-pro', 'gemini-1.0-pro'];
+      for (const m of priorityOrder) {
+        if (models.includes(m) && !sorted.includes(m)) {
+          sorted.push(m);
+        }
+      }
+      for (const m of models) {
+        if (!sorted.includes(m)) {
+          sorted.push(m);
+        }
+      }
+
+      this._supportedModelsCache = sorted.length > 0 ? sorted : defaults;
+    } catch (err) {
+      console.warn(`[Gemini] Failed to fetch supported models list: ${err.message}. Using defaults.`);
+      this._supportedModelsCache = defaults;
+    }
+
+    return this._supportedModelsCache;
   }
 
   async analyze(content, context = {}) {
@@ -66,59 +115,86 @@ class GeminiAnalyzer extends BaseAnalyzer {
 
     const analysisConfig = await this.provider.getAnalyzer().analyze(safeText, context);
 
-    const model = this.genAI.getGenerativeModel({
-      model: this.model,
-      systemInstruction: analysisConfig.systemInstruction || context.systemInstruction,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: analysisConfig.schema || schema,
-        temperature: this.temperature,
-      },
-    });
+    const modelsToTry = await this.getSupportedModels();
+    let lastErr;
 
-    let result;
-    try {
-      result = await withRetry(
-        async () => {
-          const res = await geminiQueue.add(async () => {
-            return await model.generateContent(analysisConfig.prompt);
-          });
-          metrics.recordGeminiRequest();
-          return res;
+    for (const modelName of modelsToTry) {
+      console.log(`[Gemini] Attempting analysis using model: ${modelName}`);
+
+      const model = this.genAI.getGenerativeModel({
+        model: modelName,
+        systemInstruction: analysisConfig.systemInstruction || context.systemInstruction,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: analysisConfig.schema || schema,
+          temperature: this.temperature,
         },
-        {
-          maxRetries: 5,
-          baseDelayMs: 1000,
-          onRetry: ({ attempt, delay, error }) => {
-            console.warn(`[Gemini] Retry ${attempt}/5 after ${delay}ms: ${error}`);
-            metrics.recordAnalyzerRetry();
+      });
+
+      let result;
+      try {
+        result = await withRetry(
+          async () => {
+            const res = await geminiQueue.add(async () => {
+              return await model.generateContent(analysisConfig.prompt);
+            });
+            metrics.recordGeminiRequest();
+            return res;
           },
+          {
+            maxRetries: 5,
+            baseDelayMs: 1000,
+            onRetry: ({ attempt, delay, error }) => {
+              console.warn(`[Gemini] Retry ${attempt}/5 for model ${modelName} after ${delay}ms: ${error}`);
+              metrics.recordAnalyzerRetry();
+            },
+          }
+        );
+
+        const rawResponse = result.response.text();
+
+        let aiData;
+        try {
+          const cleaned = rawResponse
+            .replace(/^```json\s*/i, '')
+            .replace(/```\s*$/, '')
+            .trim();
+          aiData = JSON.parse(cleaned);
+        } catch (parseErr) {
+          throw new Error(`Malformed JSON: ${parseErr.message}`);
         }
-      );
-    } catch (retryErr) {
-      throw new Error(`[Gemini] Failed after retries: ${retryErr.message}`);
+
+        try {
+          aiData = validateAnalyzerResponse(aiData, context.url);
+        } catch (validErr) {
+          throw new Error(`Response validation failed: ${validErr.message}`);
+        }
+
+        // Successfully completed analysis. Dynamically save this model for subsequent calls.
+        if (this.model !== modelName) {
+          console.log(`[Gemini] Switched primary active model to: ${modelName}`);
+          this.model = modelName;
+        }
+        return aiData;
+
+      } catch (err) {
+        console.warn(`[Gemini] Model ${modelName} failed: ${err.message}`);
+        lastErr = err;
+
+        const lowerMsg = err.message.toLowerCase();
+        const isQuotaOrRateLimit = lowerMsg.includes('429') || lowerMsg.includes('quota') || lowerMsg.includes('too many requests');
+
+        if (isQuotaOrRateLimit && modelName !== modelsToTry[modelsToTry.length - 1]) {
+          console.warn(`[Gemini] Quota exceeded for ${modelName}. Falling back to next available model...`);
+          continue;
+        } else {
+          // Structural failure or last model exceeded quota: throw the error
+          throw err;
+        }
+      }
     }
 
-    const rawResponse = result.response.text();
-
-    let aiData;
-    try {
-      const cleaned = rawResponse
-        .replace(/^```json\s*/i, '')
-        .replace(/```\s*$/, '')
-        .trim();
-      aiData = JSON.parse(cleaned);
-    } catch (parseErr) {
-      throw new Error(`[Gemini] Malformed JSON: ${parseErr.message}`);
-    }
-
-    try {
-      aiData = validateAnalyzerResponse(aiData, context.url);
-    } catch (validErr) {
-      throw new Error(`[Gemini] Response validation failed: ${validErr.message}`);
-    }
-
-    return aiData;
+    throw new Error(`[Gemini] All fallback models failed. Last error: ${lastErr.message}`);
   }
 }
 

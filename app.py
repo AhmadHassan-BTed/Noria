@@ -807,10 +807,11 @@ if st.session_state.current_page == "Scans":
                     })
 
                     try:
+                        daemon_log = open(f"data/daemon-{actual_scan_name}.log", "a", encoding="utf-8")
                         p = subprocess.Popen(
                             cmd,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL,
+                            stdout=daemon_log,
+                            stderr=subprocess.STDOUT,
                             env=custom_env,
                             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0
                         )
@@ -963,10 +964,11 @@ if editing_profile is None:
                             })
                             
                             try:
+                                daemon_log = open(f"data/daemon-{linker_sess_id}.log", "a", encoding="utf-8")
                                 p = subprocess.Popen(
                                     cmd,
-                                    stdout=subprocess.DEVNULL,
-                                    stderr=subprocess.DEVNULL,
+                                    stdout=daemon_log,
+                                    stderr=subprocess.STDOUT,
                                     env=custom_env,
                                     creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0
                                 )
@@ -1404,9 +1406,8 @@ if editing_profile is None:
                                             "APPLICANT_NATIONALITY": p_info["applicant_nationality"],
                                             "APPLICANT_DEGREE_TIER": p_info["applicant_degree_tier"],
                                             "APPLICANT_TARGET_FIELDS": p_info["applicant_target_fields"],
-                                            "APPLICANT_RESEARCH_FOCUS": p_info["applicant_focus"]
+                                            "APPLICANT_RESEARCH_FOCUS": p_info.get("applicant_focus", "")
                                         })
-
                                         # Reset the status file to prevent rendering stale previous statuses
                                         status_path = f"data/status-{device_sess_id}.json"
                                         try:
@@ -1419,10 +1420,11 @@ if editing_profile is None:
                                             pass
 
                                         try:
+                                            daemon_log = open(f"data/daemon-{actual_scan_name}.log", "a", encoding="utf-8")
                                             p = subprocess.Popen(
                                                 cmd,
-                                                stdout=subprocess.DEVNULL,
-                                                stderr=subprocess.DEVNULL,
+                                                stdout=daemon_log,
+                                                stderr=subprocess.STDOUT,
                                                 env=custom_env,
                                                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0
                                             )

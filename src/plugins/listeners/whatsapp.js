@@ -21,6 +21,7 @@ const {
 } = require('./source-mode');
 
 const {
+  getMsgChatId,
   isChannelMessage,
   isGroupMessage,
   isIndividualMessage,
@@ -366,7 +367,7 @@ class WhatsAppListener extends BaseListener {
 
   /** Fails CLOSED: skips message if channel metadata cannot be resolved. */
   async _isAllowedChannel(msg) {
-    const channelId = msg.from;
+    const channelId = getMsgChatId(msg);
 
     // Fast path: exact ID match
     if (this.allowedChannels.includes(channelId)) return true;
@@ -397,7 +398,7 @@ class WhatsAppListener extends BaseListener {
 
   /** Fails CLOSED: skips message if group metadata cannot be resolved. */
   async _isAllowedGroup(msg) {
-    const groupId = msg.from;
+    const groupId = getMsgChatId(msg);
 
     // Fast path: exact ID match
     if (this.allowedGroups.includes(groupId)) return true;
@@ -419,7 +420,7 @@ class WhatsAppListener extends BaseListener {
 
   /** Fails CLOSED: skips message if individual metadata cannot be resolved. */
   async _isAllowedChat(msg) {
-    const chatId = msg.from;
+    const chatId = getMsgChatId(msg);
     const phone = chatId.split('@')[0];
 
     // Fast path: exact ID or phone match
@@ -468,9 +469,16 @@ class WhatsAppListener extends BaseListener {
     }
 
     // 3. Live fetch
-    const chat = await msg.getChat();
-    const name = chat.name?.trim() ?? '';
-    this._channelCache.set(channelId, { name, cachedAt: Date.now() });
+    let chat;
+    try {
+      chat = await this.client.getChatById(channelId);
+    } catch {
+      chat = await msg.getChat();
+    }
+    const name = chat?.name?.trim() ?? '';
+    if (name) {
+      this._channelCache.set(channelId, { name, cachedAt: Date.now() });
+    }
     return name;
   }
 
@@ -479,9 +487,16 @@ class WhatsAppListener extends BaseListener {
     if (cached && (Date.now() - cached.cachedAt) < CHANNEL_CACHE_TTL_MS) {
       return cached.name;
     }
-    const chat = await msg.getChat();
-    const name = chat.name?.trim() ?? '';
-    this._groupCache.set(groupId, { name, cachedAt: Date.now() });
+    let chat;
+    try {
+      chat = await this.client.getChatById(groupId);
+    } catch {
+      chat = await msg.getChat();
+    }
+    const name = chat?.name?.trim() ?? '';
+    if (name) {
+      this._groupCache.set(groupId, { name, cachedAt: Date.now() });
+    }
     return name;
   }
 
@@ -490,9 +505,16 @@ class WhatsAppListener extends BaseListener {
     if (cached && (Date.now() - cached.cachedAt) < CHANNEL_CACHE_TTL_MS) {
       return cached.name;
     }
-    const chat = await msg.getChat();
-    const name = chat.name?.trim() ?? '';
-    this._chatCache.set(chatId, { name, cachedAt: Date.now() });
+    let chat;
+    try {
+      chat = await this.client.getChatById(chatId);
+    } catch {
+      chat = await msg.getChat();
+    }
+    const name = chat?.name?.trim() ?? '';
+    if (name) {
+      this._chatCache.set(chatId, { name, cachedAt: Date.now() });
+    }
     return name;
   }
 
@@ -532,12 +554,31 @@ class WhatsAppListener extends BaseListener {
    */
   async _handleMessage(msg) {
     try {
-      // Ignore all outgoing messages (fromMe) to prevent infinite loops from our own notification alerts
-      if (msg && msg.fromMe) {
-        return;
-      }
-
       const msgId     = msg.id?._serialized;
+      const isChannel = this._isChannelMessage(msg);
+      const isGroup   = this._classifyOrigin(msg) === 'groups';
+      const msgSource = isChannel ? 'channel' : (isGroup ? 'group' : 'chat');
+      const chatId    = getMsgChatId(msg);
+
+      this.logger.debug('MESSAGE', `Received event for message`, {
+        messageId: msgId,
+        from:      msg.from,
+        to:        msg.to,
+        fromMe:    !!msg.fromMe,
+        hasBody:   !!msg.body,
+        source:    msgSource,
+      });
+
+      // Ignore all outgoing messages (fromMe) unless it's a manual user message (not bot sent and doesn't look like a notification)
+      if (msg && msg.fromMe) {
+        const isBotSent = global.botSentMessageIds && global.botSentMessageIds.has(msgId);
+        const isNoriaNotify = msg.body && msg.body.includes('MATCH |') && msg.body.includes('⚡ Verdict:');
+        if (isBotSent || isNoriaNotify) {
+          this.logger.debug('MESSAGE', 'Ignored outgoing bot notification', { messageId: msgId });
+          return;
+        }
+        this.logger.debug('MESSAGE', 'Processing manual user outgoing message', { messageId: msgId });
+      }
 
       // ── Synchronous deduplication to prevent async race conditions ───────
       if (msgId) {
@@ -547,12 +588,9 @@ class WhatsAppListener extends BaseListener {
         this._markProcessed(msgId);
       }
 
-      const isChannel = this._isChannelMessage(msg);
-      const msgSource = isChannel ? 'channel' : 'chat';
-
       this.logger.debug('MESSAGE', `Incoming ${msgSource} message`, {
         messageId: msgId,
-        from:      msg.from,
+        from:      chatId,
         hasBody:   !!msg.body,
       });
 
@@ -565,10 +603,16 @@ class WhatsAppListener extends BaseListener {
 
       // ── URL extraction ───────────────────────────────────────────────────
       const body = msg.body;
-      if (!body || typeof body !== 'string') return;
+      if (!body || typeof body !== 'string') {
+        this.logger.debug('MESSAGE', 'Skipped (No text body)', { messageId: msgId });
+        return;
+      }
 
       const matches = body.match(URL_REGEX);
-      if (!matches) return;
+      if (!matches) {
+        this.logger.debug('MESSAGE', 'Skipped (No URL found)', { messageId: msgId });
+        return;
+      }
 
       const rawUrl = matches[0]; // One URL per message — atomic pipeline
 
@@ -586,28 +630,28 @@ class WhatsAppListener extends BaseListener {
       let channelName = null;
       if (isChannel) {
         try {
-          channelName = await this._resolveChannelName(msg.from, msg);
+          channelName = await this._resolveChannelName(chatId, msg);
         } catch {
           channelName = null; // Non-fatal
         }
       }
 
       // ── Emit ─────────────────────────────────────────────────────────────
-      const source = isChannel ? 'channel' : (msg.from.endsWith(CHAT_ID_SUFFIX.GROUP) ? 'group' : 'chat');
+      const source = msgSource;
       const label  = channelName ? ` "${channelName}"` : '';
       console.log(`[WhatsApp] 🔗  URL from ${source}${label}: ${validatedUrl}`);
 
       this.logger.info('URL_EXTRACTED', `URL from ${source}${label}`, {
         messageId:   msgId,
         url:         validatedUrl,
-        channelId:   isChannel ? msg.from : null,
+        channelId:   isChannel ? chatId : null,
         channelName,
       });
 
       this._emit('link_extracted', {
         url:         validatedUrl,
         source,
-        channelId:   isChannel ? msg.from    : null,
+        channelId:   isChannel ? chatId    : null,
         channelName: isChannel ? channelName : null,
         messageId:   msgId   ?? null,
         timestamp:   new Date(),
