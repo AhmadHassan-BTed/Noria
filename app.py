@@ -42,6 +42,20 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
+    /* Streamlit top header & decoration bar */
+    header[data-testid="stHeader"] {
+        background-color: #212121 !important;
+        border-bottom: 1px solid #2D2D2D !important;
+    }
+
+    header[data-testid="stHeader"] * {
+        color: #FFFFFF !important;
+    }
+
+    div[data-testid="stDecoration"] {
+        background-image: linear-gradient(90deg, #25D366, #20ba5a) !important;
+    }
+
     h1, h2, h3, h4, h5, h6 {
         font-family: 'Outfit', sans-serif !important;
         color: #FFFFFF !important;
@@ -58,47 +72,84 @@ st.markdown("""
 
     /* Sidebar container styling */
     [data-testid="stSidebar"] {
-        background-color: #1A1A1A !important;
-        border-right: 1px solid #2D2D2D !important;
+        background: linear-gradient(180deg, #181818 0%, #0F0F0F 100%) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
     }
 
     [data-testid="stSidebar"] * {
         color: #FFFFFF !important;
     }
 
-    /* Sidebar button navigation */
+    /* Sidebar scrollbar styling */
+    [data-testid="stSidebar"]::-webkit-scrollbar {
+        width: 4px !important;
+    }
+    [data-testid="stSidebar"]::-webkit-scrollbar-thumb {
+        background-color: rgba(37, 211, 102, 0.2) !important;
+        border-radius: 10px !important;
+    }
+
+    /* Sidebar info box styling */
+    [data-testid="stSidebar"] div[data-testid="stAlert"] {
+        background: rgba(255, 255, 255, 0.01) !important;
+        border: 1px solid rgba(255, 255, 255, 0.04) !important;
+        border-left: 3px solid #25D366 !important;
+        border-radius: 8px !important;
+        padding: 12px 16px !important;
+        margin-top: 20px !important;
+    }
+
+    [data-testid="stSidebar"] div[data-testid="stAlert"] div {
+        color: #B0B3B8 !important;
+        font-size: 13px !important;
+        line-height: 1.5 !important;
+    }
+
+    /* Sidebar button navigation (Inactive secondary) */
     [data-testid="stSidebar"] div.stButton > button {
         width: 100% !important;
         text-align: left !important;
-        border-radius: 10px !important;
-        border: 1px solid #2D2D2D !important;
-        background-color: #212121 !important;
-        color: #FFFFFF !important;
+        border-radius: 6px !important;
+        border: 1px solid transparent !important;
+        border-left: 4px solid transparent !important;
+        background-color: transparent !important;
+        color: #8E9297 !important;
         margin-bottom: 8px !important;
-        padding: 10px 16px !important;
+        padding: 12px 16px !important;
         font-weight: 500 !important;
-        transition: all 0.2s ease-in-out !important;
+        font-size: 14px !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
     [data-testid="stSidebar"] div.stButton > button:hover {
-        border-color: #25D366 !important;
-        color: #25D366 !important;
-        background-color: #2D2D2D !important;
-        box-shadow: 0 2px 8px rgba(37, 211, 102, 0.15) !important;
+        border-color: rgba(255, 255, 255, 0.05) !important;
+        border-left: 4px solid rgba(37, 211, 102, 0.5) !important;
+        color: #FFFFFF !important;
+        background-color: rgba(255, 255, 255, 0.02) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        transform: translateX(4px) !important;
     }
 
-    /* Sidebar active primary buttons */
+    /* Sidebar active primary navigation buttons */
     [data-testid="stSidebar"] div.stButton > button[kind="primary"] {
-        background-color: #25D366 !important;
-        color: #121212 !important;
-        border: 1px solid #25D366 !important;
+        background-color: rgba(37, 211, 102, 0.06) !important;
+        color: #25D366 !important;
+        border: 1px solid rgba(37, 211, 102, 0.15) !important;
+        border-left: 4px solid #25D366 !important;
+        border-radius: 6px !important;
         font-weight: 600 !important;
+        font-size: 14px !important;
+        box-shadow: inset 0 0 10px rgba(37, 211, 102, 0.05), 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+        transform: translateX(4px) !important;
     }
 
     [data-testid="stSidebar"] div.stButton > button[kind="primary"]:hover {
-        background-color: #20ba5a !important;
-        color: #121212 !important;
-        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3) !important;
+        background-color: rgba(37, 211, 102, 0.1) !important;
+        color: #25D366 !important;
+        border-color: rgba(37, 211, 102, 0.25) !important;
+        border-left: 4px solid #25D366 !important;
+        box-shadow: inset 0 0 10px rgba(37, 211, 102, 0.08), 0 4px 15px rgba(37, 211, 102, 0.15) !important;
+        transform: translateX(4px) !important;
     }
 
     /* General containers & cards */
@@ -132,14 +183,16 @@ st.markdown("""
     }
 
     /* Grandchild nested containers (Level 3 sub-cards) styling */
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #101010 !important;
         border-color: #2D2D2D !important;
         box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5) !important;
         padding: 16px !important;
     }
 
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #25D366 !important;
         box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(37, 211, 102, 0.15) !important;
     }
@@ -857,28 +910,24 @@ if "current_page" not in st.session_state:
 # Sidebar Navigation Panel (Clean SaaS Layout)
 # =============================================================================
 st.sidebar.markdown("""
-<div style="text-align: center; margin-bottom: 20px;">
-    <svg width="160" height="60" viewBox="0 0 220 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;">
-      <path d="M40 70C34 72 20 75 14 77C15 70 17 58 19 53C10 42 10 26 21 15C32 4 50 4 61 15C72 26 72 44 61 55C50 66 42 69 40 70Z" stroke="#25D366" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="38" cy="38" r="4" fill="#25D366"/>
-      <line x1="38" y1="34" x2="38" y2="24" stroke="#25D366" stroke-width="3"/>
-      <rect x="33" y="18" width="10" height="6" rx="2" stroke="#25D366" stroke-width="2"/>
-      <line x1="41.5" y1="36" x2="50" y2="31" stroke="#25D366" stroke-width="3"/>
-      <rect x="48" y="25" width="10" height="6" rx="2" transform="rotate(30 48 25)" stroke="#25D366" stroke-width="2"/>
-      <line x1="41.5" y1="40" x2="50" y2="45" stroke="#25D366" stroke-width="3"/>
-      <rect x="48" y="45" width="10" height="6" rx="2" transform="rotate(-30 48 45)" stroke="#25D366" stroke-width="2"/>
-      <line x1="38" y1="42" x2="38" y2="52" stroke="#25D366" stroke-width="3"/>
-      <rect x="33" y="52" width="10" height="6" rx="2" stroke="#25D366" stroke-width="2"/>
-      <line x1="34.5" y1="40" x2="26" y2="45" stroke="#25D366" stroke-width="3"/>
-      <rect x="18" y="42" width="10" height="6" rx="2" transform="rotate(30 18 42)" stroke="#25D366" stroke-width="2"/>
-      <line x1="34.5" y1="36" x2="26" y2="31" stroke="#25D366" stroke-width="3"/>
-      <rect x="18" y="28" width="10" height="6" rx="2" transform="rotate(-30 18 28)" stroke="#25D366" stroke-width="2"/>
-      <text x="85" y="48" fill="#FFFFFF" font-family="'Outfit', sans-serif" font-weight="700" font-size="34">Noria</text>
+<div style="display: flex; align-items: center; justify-content: center; gap: 12px; padding: 18px 12px; background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-top: 10px; margin-bottom: 25px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);">
+    <svg width="42" height="42" viewBox="0 0 299 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M149.789 0C67.9177 0 1.27639 66.4656 1.24166 148.157C1.23297 174.271 8.0751 199.761 21.0734 222.228L0 299.017L78.7453 278.412C100.444 290.218 124.869 296.436 149.728 296.445H149.789C231.651 296.445 298.292 229.971 298.327 148.279C298.345 108.689 282.906 71.4631 254.861 43.4616C226.815 15.4515 189.522 0.0173223 149.789 0ZM149.789 271.423H149.737C127.587 271.423 105.853 265.473 86.8985 254.256L82.3921 251.589L35.6694 263.818L48.138 218.373L45.2032 213.714C32.8474 194.105 26.3179 171.439 26.3266 148.175C26.3526 80.2715 81.7409 25.0307 149.841 25.0307C182.819 25.0394 213.816 37.8665 237.121 61.1477C260.435 84.4202 273.26 115.366 273.251 148.27C273.225 216.173 217.837 271.423 149.789 271.423Z" fill="#25D366"/>
+      <path d="M156.792 213.075L141.536 213.075L141.536 85.9421L156.792 85.9421L156.792 213.075Z" fill="#25D366"/>
+      <path d="M97.9276 187.898L90.2996 174.686L200.4 111.119L208.028 124.331L97.9276 187.898Z" fill="#25D366"/>
+      <path d="M90.2996 124.331L97.9276 111.119L208.028 174.686L200.4 187.898L90.2996 124.331Z" fill="#25D366"/>
+      <path d="M121.032 60.403C121.032 57.0892 123.718 54.403 127.032 54.403H171.296C174.609 54.403 177.296 57.0892 177.296 60.403V65.9421C177.296 76.9878 168.341 85.9421 157.296 85.9421H141.032C129.986 85.9421 121.032 76.9878 121.032 65.9421V60.403Z" fill="#212121" stroke="#25D366" stroke-width="16"/>
+      <path d="M121.032 219.075C121.032 215.761 123.718 213.075 127.032 213.075H171.296C174.609 213.075 177.296 215.761 177.296 219.075V224.614C177.296 235.66 168.341 244.614 157.296 244.614H141.032C129.986 244.614 121.032 235.66 121.032 224.614V219.075Z" fill="#212121" stroke="#25D366" stroke-width="16"/>
+      <path d="M51.5605 103.653C51.5605 100.339 54.2468 97.6532 57.5605 97.6532H101.824C105.138 100.339 107.824 100.339 107.824 103.653V109.192C107.824 120.238 98.87 129.192 87.8243 129.192H71.5605C60.5148 129.192 51.5605 120.238 51.5605 109.192V103.653Z" fill="#212121" stroke="#25D366" stroke-width="16"/>
+      <path d="M190.503 103.653C190.503 100.339 193.189 97.6532 196.503 97.6532H240.767C244.081 97.6532 246.767 100.339 246.767 103.653V109.192C246.767 120.238 237.813 129.192 226.767 129.192H210.503C199.457 129.192 190.503 120.238 190.503 109.192V103.653Z" fill="#212121" stroke="#25D366" stroke-width="16"/>
+      <path d="M51.5605 175.825C51.5605 172.511 54.2468 169.825 57.5605 169.825H101.824C105.138 169.825 107.824 172.511 107.824 175.825V181.364C107.824 192.41 98.87 201.364 87.8243 201.364H71.5605C60.5148 201.364 51.5605 192.41 51.5605 181.364V175.825Z" fill="#212121" stroke="#25D366" stroke-width="16"/>
+      <path d="M190.503 175.825C190.503 172.511 193.189 169.825 196.503 169.825H240.767C244.081 169.825 246.767 172.511 246.767 175.825V181.364C246.767 192.41 237.813 201.364 226.767 201.364H210.503C199.457 201.364 190.503 192.41 190.503 181.364V175.825Z" fill="#212121" stroke="#25D366" stroke-width="16"/>
     </svg>
+    <span style="color: #FFFFFF; font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 28px; letter-spacing: 0.5px;">Noria</span>
 </div>
+<div style="font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #8E9297; text-align: center; margin-bottom: 20px;">SaaS Orchestration Console</div>
+<div style="height: 1px; background: rgba(255, 255, 255, 0.05); margin: 20px 0;"></div>
 """, unsafe_allow_html=True)
-st.sidebar.caption("SaaS Orchestration Console")
-st.sidebar.write("---")
 
 # Styled Sidebar Buttons for Navigation
 if st.sidebar.button("👤 Applicant Profiles", use_container_width=True, type="primary" if st.session_state.current_page == "Profiles" else "secondary"):
@@ -889,8 +938,15 @@ if st.sidebar.button("📡 Opportunity Scans", use_container_width=True, type="p
     st.session_state.current_page = "Scans"
     st.rerun()
 
-st.sidebar.write("---")
-st.sidebar.info("Manage independent customer profiles, API keys, and launch dynamic opportunity scans entirely from the unified profile directory.")
+st.sidebar.markdown("""
+<div style="height: 1px; background: rgba(255, 255, 255, 0.05); margin: 25px 0 20px 0;"></div>
+<div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 3px solid #25D366; border-radius: 8px; padding: 14px;">
+    <div style="font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #25D366; margin-bottom: 6px;">Unified Control</div>
+    <div style="font-family: 'Inter', sans-serif; font-size: 12.5px; line-height: 1.5; color: #8E9297;">
+        Manage independent customer profiles, API keys, and launch dynamic opportunity scans entirely from the unified profile directory.
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # =============================================================================
 # Main View: SaaS Applicant Profiles Directory
@@ -1404,77 +1460,79 @@ if editing_profile is None:
                                     
                                     # ── Device Log Viewer ──────────────────────────────────
                                     device_sess_id = f"session_{p_id}_dev_{dev_phone}"
-                                    with st.expander(f"📋 Device Logs — +{dev_phone}", expanded=False):
-                                        log_col1, log_col2 = st.columns([3, 1])
-                                        with log_col1:
-                                            st.caption(f"Session ID: `{device_sess_id}`")
-                                        with log_col2:
-                                            if st.button("🗑️ Clear Logs", key=f"clear_logs_{p_id}_{dev_phone}", use_container_width=True):
-                                                if clear_session_logs(device_sess_id):
-                                                    st.toast("Logs cleared successfully.")
-                                                else:
-                                                    st.toast("No logs to clear.")
-                                        
-                                        # Read and display logs
-                                        log_lines = read_session_logs(device_sess_id, max_lines=100)
-                                        
-                                        if not log_lines:
-                                            st.info("No logs available for this device. Logs will appear once the device is connected and processing messages.")
-                                        else:
-                                            # Display logs in a scrollable code block
-                                            log_text = "\n".join(log_lines)
+                                    show_logs = st.toggle(f"📋 Show Device Logs — +{dev_phone}", value=False, key=f"toggle_logs_{p_id}_{dev_phone}")
+                                    if show_logs:
+                                        with st.container(border=True):
+                                            log_col1, log_col2 = st.columns([3, 1])
+                                            with log_col1:
+                                                st.caption(f"Session ID: `{device_sess_id}`")
+                                            with log_col2:
+                                                if st.button("🗑️ Clear Logs", key=f"clear_logs_{p_id}_{dev_phone}", use_container_width=True):
+                                                    if clear_session_logs(device_sess_id):
+                                                        st.toast("Logs cleared successfully.")
+                                                    else:
+                                                        st.toast("No logs to clear.")
                                             
-                                            # Copy logs button using custom HTML/JS
-                                            import urllib.parse
-                                            encoded_logs = urllib.parse.quote(log_text)
-                                            copy_btn_html = f"""
-                                            <div style="display: flex; justify-content: flex-end; margin-bottom: -10px;">
-                                                <button id="copyBtn" style="
-                                                    background-color: #2b2b36;
-                                                    color: #f4f4f4;
-                                                    border: 1px solid #444;
-                                                    padding: 6px 12px;
-                                                    border-radius: 6px;
-                                                    cursor: pointer;
-                                                    font-size: 13px;
-                                                    font-family: system-ui, -apple-system, sans-serif;
-                                                    display: flex;
-                                                    align-items: center;
-                                                    gap: 6px;
-                                                    transition: background-color 0.2s;
-                                                " onclick="copyLogs()">
-                                                    📋 Copy Logs
-                                                </button>
-                                                <textarea id="logText" style="display:none;"></textarea>
-                                            </div>
-                                            <script>
-                                            function copyLogs() {{
-                                                const text = decodeURIComponent("{encoded_logs}");
-                                                const textArea = document.getElementById("logText");
-                                                textArea.style.display = "block";
-                                                textArea.value = text;
-                                                textArea.select();
-                                                try {{
-                                                    document.execCommand("copy");
-                                                    const btn = document.getElementById("copyBtn");
-                                                    btn.innerHTML = "✅ Copied!";
-                                                    btn.style.backgroundColor = "#1b4d3e";
-                                                    setTimeout(() => {{
-                                                        btn.innerHTML = "📋 Copy Logs";
-                                                        btn.style.backgroundColor = "#2b2b36";
-                                                    }}, 2000);
-                                                }} catch (err) {{
-                                                    alert("Could not copy: " + err);
+                                            # Read and display logs
+                                            log_lines = read_session_logs(device_sess_id, max_lines=100)
+                                            
+                                            if not log_lines:
+                                                st.info("No logs available for this device. Logs will appear once the device is connected and processing messages.")
+                                            else:
+                                                # Display logs in a scrollable code block
+                                                log_text = "\n".join(log_lines)
+                                                
+                                                # Copy logs button using custom HTML/JS
+                                                import urllib.parse
+                                                encoded_logs = urllib.parse.quote(log_text)
+                                                copy_btn_html = f"""
+                                                <div style="display: flex; justify-content: flex-end; margin-bottom: -10px;">
+                                                    <button id="copyBtn" style="
+                                                        background-color: #2b2b36;
+                                                        color: #f4f4f4;
+                                                        border: 1px solid #444;
+                                                        padding: 6px 12px;
+                                                        border-radius: 6px;
+                                                        cursor: pointer;
+                                                        font-size: 13px;
+                                                        font-family: system-ui, -apple-system, sans-serif;
+                                                        display: flex;
+                                                        align-items: center;
+                                                        gap: 6px;
+                                                        transition: background-color 0.2s;
+                                                    " onclick="copyLogs()">
+                                                        📋 Copy Logs
+                                                    </button>
+                                                    <textarea id="logText" style="display:none;"></textarea>
+                                                </div>
+                                                <script>
+                                                function copyLogs() {{
+                                                    const text = decodeURIComponent("{encoded_logs}");
+                                                    const textArea = document.getElementById("logText");
+                                                    textArea.style.display = "block";
+                                                    textArea.value = text;
+                                                    textArea.select();
+                                                    try {{
+                                                        document.execCommand("copy");
+                                                        const btn = document.getElementById("copyBtn");
+                                                        btn.innerHTML = "✅ Copied!";
+                                                        btn.style.backgroundColor = "#1b4d3e";
+                                                        setTimeout(() => {{
+                                                            btn.innerHTML = "📋 Copy Logs";
+                                                            btn.style.backgroundColor = "#2b2b36";
+                                                        }}, 2000);
+                                                    }} catch (err) {{
+                                                        alert("Could not copy: " + err);
+                                                    }}
+                                                    textArea.style.display = "none";
                                                 }}
-                                                textArea.style.display = "none";
-                                            }}
-                                            </script>
-                                            """
-                                            import streamlit.components.v1 as components
-                                            components.html(copy_btn_html, height=45)
-                                            
-                                            st.code(log_text, language="text")
-                                            st.caption(f"Showing last {len(log_lines)} log entries. Logs auto-refresh every 2 seconds.")
+                                                </script>
+                                                """
+                                                import streamlit.components.v1 as components
+                                                components.html(copy_btn_html, height=45)
+                                                
+                                                st.code(log_text, language="text")
+                                                st.caption(f"Showing last {len(log_lines)} log entries. Logs auto-refresh every 2 seconds.")
                                     
                                     st.write("---")
                                     
