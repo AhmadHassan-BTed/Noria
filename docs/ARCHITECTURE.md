@@ -46,10 +46,11 @@ Noria's execution stages are coordinated completely dynamically through decouple
   (Event: scraper:start)
          │
          ▼
-  [Scraper Plugin] ──(Checks cache/duplicates)──► [LRU Cache]
+  [Scraper Plugin] ──(Checks cache/duplicates & flag-clear)──► [URL Cache]
          │
          ├─► Primary: [Jina Reader API]
-         └─► Fallback: [Puppeteer Scraper]
+         ├─► Fallback: [Puppeteer Scraper]
+         └─► Resilient Native Fetch Recovery (Raw HTML processing)
          │
          ▼ (Extracts text & validates)
   (Event: scraper:success)
@@ -60,7 +61,7 @@ Noria's execution stages are coordinated completely dynamically through decouple
          ▼
   [Gemini Analyzer Plugin] ──► [Scholarships / Jobs provider] (builds prompt)
          │
-         ▼ (Executes Gemini generation & validates response)
+         ▼ (Executes Gemini generation & validates response & handles 429 fallback)
   (Event: analyzer:match_found)  [If Match Score >= 50]
          │
          ▼
@@ -69,6 +70,33 @@ Noria's execution stages are coordinated completely dynamically through decouple
          ▼ (Delivers alert message)
   (Event: notifier:send)
 ```
+
+---
+
+## 🛡️ Resilient Gating, Scraping & Model Fallbacks
+
+Noria incorporates advanced resilience features to handle rate limits, network synchronization, and scraping blocks:
+
+### 1. Granular Message Source Gating & JID Resolution
+Message listeners utilize decoupled origin classification and mode normalization helpers:
+- **`source-mode.js`**: Normalizes source configurations (e.g. `individual`, `groups`, `channels`, or legacy arrays).
+- **`source-classifier.js`**: Classifies message origins using `getMsgChatId(msg)`. By checking both `msg.from` and `msg.to`, it extracts the actual target chat JID for both incoming and outgoing (`fromMe`) messages, enabling precise whitelist checks and allowing manual self-message testing from the linked device without infinite loop feedback.
+
+### 2. Triple-Layer Resilient Scraping
+When a scraper event triggers, the core pipeline attempts a three-tier recovery:
+- **Primary Scraper**: Executes Jina or other API-based scraping.
+- **Fallback Scraper**: Executes Puppeteer headless scraper if the primary fails.
+- **Native Fetch Recovery**: Directly requests the URL with spoofed user agents, strips HTML tags, scripts, styles, navigation, and footers, and processes the text as a final fail-safe.
+
+### 3. Dynamic Model Fallback Chain & 429 Rate Limit Handling
+To prevent quota blocks and rate limits from interrupting active scans:
+- **Exact Delay Extraction**: Gemini analyzer extracts exact delay times from 429 errors (both JSON responses and textual headers) and pauses execution for the requested duration + a `1.5s` safety buffer.
+- **Model Fallback**: Sequentially falls back to alternative models (e.g., `gemini-2.5-flash` -> `gemini-1.5-flash` -> `gemini-1.5-pro`) on 429 blocks and promotes the successful model to avoid subsequent blocks.
+
+### 4. Deduplication & Cache Clearing
+To allow users to force re-evaluation of URLs, a multi-level cache clearing system is implemented:
+- **Profile-Level & Device-Level Clear**: Streamlit buttons write `clear-cache-{instanceId}.flag` files.
+- **Backend Flag Detection**: The orchestrator checks for these flags absolutely relative to `__dirname`, flushes the in-memory URL deduplication cache (`urlCache`) when found, and deletes the flag.
 
 ---
 
