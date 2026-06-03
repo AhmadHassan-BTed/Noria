@@ -10,7 +10,8 @@ import io
 
 # Suppress Streamlit ScriptRunContext warning when running in bare mode
 # This warning is benign and occurs when @st.fragment is used outside of a full Streamlit context
-warnings.filterwarnings("ignore", message=".*missing ScriptRunContext.*")
+import logging
+logging.getLogger("streamlit").setLevel(logging.ERROR)
 
 # Optional qrcode import fallback
 try:
