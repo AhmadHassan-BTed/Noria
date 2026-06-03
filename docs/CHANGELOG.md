@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-06-03
+
+### Refactored
+- Implemented Clean Hexagonal Architecture separating infrastructure from business rules
+- Extracted pure domain modules (`src/domains/`) containing stateless prompt builders and notification layout templates
+- Converted technical drivers into stateless adapters (`src/infrastructure/`) for Gemini, Scrapers, and WhatsApp Sender
+- Redesigned core registry (`src/core/registry.js`) from class-prototype matching to function-based and adapter-interface validation
+- Rewrote the core orchestrator (`src/core/pipeline.js`) to sequential data-coupling logic
+- Re-routed all test suites to verify new paths and stateless logic
+- Removed legacy coupled code, OOP base classes, and outdated providers/plugins directories
+
 ## [2.0.0] - 2026-06-01
 
 ### Added

@@ -23,7 +23,9 @@ const originalWarn = console.warn;
 const originalError = console.error;
 
 function writeToLogFile(level, ...args) {
-  if (!currentSessionId) return;
+  if (!currentSessionId) {
+    return;
+  }
   try {
     const dataDir = path.join(process.cwd(), 'data');
     if (!fs.existsSync(dataDir)) {
@@ -31,14 +33,22 @@ function writeToLogFile(level, ...args) {
     }
     const logPath = path.join(dataDir, `logs-${currentSessionId}.log`);
     const ts = new Date().toISOString();
-    const message = args.map(arg => {
-      if (arg instanceof Error) return arg.stack;
-      if (typeof arg === 'object') {
-        try { return JSON.stringify(arg); } catch { return String(arg); }
-      }
-      return String(arg);
-    }).join(' ');
-    
+    const message = args
+      .map((arg) => {
+        if (arg instanceof Error) {
+          return arg.stack;
+        }
+        if (typeof arg === 'object') {
+          try {
+            return JSON.stringify(arg);
+          } catch {
+            return String(arg);
+          }
+        }
+        return String(arg);
+      })
+      .join(' ');
+
     fs.appendFileSync(logPath, `[${ts}] [${level}] ${message}\n`);
   } catch (err) {
     // Fail-safe to avoid loops
@@ -61,21 +71,26 @@ console.error = (...args) => {
 };
 
 function writeDisconnectStatus(reason) {
-  if (!currentSessionId) return;
-  
+  if (!currentSessionId) {
+    return;
+  }
+
   try {
     const dataDir = path.join(process.cwd(), 'data');
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
-    
+
     const statusPath = path.join(dataDir, `status-${currentSessionId}.json`);
-    fs.writeFileSync(statusPath, JSON.stringify({
-      status: 'DISCONNECTED',
-      reason: reason,
-      timestamp: new Date().toISOString()
-    }));
-    
+    fs.writeFileSync(
+      statusPath,
+      JSON.stringify({
+        status: 'DISCONNECTED',
+        reason: reason,
+        timestamp: new Date().toISOString(),
+      })
+    );
+
     console.error(`[Launcher] Wrote DISCONNECTED status for session ${currentSessionId}`);
   } catch (err) {
     console.error(`[Launcher] Failed to write disconnect status: ${err.message}`);
@@ -91,7 +106,7 @@ process.on('uncaughtException', (err) => {
 });
 
 // Catch unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   const errorMsg = reason instanceof Error ? reason.message : String(reason);
   console.error('[Launcher] ❌ UNHANDLED REJECTION:', errorMsg);
   if (reason instanceof Error) {
@@ -99,7 +114,12 @@ process.on('unhandledRejection', (reason, promise) => {
   }
 
   // If it's a known non-fatal file-lock error from session folder cleanup on Windows, log warning and do not crash
-  if (errorMsg.includes('EBUSY') && (errorMsg.includes('.wwebjs_auth') || errorMsg.includes('first_party_sets.db') || errorMsg.includes('session'))) {
+  if (
+    errorMsg.includes('EBUSY') &&
+    (errorMsg.includes('.wwebjs_auth') ||
+      errorMsg.includes('first_party_sets.db') ||
+      errorMsg.includes('session'))
+  ) {
     console.warn('[Launcher] ⚠️ Ignored non-fatal EBUSY file lock during session cleanup.');
     return;
   }
@@ -138,7 +158,9 @@ async function launch() {
   const { template, instance, sessionId, channels, phone, sourceMode, groups, chats } = args;
 
   if (!template || !instance) {
-    console.error('Usage: node src/launcher.js --template <name> --instance <id> [--sessionId <id>] [--channels <list>] [--phone <num>] [--sourceMode <mode>] [--groups <list>] [--chats <list>]');
+    console.error(
+      'Usage: node src/launcher.js --template <name> --instance <id> [--sessionId <id>] [--channels <list>] [--phone <num>] [--sourceMode <mode>] [--groups <list>] [--chats <list>]'
+    );
     process.exit(1);
   }
 
@@ -180,17 +202,29 @@ async function launch() {
   }
 
   // Parse allowed channels
-  const allowedChannels = channels
-    ? channels.split(',').map((c) => c.trim()).filter(Boolean)
-    : [];
+  let allowedChannels = [];
+  if (channels) {
+    allowedChannels = channels
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean);
+  }
 
-  const allowedGroups = groups
-    ? groups.split(',').map((g) => g.trim()).filter(Boolean)
-    : [];
+  let allowedGroups = [];
+  if (groups) {
+    allowedGroups = groups
+      .split(',')
+      .map((g) => g.trim())
+      .filter(Boolean);
+  }
 
-  const allowedChats = chats
-    ? chats.split(',').map((c) => c.trim()).filter(Boolean)
-    : [];
+  let allowedChats = [];
+  if (chats) {
+    allowedChats = chats
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean);
+  }
 
   const customConfig = {
     listen: {

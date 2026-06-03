@@ -1,38 +1,56 @@
 'use strict';
 
+/**
+ * Plugin/Adapter Registration
+ *
+ * Registers all built-in domains, infrastructure adapters, and listeners
+ * with the central registry. This is the wiring point where the new
+ * hexagonal architecture connects infrastructure to the core.
+ */
+
 const { registry } = require('../core/registry');
 
-const { WhatsAppListener } = require('../plugins/listeners/whatsapp');
-const { GeminiAnalyzer } = require('../plugins/analyzers/gemini');
-const { PuppeteerScraper } = require('../plugins/scrapers/puppeteer');
-const { JinaScraper } = require('../plugins/scrapers/jina');
-const { WhatsAppNotifier } = require('../plugins/notifiers/whatsapp');
-const { ScholarshipsProvider } = require('../providers/scholarships');
-const { JobsProvider } = require('../providers/jobs');
+// ─── Domain Modules (plain objects) ─────────────────────────────────────────
+const scholarshipsDomain = require('../domains/scholarships');
+const jobsDomain = require('../domains/jobs');
 
-function registerBuiltInPlugins() {
-  registry.registerPlugin('listener', 'whatsapp-listener', WhatsAppListener);
+// ─── Infrastructure: Listener (class-based — the only exception) ────────────
+const { WhatsAppListener } = require('../infrastructure/messaging/whatsapp-listener');
 
-  registry.registerPlugin('analyzer', 'gemini-analyzer', GeminiAnalyzer);
+// ─── Infrastructure: LLM Adapter (stateless functions) ──────────────────────
+const geminiAdapter = require('../infrastructure/llm/gemini');
 
-  registry.registerPlugin('scraper', 'puppeteer-scraper', PuppeteerScraper);
-  registry.registerPlugin('scraper', 'jina-scraper', JinaScraper);
+// ─── Infrastructure: Scraper Adapters (stateless functions) ─────────────────
+const jinaScraper = require('../infrastructure/scraper/jina');
+const puppeteerScraper = require('../infrastructure/scraper/puppeteer');
+const resilientFetchScraper = require('../infrastructure/scraper/resilientFetch');
 
-  registry.registerPlugin('notifier', 'whatsapp-notifier', WhatsAppNotifier);
-
-  console.log('[Registry] Built-in plugins registered');
-}
-
-function registerBuiltInProviders() {
-  registry.registerProvider('scholarships', ScholarshipsProvider);
-  registry.registerProvider('jobs', JobsProvider);
-
-  console.log('[Registry] Built-in providers registered');
-}
+// ─── Infrastructure: Sender Adapter (stateless function) ────────────────────
+const whatsappSender = require('../infrastructure/messaging/whatsapp-sender');
 
 function initialize() {
-  registerBuiltInPlugins();
-  registerBuiltInProviders();
+  // ── Domains ───────────────────────────────────────────────────────────────
+  registry.registerDomain('scholarships', scholarshipsDomain);
+  registry.registerDomain('jobs', jobsDomain);
+  console.log('[Registry] Domains registered');
+
+  // ── Listener (class-based) ────────────────────────────────────────────────
+  registry.registerListener('whatsapp-listener', WhatsAppListener);
+  console.log('[Registry] Listeners registered');
+
+  // ── LLM Adapters ──────────────────────────────────────────────────────────
+  registry.registerAdapter('llm', 'gemini', geminiAdapter);
+  console.log('[Registry] LLM adapters registered');
+
+  // ── Scraper Adapters ──────────────────────────────────────────────────────
+  registry.registerAdapter('scraper', 'jina-scraper', jinaScraper);
+  registry.registerAdapter('scraper', 'puppeteer-scraper', puppeteerScraper);
+  registry.registerAdapter('scraper', 'resilient-fetch', resilientFetchScraper);
+  console.log('[Registry] Scraper adapters registered');
+
+  // ── Sender Adapters ───────────────────────────────────────────────────────
+  registry.registerAdapter('sender', 'whatsapp-sender', whatsappSender);
+  console.log('[Registry] Sender adapters registered');
 }
 
 module.exports = { initialize };

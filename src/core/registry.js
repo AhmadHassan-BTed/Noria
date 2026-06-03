@@ -1,112 +1,163 @@
 'use strict';
 
+/**
+ * Core — Function-Based Registry
+ *
+ * Registers domain modules (plain objects) and infrastructure adapters
+ * (functions or lightweight modules). No class prototype checks.
+ * No inheritance validation.
+ *
+ * Registration types:
+ *   • Domains:   Plain objects with { buildPrompt, buildTemplate, schema, metadata }
+ *   • Adapters:  Function modules keyed by (type, name)
+ *   • Listeners: Constructor classes (the ONLY class-based registration — WhatsApp is stateful)
+ */
+
 class PluginRegistry {
   constructor() {
-    this.plugins = new Map();
-    this.providers = new Map();
+    this.domains = new Map();
+    this.adapters = new Map();
+    this.listeners = new Map();
   }
 
-  registerPlugin(type, name, pluginClass) {
-    const key = `${type}:${name}`;
-    if (this.plugins.has(key)) {
-      throw new Error(`Plugin already registered: ${key}`);
+  // ─── Domain Registration ──────────────────────────────────────────────────
+
+  /**
+   * Register a domain module (plain object).
+   *
+   * @param {string} name - Domain name (e.g. 'scholarships', 'jobs')
+   * @param {object} domainModule - Plain object with { buildPrompt, resolveProfile, buildTemplate, schema, metadata }
+   */
+  registerDomain(name, domainModule) {
+    if (this.domains.has(name)) {
+      throw new Error(`Domain already registered: ${name}`);
     }
 
-    // Dynamic Interface Verification
-    const prototype = pluginClass.prototype;
-    if (!prototype) {
-      throw new Error(`Plugin registry error: ${key} is not a valid constructor class`);
-    }
-
-    const requiredMethods = {
-      listener: ['initialize', 'on', 'close'],
-      scraper: ['scrape'],
-      analyzer: ['analyze', 'setProvider'],
-      notifier: ['send', 'setProvider', 'format'],
-    }[type];
-
-    if (requiredMethods) {
-      for (const method of requiredMethods) {
-        if (typeof prototype[method] !== 'function') {
-          throw new Error(
-            `Plugin interface violation: Plugin class '${pluginClass.name}' registered as type '${type}' must implement method '${method}()'`
-          );
-        }
-      }
-    }
-
-    this.plugins.set(key, pluginClass);
-    console.log(`[Registry] Plugin registered: ${key}`);
-  }
-
-  registerProvider(name, providerClass) {
-    if (this.providers.has(name)) {
-      throw new Error(`Provider already registered: ${name}`);
-    }
-
-    // Dynamic Interface Verification
-    const prototype = providerClass.prototype;
-    if (!prototype) {
-      throw new Error(
-        `Provider registry error: Provider '${name}' is not a valid constructor class`
-      );
-    }
-
-    const requiredMethods = ['getAnalyzer', 'getNotifier', 'getSchema', 'getMetadata'];
-    for (const method of requiredMethods) {
-      if (typeof prototype[method] !== 'function') {
+    // Validate required exports
+    const required = ['buildPrompt', 'resolveProfile', 'buildTemplate', 'schema'];
+    for (const fn of required) {
+      if (typeof domainModule[fn] !== 'function' && typeof domainModule[fn] !== 'object') {
         throw new Error(
-          `Provider interface violation: Provider class '${providerClass.name}' must implement method '${method}()' to abide by the BaseProvider interface`
+          `Domain interface violation: '${name}' must export '${fn}' ` +
+            `(got ${typeof domainModule[fn]})`
         );
       }
     }
 
-    this.providers.set(name, providerClass);
-    console.log(`[Registry] Provider registered: ${name}`);
+    this.domains.set(name, domainModule);
+    console.log(`[Registry] Domain registered: ${name}`);
   }
 
-  getPlugin(type, name) {
+  /**
+   * @param {string} name
+   * @returns {object} Domain module
+   */
+  getDomain(name) {
+    const domain = this.domains.get(name);
+    if (!domain) {
+      throw new Error(`Domain not found: ${name}`);
+    }
+    return domain;
+  }
+
+  // ─── Adapter Registration ─────────────────────────────────────────────────
+
+  /**
+   * Register an infrastructure adapter (function module).
+   *
+   * @param {string} type - Adapter type (e.g. 'scraper', 'llm', 'sender')
+   * @param {string} name - Adapter name (e.g. 'jina-scraper', 'gemini')
+   * @param {object} adapterModule - Module with exported functions (e.g. { scrape }, { generateStructuredData })
+   */
+  registerAdapter(type, name, adapterModule) {
     const key = `${type}:${name}`;
-    const pluginClass = this.plugins.get(key);
-    if (!pluginClass) {
-      throw new Error(`Plugin not found: ${key}`);
+    if (this.adapters.has(key)) {
+      throw new Error(`Adapter already registered: ${key}`);
     }
-    return pluginClass;
+
+    this.adapters.set(key, adapterModule);
+    console.log(`[Registry] Adapter registered: ${key}`);
   }
 
-  getProvider(name) {
-    const providerClass = this.providers.get(name);
-    if (!providerClass) {
-      throw new Error(`Provider not found: ${name}`);
+  /**
+   * @param {string} type
+   * @param {string} name
+   * @returns {object} Adapter module
+   */
+  getAdapter(type, name) {
+    const key = `${type}:${name}`;
+    const adapter = this.adapters.get(key);
+    if (!adapter) {
+      throw new Error(`Adapter not found: ${key}`);
     }
-    return providerClass;
+    return adapter;
   }
 
-  instantiatePlugin(type, name, config = {}) {
-    const PluginClass = this.getPlugin(type, name);
-    return new PluginClass(config);
-  }
+  // ─── Listener Registration ────────────────────────────────────────────────
 
-  instantiateProvider(name, config = {}) {
-    const ProviderClass = this.getProvider(name);
-    return new ProviderClass(config);
-  }
+  /**
+   * Register a listener class (the only class-based registration).
+   * Listeners are stateful (WebSocket, QR, auth) so they stay class-based.
+   *
+   * @param {string} name - Listener name (e.g. 'whatsapp-listener')
+   * @param {Function} ListenerClass - Constructor class
+   */
+  registerListener(name, ListenerClass) {
+    if (this.listeners.has(name)) {
+      throw new Error(`Listener already registered: ${name}`);
+    }
 
-  listPlugins(type) {
-    const prefix = type ? `${type}:` : '';
-    const plugins = [];
+    // Validate required methods on the prototype
+    const prototype = ListenerClass.prototype;
+    if (!prototype) {
+      throw new Error(`Listener registration error: '${name}' is not a valid constructor`);
+    }
 
-    for (const key of this.plugins.keys()) {
-      if (!type || key.startsWith(prefix)) {
-        plugins.push(key);
+    const requiredMethods = ['initialize', 'on', 'close'];
+    for (const method of requiredMethods) {
+      if (typeof prototype[method] !== 'function') {
+        throw new Error(
+          `Listener interface violation: '${ListenerClass.name}' must implement '${method}()'`
+        );
       }
     }
 
-    return plugins;
+    this.listeners.set(name, ListenerClass);
+    console.log(`[Registry] Listener registered: ${name}`);
   }
 
-  listProviders() {
-    return Array.from(this.providers.keys());
+  /**
+   * @param {string} name
+   * @param {object} config
+   * @returns {object} Listener instance
+   */
+  createListener(name, config = {}) {
+    const ListenerClass = this.listeners.get(name);
+    if (!ListenerClass) {
+      throw new Error(`Listener not found: ${name}`);
+    }
+    return new ListenerClass(config);
+  }
+
+  // ─── Introspection ────────────────────────────────────────────────────────
+
+  listDomains() {
+    return Array.from(this.domains.keys());
+  }
+
+  listAdapters(type) {
+    const prefix = type ? `${type}:` : '';
+    const result = [];
+    for (const key of this.adapters.keys()) {
+      if (!type || key.startsWith(prefix)) {
+        result.push(key);
+      }
+    }
+    return result;
+  }
+
+  listListeners() {
+    return Array.from(this.listeners.keys());
   }
 }
 

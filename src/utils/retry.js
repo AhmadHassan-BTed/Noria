@@ -34,7 +34,7 @@ function extractRetryDelayMs(err) {
   if (!err || !err.message) {
     return null;
   }
-  
+
   // 1. Try to find retryDelay in JSON format: "retryDelay":"48s" or "retryDelay": "48s"
   const jsonMatch = err.message.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)(s|ms)"/);
   if (jsonMatch) {
@@ -42,7 +42,7 @@ function extractRetryDelayMs(err) {
     const unit = jsonMatch[2];
     return unit === 's' ? value * 1000 : value;
   }
-  
+
   // 2. Try to find plain text format: "Please retry in 48.184025976s"
   const textMatch = err.message.match(/Please retry in (\d+(?:\.\d+)?)\s*(s|ms)/i);
   if (textMatch) {
@@ -77,9 +77,12 @@ async function withRetry(fn, options = {}) {
 
       // Check if it's a rate limit error to apply aggressive backoff
       const lowerMsg = (err.message || '').toLowerCase();
-      const isRateLimit = err.status === 429 || err.statusCode === 429 || 
-                          lowerMsg.includes('429') || lowerMsg.includes('quota') || 
-                          lowerMsg.includes('too many requests');
+      const isRateLimit =
+        err.status === 429 ||
+        err.statusCode === 429 ||
+        lowerMsg.includes('429') ||
+        lowerMsg.includes('quota') ||
+        lowerMsg.includes('too many requests');
 
       const currentBaseDelay = isRateLimit ? Math.max(baseDelayMs, 15000) : baseDelayMs;
 

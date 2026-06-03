@@ -4,14 +4,80 @@ const fs = require('fs');
 const yaml = require('js-yaml');
 const { PipelineOrchestrator } = require('../../../src/core/pipeline');
 const { registry } = require('../../../src/core/registry');
+const { EventTypes } = require('../../../src/core/events');
+const { urlCache } = require('../../../src/utils/cache');
 
-// Mock fs, js-yaml, and registry
+// Mock fs and js-yaml
 jest.mock('fs');
 jest.mock('js-yaml');
-jest.mock('../../../src/core/registry', () => ({
-  registry: {
-    instantiateProvider: jest.fn(),
-    instantiatePlugin: jest.fn(),
+
+// Mock registry
+jest.mock('../../../src/core/registry', () => {
+  const mockDomain = {
+    resolveProfile: jest.fn().mockReturnValue({ name: 'mock-profile' }),
+    buildPrompt: jest.fn().mockReturnValue('Mock prompt'),
+    schema: { type: 'object' },
+    buildTemplate: jest.fn().mockReturnValue('Formatted Message'),
+  };
+
+  const mockScraper = {
+    scrape: jest.fn().mockResolvedValue({ text: 'Valid scraper opportunity content. '.repeat(10) }),
+  };
+
+  const mockLlm = {
+    generateStructuredData: jest.fn().mockResolvedValue({ match_score: 85, verdict: 'Good alignment' }),
+  };
+
+  const mockSender = {
+    sendMessage: jest.fn().mockResolvedValue(),
+  };
+
+  const mockListener = {
+    initialize: jest.fn(),
+    on: jest.fn(),
+    close: jest.fn(),
+  };
+
+  return {
+    registry: {
+      getDomain: jest.fn().mockReturnValue(mockDomain),
+      createListener: jest.fn().mockReturnValue(mockListener),
+      getAdapter: jest.fn().mockImplementation((type, name) => {
+        if (type === 'scraper') return mockScraper;
+        if (type === 'llm') return mockLlm;
+        if (type === 'sender') return mockSender;
+        return null;
+      }),
+    },
+  };
+});
+
+// Mock connection manager
+jest.mock('../../../src/infrastructure/messaging/connection-manager', () => ({
+  getConnectionManager: jest.fn().mockReturnValue({
+    getClient: jest.fn().mockReturnValue({ name: 'mock-client' }),
+  }),
+}));
+
+// Mock validators
+jest.mock('../../../src/utils/validators', () => ({
+  validateScraperPayload: jest.fn().mockImplementation((data) => data),
+  validateAnalyzerResponse: jest.fn().mockImplementation((data) => data),
+}));
+
+// Mock cache
+jest.mock('../../../src/utils/cache', () => ({
+  urlCache: {
+    has: jest.fn().mockReturnValue(false),
+    set: jest.fn(),
+    clear: jest.fn(),
+  },
+}));
+
+// Mock config
+jest.mock('../../../src/config', () => ({
+  config: {
+    getAll: jest.fn().mockReturnValue({ APPLICANT_NAME: 'Test User' }),
   },
 }));
 
@@ -25,8 +91,8 @@ describe('PipelineOrchestrator Core', () => {
     stages: {
       listen: { plugin: 'whatsapp-listener', config: {} },
       scrape: { primary: 'jina-scraper', fallback: 'puppeteer-scraper' },
-      analyze: { plugin: 'gemini-analyzer', config: {} },
-      notify: { plugin: 'whatsapp-notifier', config: {} },
+      analyze: { plugin: 'gemini-analyzer', config: { model: 'gemini-2.5-flash' } },
+      notify: { plugin: 'whatsapp-notifier', config: { phoneNumber: '+923000000000' } },
     },
     config: { custom: 'value' },
   };
@@ -38,6 +104,7 @@ describe('PipelineOrchestrator Core', () => {
     };
     orchestrator = new PipelineOrchestrator(broker);
     jest.clearAllMocks();
+    urlCache.has.mockReturnValue(false);
   });
 
   describe('loadPipelineFromObject', () => {
@@ -95,51 +162,29 @@ describe('PipelineOrchestrator Core', () => {
   });
 
   describe('initializePipeline', () => {
-    let mockProviderInstance;
-    let mockListenerInstance;
-    let mockScraperInstance;
-    let mockAnalyzerInstance;
-    let mockNotifierInstance;
-
     beforeEach(() => {
       orchestrator.loadPipelineFromObject(validConfig);
-
-      mockProviderInstance = { name: 'mock-provider' };
-      mockListenerInstance = { initialize: jest.fn(), on: jest.fn() };
-      mockScraperInstance = { name: 'mock-scraper' };
-      mockAnalyzerInstance = { setProvider: jest.fn() };
-      mockNotifierInstance = { setProvider: jest.fn() };
-
-      registry.instantiateProvider.mockReturnValue(mockProviderInstance);
-      registry.instantiatePlugin.mockImplementation((type, name) => {
-        if (type === 'listener') return mockListenerInstance;
-        if (type === 'scraper') return mockScraperInstance;
-        if (type === 'analyzer') return mockAnalyzerInstance;
-        if (type === 'notifier') return mockNotifierInstance;
-        return null;
-      });
     });
 
-    test('should instantiate all stages and wire them successfully', async () => {
+    test('should resolve domains and adapters and wire them successfully', async () => {
       const services = await orchestrator.initializePipeline('test-pipeline');
 
-      expect(registry.instantiateProvider).toHaveBeenCalledWith('scholarships', { custom: 'value' });
-      expect(registry.instantiatePlugin).toHaveBeenCalledWith('listener', 'whatsapp-listener', {});
-      expect(registry.instantiatePlugin).toHaveBeenCalledWith('scraper', 'jina-scraper', {});
-      expect(registry.instantiatePlugin).toHaveBeenCalledWith('scraper', 'puppeteer-scraper', {});
-      expect(registry.instantiatePlugin).toHaveBeenCalledWith('analyzer', 'gemini-analyzer', {});
-      expect(registry.instantiatePlugin).toHaveBeenCalledWith('notifier', 'whatsapp-notifier', {});
+      expect(registry.getDomain).toHaveBeenCalledWith('scholarships');
+      expect(registry.createListener).toHaveBeenCalledWith('whatsapp-listener', {});
+      expect(registry.getAdapter).toHaveBeenCalledWith('scraper', 'jina-scraper');
+      expect(registry.getAdapter).toHaveBeenCalledWith('scraper', 'puppeteer-scraper');
+      expect(registry.getAdapter).toHaveBeenCalledWith('llm', 'gemini');
+      expect(registry.getAdapter).toHaveBeenCalledWith('sender', 'whatsapp-sender');
 
-      expect(mockListenerInstance.initialize).toHaveBeenCalled();
-      expect(mockAnalyzerInstance.setProvider).toHaveBeenCalledWith(mockProviderInstance);
-      expect(mockNotifierInstance.setProvider).toHaveBeenCalledWith(mockProviderInstance);
+      expect(services.domain).toBeDefined();
+      expect(services.listener).toBeDefined();
+      expect(services.primaryScraper).toBeDefined();
+      expect(services.fallbackScraper).toBeDefined();
+      expect(services.llm).toBeDefined();
+      expect(services.sender).toBeDefined();
 
-      expect(services.provider).toBe(mockProviderInstance);
-      expect(services.listener).toBe(mockListenerInstance);
-      expect(services.primaryScraper).toBe(mockScraperInstance);
-      expect(services.fallbackScraper).toBe(mockScraperInstance);
-      expect(services.analyzer).toBe(mockAnalyzerInstance);
-      expect(services.notifier).toBe(mockNotifierInstance);
+      expect(services.llmConfig).toEqual({ model: 'gemini-2.5-flash', temperature: undefined });
+      expect(services.notifyConfig).toEqual({ phoneNumber: '+923000000000', sessionId: 'default' });
     });
 
     test('should instantiate dynamic pipeline instance with merged configurations', async () => {
@@ -150,12 +195,13 @@ describe('PipelineOrchestrator Core', () => {
 
       const services = await orchestrator.initializePipeline('test-pipeline', customConfig, 'dynamic-instance-1');
 
-      expect(registry.instantiatePlugin).toHaveBeenCalledWith('listener', 'whatsapp-listener', {
+      expect(registry.createListener).toHaveBeenCalledWith('whatsapp-listener', {
         sessionId: 'user_xyz',
         allowedChannels: ['Dynamic Channel'],
       });
-      expect(registry.instantiatePlugin).toHaveBeenCalledWith('notifier', 'whatsapp-notifier', {
+      expect(services.notifyConfig).toEqual({
         phoneNumber: '+923334445555',
+        sessionId: 'user_xyz',
       });
 
       expect(orchestrator.activeServices.has('dynamic-instance-1')).toBe(true);
@@ -168,96 +214,100 @@ describe('PipelineOrchestrator Core', () => {
   });
 
   describe('wirePipelineEvents', () => {
-    let mockListenerInstance;
-    let mockScraperInstance;
-    let mockAnalyzerInstance;
-    let mockNotifierInstance;
-    let mockProviderInstance;
+    let mockServices;
 
     beforeEach(() => {
       orchestrator.loadPipelineFromObject(validConfig);
-      mockListenerInstance = {
-        on: jest.fn(),
+
+      mockServices = {
+        domain: registry.getDomain('scholarships'),
+        listener: registry.createListener('whatsapp-listener'),
+        primaryScraper: registry.getAdapter('scraper', 'jina-scraper'),
+        fallbackScraper: registry.getAdapter('scraper', 'puppeteer-scraper'),
+        llm: registry.getAdapter('llm', 'gemini'),
+        sender: registry.getAdapter('sender', 'whatsapp-sender'),
+        llmConfig: { model: 'gemini-2.5-flash' },
+        notifyConfig: { phoneNumber: '+923000000000', sessionId: 'default' },
       };
-      mockScraperInstance = {
-        scrape: jest.fn(),
-      };
-      mockAnalyzerInstance = {
-        analyze: jest.fn(),
-        setProvider: jest.fn(),
-      };
-      mockNotifierInstance = {
-        format: jest.fn(),
-        send: jest.fn(),
-        setProvider: jest.fn(),
-      };
-      mockProviderInstance = {
-        name: 'mock-provider',
-      };
-      orchestrator.activeServices.set('test-pipeline', {
-        listener: mockListenerInstance,
-        primaryScraper: mockScraperInstance,
-        fallbackScraper: mockScraperInstance,
-        analyzer: mockAnalyzerInstance,
-        notifier: mockNotifierInstance,
-        provider: mockProviderInstance,
-      });
+
+      orchestrator.activeServices.set('test-pipeline', mockServices);
     });
 
     test('should wire listener events correctly', () => {
       orchestrator.wirePipelineEvents('test-pipeline');
 
-      expect(mockListenerInstance.on).toHaveBeenCalledWith('link_extracted', expect.any(Function));
+      expect(mockServices.listener.on).toHaveBeenCalledWith('link_extracted', expect.any(Function));
 
       // Trigger the handler callback
-      const callback = mockListenerInstance.on.mock.calls[0][1];
+      const callback = mockServices.listener.on.mock.calls[0][1];
       callback('https://target.url');
 
-      expect(broker.emit).toHaveBeenCalledWith('scraper:start', {
+      expect(broker.emit).toHaveBeenCalledWith(EventTypes.SCRAPER.START, {
         pipelineName: 'test-pipeline',
         instanceId: 'test-pipeline',
         provider: 'scholarships',
         url: 'https://target.url',
+        messageText: undefined,
       });
     });
 
-    test('should throw error if wiring unitialized pipeline', () => {
+    test('should throw error if wiring uninitialized pipeline', () => {
       expect(() => {
         orchestrator.wirePipelineEvents('unknown');
       }).toThrow('Pipeline not ready: unknown');
     });
 
-    test('should handle scraper:start event and trigger analyzer', async () => {
+    test('should handle scraper:start event and run the full pipeline sequentially', async () => {
       orchestrator.wirePipelineEvents('test-pipeline');
 
       // Find the scraper:start listener callback
       const scraperStartCall = broker.on.mock.calls.find(
-        (call) => call[0] === 'scraper:start'
+        (call) => call[0] === EventTypes.SCRAPER.START
       );
       expect(scraperStartCall).toBeDefined();
 
       const callback = scraperStartCall[1];
-      const longText = 'Valid scraper opportunity content. '.repeat(10);
-      mockScraperInstance.scrape.mockResolvedValue({ text: longText });
 
       // Trigger scraper:start
       await callback({
         pipelineName: 'test-pipeline',
+        instanceId: 'test-pipeline',
         url: 'https://opportunity.com/1',
       });
 
-      expect(mockScraperInstance.scrape).toHaveBeenCalledWith('https://opportunity.com/1');
-      expect(broker.emit).toHaveBeenCalledWith('scraper:success', {
+      expect(mockServices.primaryScraper.scrape).toHaveBeenCalledWith('https://opportunity.com/1');
+      expect(broker.emit).toHaveBeenCalledWith(EventTypes.SCRAPER.SUCCESS, {
         pipelineName: 'test-pipeline',
         instanceId: 'test-pipeline',
         url: 'https://opportunity.com/1',
       });
-      expect(broker.emit).toHaveBeenCalledWith('analyzer:start', {
+
+      expect(mockServices.domain.resolveProfile).toHaveBeenCalled();
+      expect(mockServices.domain.buildPrompt).toHaveBeenCalledWith(
+        expect.any(String),
+        { name: 'mock-profile' },
+        undefined
+      );
+      expect(mockServices.llm.generateStructuredData).toHaveBeenCalledWith(
+        'Mock prompt',
+        mockServices.domain.schema,
+        mockServices.llmConfig
+      );
+
+      expect(mockServices.domain.buildTemplate).toHaveBeenCalledWith({
+        match_score: 85,
+        verdict: 'Good alignment',
+        url: 'https://opportunity.com/1',
+      });
+      expect(mockServices.sender.sendMessage).toHaveBeenCalledWith(
+        { name: 'mock-client' },
+        '+923000000000',
+        'Formatted Message'
+      );
+      expect(broker.emit).toHaveBeenCalledWith(EventTypes.NOTIFIER.SEND, {
         pipelineName: 'test-pipeline',
         instanceId: 'test-pipeline',
-        provider: 'scholarships',
         url: 'https://opportunity.com/1',
-        text: longText.trim(),
       });
     });
 
@@ -265,7 +315,7 @@ describe('PipelineOrchestrator Core', () => {
       orchestrator.wirePipelineEvents('test-pipeline');
 
       const scraperStartCall = broker.on.mock.calls.find(
-        (call) => call[0] === 'scraper:start'
+        (call) => call[0] === EventTypes.SCRAPER.START
       );
       const callback = scraperStartCall[1];
 
@@ -273,109 +323,31 @@ describe('PipelineOrchestrator Core', () => {
       fs.existsSync.mockReturnValue(true);
       fs.unlinkSync.mockImplementation(() => {});
 
-      const { urlCache } = require('../../../src/utils/cache');
-      urlCache.set('https://opportunity.com/cached', true);
-      expect(urlCache.has('https://opportunity.com/cached')).toBe(true);
-
-      mockScraperInstance.scrape.mockResolvedValue({ text: 'Some opportunity content' });
+      urlCache.has.mockReturnValue(true);
 
       // Trigger scraper:start which should trigger the clear cache check
       await callback({
         pipelineName: 'test-pipeline',
+        instanceId: 'test-pipeline',
         url: 'https://opportunity.com/cached',
       });
 
-      // urlCache should have been cleared, so it shouldn't hit cache and should trigger scraper success
-      expect(urlCache.has('https://opportunity.com/cached')).toBe(false);
+      expect(urlCache.clear).toHaveBeenCalled();
       expect(fs.existsSync).toHaveBeenCalledWith(expect.stringContaining('clear-cache-test-pipeline.flag'));
       expect(fs.unlinkSync).toHaveBeenCalledWith(expect.stringContaining('clear-cache-test-pipeline.flag'));
-    });
-
-    test('should handle analyzer:start and evaluate opportunity match score', async () => {
-      orchestrator.wirePipelineEvents('test-pipeline');
-
-      const analyzerStartCall = broker.on.mock.calls.find(
-        (call) => call[0] === 'analyzer:start'
-      );
-      expect(analyzerStartCall).toBeDefined();
-
-      const callback = analyzerStartCall[1];
-      const mockResult = {
-        match_score: 85,
-        verdict: 'Good alignment',
-      };
-      mockAnalyzerInstance.analyze.mockResolvedValue(mockResult);
-
-      // Trigger analyzer:start
-      await callback({
-        pipelineName: 'test-pipeline',
-        url: 'https://opportunity.com/2',
-        text: 'Valid opportunity text',
-      });
-
-      expect(mockAnalyzerInstance.analyze).toHaveBeenCalledWith('Valid opportunity text', {
-        url: 'https://opportunity.com/2',
-      });
-      expect(broker.emit).toHaveBeenCalledWith('analyzer:match_found', {
-        pipelineName: 'test-pipeline',
-        instanceId: 'test-pipeline',
-        provider: 'scholarships',
-        url: 'https://opportunity.com/2',
-        result: {
-          ...mockResult,
-          url: 'https://opportunity.com/2',
-        },
-      });
-    });
-
-    test('should handle analyzer:match_found and deliver custom notification', async () => {
-      orchestrator.wirePipelineEvents('test-pipeline');
-
-      const matchFoundCall = broker.on.mock.calls.find(
-        (call) => call[0] === 'analyzer:match_found'
-      );
-      expect(matchFoundCall).toBeDefined();
-
-      const callback = matchFoundCall[1];
-      mockNotifierInstance.format.mockReturnValue('Beautiful custom layout message');
-      mockNotifierInstance.send.mockResolvedValue();
-
-      // Trigger analyzer:match_found
-      await callback({
-        pipelineName: 'test-pipeline',
-        url: 'https://opportunity.com/3',
-        result: {
-          match_score: 90,
-          url: 'https://opportunity.com/3',
-        },
-      });
-
-      expect(mockNotifierInstance.format).toHaveBeenCalledWith({
-        match_score: 90,
-        url: 'https://opportunity.com/3',
-      });
-      expect(mockNotifierInstance.send).toHaveBeenCalledWith(
-        undefined,
-        'Beautiful custom layout message'
-      );
-      expect(broker.emit).toHaveBeenCalledWith('notifier:send', {
-        pipelineName: 'test-pipeline',
-        instanceId: 'test-pipeline',
-        url: 'https://opportunity.com/3',
-      });
     });
   });
 
   describe('getService', () => {
     test('should return service when pipeline and service exist', () => {
-      orchestrator.activeServices.set('test-pipeline', { provider: 'mock' });
-      const service = orchestrator.getService('test-pipeline', 'provider');
+      orchestrator.activeServices.set('test-pipeline', { domain: 'mock' });
+      const service = orchestrator.getService('test-pipeline', 'domain');
       expect(service).toBe('mock');
     });
 
     test('should throw error when pipeline not initialized', () => {
       expect(() => {
-        orchestrator.getService('unknown', 'provider');
+        orchestrator.getService('unknown', 'domain');
       }).toThrow('Pipeline not initialized: unknown');
     });
   });

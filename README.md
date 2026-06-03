@@ -1,14 +1,13 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/NORIA-v2.0.0-blue?style=for-the-badge&logo=javascript&logoColor=white" alt="Noria Version" />
+  <img src="https://img.shields.io/badge/NORIA-v2.1.0-blue?style=for-the-badge&logo=javascript&logoColor=white" alt="Noria Version" />
   <img src="https://img.shields.io/badge/LICENSED-MIT-yellow?style=for-the-badge" alt="MIT License" />
-  <img src="https://img.shields.io/badge/COVERAGE-92.3%25-green?style=for-the-badge" alt="Coverage" />
-  <img src="https://img.shields.io/badge/TESTS-83%20PASSING-brightgreen?style=for-the-badge" alt="Tests" />
+  <img src="https://img.shields.io/badge/TESTS-223%20PASSING-brightgreen?style=for-the-badge" alt="Tests" />
 </p>
 
 <h1 align="center">NORIA</h1>
 
 <p align="center">
-  <strong>A Decoupled, Event-Driven Pipeline Orchestrator for Opportunity Extraction & Generative Evaluation</strong>
+  <strong>A Decoupled, Hexagonal Pipeline Orchestrator for Opportunity Extraction & Generative Evaluation</strong>
 </p>
 
 <p align="center">
@@ -17,7 +16,7 @@
 
 ---
 
-## 🌟 The Vision & Vibe
+## 🌟 The Vision
 
 Opportunities define careers, yet discovery remains a chaotic manual process. Noria was created to bridge this gap. Noria connects humans to life-changing possibilities by crawling raw web pages, executing rigorous AI evaluations against human profiles, and sending real-time alerts. Whether helping students secure fully funded academic scholarships or matching developers with remote job postings, Noria converts raw internet noise into structured opportunities.
 
@@ -25,7 +24,7 @@ Opportunities define careers, yet discovery remains a chaotic manual process. No
 
 ## 🏛️ Clean Architecture & Boundary Separation
 
-Noria enforces strict Hexagonal Architecture principles. The core orchestrator acts as a pure coordinator, maintaining absolute isolation from external protocols, drivers, or specific AI libraries.
+Noria enforces strict Hexagonal Architecture principles, separating core business domains from pluggable technical infrastructure. Dependencies flow strictly inward: `Infrastructure → Core → Domain`.
 
 ### Module Relationship & Boundaries
 
@@ -34,40 +33,28 @@ graph TD
     classDef core fill:#e1f5fe,stroke:#03a9f4,stroke-width:2px;
     classDef domain fill:#efebe9,stroke:#8d6e63,stroke-width:2px;
     classDef infra fill:#f1f8e9,stroke:#7cb342,stroke-width:2px;
-    classDef features fill:#fff3e0,stroke:#ffb74d,stroke-width:2px;
 
-    subgraph Domain ["src/domain/ (Abstract Specifications)"]
-        Contracts["contracts/ <br> (BaseProvider, BaseNotifier, etc.)"]:::domain
-        Events["events.js <br> (Domain Events)"]:::domain
-        Validators["validators.js <br> (Payload Validation)"]:::domain
+    subgraph Domains ["src/domains/ (Pure Business Logic)"]
+        Scholarships["scholarships/ <br> (Evaluation Prompt & Layout Template)"]:::domain
+        Jobs["jobs/ <br> (Evaluation Prompt & Layout Template)"]:::domain
     end
 
-    subgraph Core ["src/core/ (Dynamic Event Heart)"]
-        Pipeline["pipeline.js <br> (Pipeline Orchestrator)"]:::core
-        Registry["registry.js <br> (Boot Verification)"]:::core
-        Broker["queue/broker.js <br> (Event Coordinator)"]:::core
+    subgraph Core ["src/core/ (Pipeline Orchestrator)"]
+        Pipeline["pipeline.js <br> (Sequential Orchestrator)"]:::core
+        Registry["registry.js <br> (Functional Registry)"]:::core
+        Events["events.js <br> (Domain Events)"]:::core
     end
 
-    subgraph Infrastructure ["src/infrastructure/ (Technical Adapters)"]
-        Scrapers["scrapers/ <br> (Puppeteer, Jina)"]:::infra
-        Notifiers["notifiers/ <br> (WhatsApp)"]:::infra
-        Listeners["listeners/ <br> (WhatsApp Listener)"]:::infra
-        Queue["queue/dlq.js <br> (Retry Logic & DLQ)"]:::infra
+    subgraph Infrastructure ["src/infrastructure/ (Stateless Adapters)"]
+        Scrapers["scraper/ <br> (Jina, Puppeteer, Resilient Fetch)"]:::infra
+        LLM["llm/ <br> (Gemini Adapter & Request Queue)"]:::infra
+        Messaging["messaging/ <br> (WhatsApp Sender & Listener)"]:::infra
     end
 
-    subgraph Features ["src/providers/ (Cohesive Opportunities)"]
-        Scholarships["scholarships/ <br> (Evaluation Logic)"]:::features
-        Jobs["jobs/ <br> (Evaluation Logic)"]:::features
-    end
-
-    Pipeline --> Broker
     Pipeline --> Registry
-    Registry --> Contracts
-    Scrapers -.-> Contracts
-    Notifiers -.-> Contracts
-    Listeners -.-> Contracts
-    Scholarships -.-> Contracts
-    Jobs -.-> Contracts
+    Pipeline --> Events
+    Registry --> Domains
+    Registry --> Infrastructure
 ```
 
 ---
@@ -80,12 +67,12 @@ Noria processes raw internet inputs and coordinates executions dynamically throu
 sequenceDiagram
     autonumber
     actor TargetChat as WhatsApp Group/Chat
-    participant Listener as Listener Plugin
+    participant Listener as WhatsApp Listener
     participant Core as Pipeline Orchestrator
     participant Scraper as Scraper Adapter
     participant Cache as Memory Cache
-    participant Analyzer as Gemini Analyzer
-    participant Notifier as Notifier Adapter
+    participant Analyzer as Gemini Adapter
+    participant Sender as WhatsApp Sender
 
     TargetChat->>Listener: Shares raw URL message
     Listener->>Core: Emit link_extracted (URL)
@@ -93,19 +80,18 @@ sequenceDiagram
     alt Cache Hit (Already Processed)
         Cache-->>Core: Skip URL evaluation
     else Cache Miss (Fresh Opportunity)
-        Core->>Scraper: Emit scraper:start (URL)
-        Scraper->>Scraper: Execute Scrape (Jina Reader / Puppeteer)
+        Core->>Scraper: Execute Scrape (Jina / Puppeteer)
         Scraper-->>Core: Return extracted web text
         Core->>Core: Validate web text size & contents
         Core->>Core: Emit scraper:success
-        Core->>Core: Emit analyzer:start (Text)
-        Core->>Analyzer: Execute LLM scoring evaluation
-        Analyzer->>Analyzer: Generate parsed JSON response
+        Core->>Core: Build Prompt (Domain promptBuilder)
+        Core->>Analyzer: Call Gemini structured generation
         Analyzer-->>Core: Return match results & verdict
         alt Match Score >= 50 (High Alignment)
             Core->>Core: Emit analyzer:match_found
-            Core->>Notifier: Format layout & execute send
-            Notifier->>TargetChat: Deliver markdown message alert
+            Core->>Core: Format Template (Domain templateBuilder)
+            Core->>Sender: sendMessage (whatsapp-sender)
+            Sender->>TargetChat: Deliver markdown message alert
             Core->>Core: Emit notifier:send
         else Match Score < 50
             Core->>Core: Emit analyzer:no_match
@@ -115,20 +101,20 @@ sequenceDiagram
 
 ---
 
-## ⚙️ Statically Enforced Registry Validation
+## ⚙️ Registry Validation
 
-Dynamic verification occurs at boot-time inside the `PluginRegistry` (`src/core/registry.js`). If a class is registered without conforming to the domain specifications, Noria fails fast with an interface violation error:
+Dynamic verification occurs at boot-time inside the `PluginRegistry` (`src/core/registry.js`). Registered modules are validated functionally:
 
 <details>
 <summary><b>🔍 View Enforced Interface Constraints (Collapsible)</b></summary>
 
-| Registry Type | Target Interface Class | Mandatory Signature Methods |
+| Registry Category | Target Registration | Mandatory Signature / Keys |
 | :--- | :--- | :--- |
-| **Provider** | `BaseProvider` | `getAnalyzer()`, `getNotifier()`, `getSchema()`, `getMetadata()` |
-| **Listener** | `BaseListener` | `initialize()`, `on(event, cb)`, `close()` |
-| **Scraper** | `BaseScraper` | `scrape(url, options)` |
-| **Analyzer** | `BaseAnalyzer` | `analyze(content, context)`, `setProvider(provider)` |
-| **Notifier** | `BaseNotifier` | `send(target, message)`, `setProvider(provider)`, `format(data)` |
+| **Domain** | Plain Domain Object | `buildPrompt`, `resolveProfile`, `buildTemplate`, `schema` |
+| **Adapter (scraper)** | Plain Scraper Object | `scrape` |
+| **Adapter (llm)** | Plain LLM Object | `generateStructuredData` |
+| **Adapter (sender)** | Plain Sender Object | `sendMessage` |
+| **Listener** | Constructor Class | `initialize()`, `on(event, cb)`, `close()` |
 
 </details>
 
@@ -138,21 +124,20 @@ Dynamic verification occurs at boot-time inside the `PluginRegistry` (`src/core/
 
 ```
 noria/
-├── .github/                       # CI workflows & issue/PR templates
-├── docker/                        # Multi-environment container files
 ├── docs/                          # Guides & system architecture docs
+│   └── ARCHITECTURE.md            # Detailed Hexagonal Architecture specifications
 ├── pipelines/                     # Declarative YAML workflow configurations
 │   ├── jobs.yaml                  # Crawler stage coordinates for Jobs
 │   └── scholarships.yaml          # Crawler stage coordinates for Scholarships
 ├── src/                           # Platform code
-│   ├── config/                    # Environment settings loader
-│   ├── core/                      # Core orchestrator and cache systems
-│   ├── plugins/                   # Technical communication adapters
-│   ├── providers/                 # Opportunity business rules
+│   ├── config/                    # Environment settings loader & registry wiring
+│   ├── core/                      # Pipeline orchestrator, event types, registry
+│   ├── domains/                   # Pure business logic prompts & notification templates
+│   ├── infrastructure/            # Stateless adapters (LLM, Scraper, WhatsApp)
 │   ├── queue/                     # Decoupled global event broker
-│   ├── utils/                     # System-wide helper libraries
-│   └── index.js                   # Main consolidated entrypoint
-└── tests/                         # Unit and integration test suites
+│   ├── utils/                     # System-wide helper libraries (Retry, Cache)
+│   └── index.js                   # Boot entrypoint
+└── tests/                         # Unit test suite mirroring src/
 ```
 
 ---
@@ -164,7 +149,7 @@ noria/
 - **NPM**: `>=10.0.0`
 
 ### 2. Setup
-Install the standard dependencies:
+Install dependencies:
 ```bash
 git clone https://github.com/AhmadHassan-BTed/Noria.git
 cd noria
@@ -193,18 +178,11 @@ npm start
 
 ## 🧪 Developer Workflow & Commands
 
-The project enforces strict quality gates on all contributions. Ensure all local automation checks pass cleanly:
+Ensure all local verification checks pass cleanly:
 
 | Command | Objective | Quality Gate Target |
 | :--- | :--- | :--- |
 | `npm run lint` | ESLint Code Quality | Zero errors or warnings |
 | `npm run format:check` | Prettier Layout Verification | Compliant with project styles |
-| `npm test` | Jest Unit Tests Execution | All 83 tests passing |
+| `npm test` | Jest Unit Tests Execution | All 223 tests passing |
 | `npm run test:coverage` | Test Coverage Telemetry | Global coverage must be > 90% |
-| `npm run build` | Compile Production Bundle | Successful output in `dist/` |
-
----
-
-## 🤝 Contributing
-
-Contributions to Noria are welcomed. Please review [CONTRIBUTING.md](docs/CONTRIBUTING.md) and submit a pull request adhering to the review checklist in our [PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md).

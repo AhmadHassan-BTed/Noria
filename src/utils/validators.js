@@ -47,24 +47,16 @@ function validateScraperPayload(payload) {
   return { url: url.trim(), text: text.trim() };
 }
 
-function validateAnalyzerResponse(response, _url) {
+function validateAnalyzerResponse(response, schema, _url) {
+  if (!schema) {
+    throw new Error('Schema is required for analyzer response validation');
+  }
+
   if (!response || typeof response !== 'object') {
     throw new Error(`Analyzer response invalid: expected object, got ${typeof response}`);
   }
 
-  const required = [
-    'match_score',
-    'uni_country',
-    'scholarship_name',
-    'program_name',
-    'deadline',
-    'fully_funded',
-    'english_taught',
-    'post_study_visa',
-    'verdict',
-    'apply_link',
-    'official_link',
-  ];
+  const required = (schema && schema.required) || [];
 
   for (const field of required) {
     if (!(field in response)) {
@@ -75,32 +67,30 @@ function validateAnalyzerResponse(response, _url) {
     if (value === null || value === undefined || value === '') {
       throw new Error(`Analyzer response field '${field}' is empty or null`);
     }
-  }
 
-  if (typeof response.match_score !== 'number') {
-    throw new Error(`Analyzer 'match_score' must be a number, got: ${typeof response.match_score}`);
-  }
+    const propSchema = schema.properties && schema.properties[field];
+    if (propSchema) {
+      const expectedType = String(propSchema.type).toLowerCase();
 
-  if (response.match_score < 0 || response.match_score > 100) {
-    throw new Error(`Analyzer 'match_score' out of range (0-100): ${response.match_score}`);
-  }
-
-  if (typeof response.fully_funded !== 'boolean') {
-    throw new Error(
-      `Analyzer 'fully_funded' must be boolean, got: ${typeof response.fully_funded}`
-    );
-  }
-
-  if (typeof response.english_taught !== 'boolean') {
-    throw new Error(
-      `Analyzer 'english_taught' must be boolean, got: ${typeof response.english_taught}`
-    );
-  }
-
-  if (typeof response.post_study_visa !== 'boolean') {
-    throw new Error(
-      `Analyzer 'post_study_visa' must be boolean, got: ${typeof response.post_study_visa}`
-    );
+      if (expectedType.includes('string')) {
+        if (typeof value !== 'string') {
+          throw new Error(`Analyzer '${field}' must be a string, got: ${typeof value}`);
+        }
+      } else if (expectedType.includes('int') || expectedType.includes('num')) {
+        if (typeof value !== 'number') {
+          throw new Error(`Analyzer '${field}' must be a number, got: ${typeof value}`);
+        }
+        if (field === 'match_score') {
+          if (value < 0 || value > 100) {
+            throw new Error(`Analyzer 'match_score' out of range (0-100): ${value}`);
+          }
+        }
+      } else if (expectedType.includes('bool')) {
+        if (typeof value !== 'boolean') {
+          throw new Error(`Analyzer '${field}' must be boolean, got: ${typeof value}`);
+        }
+      }
+    }
   }
 
   return response;

@@ -8,25 +8,48 @@ This document details the architectural design patterns, dynamic validation boun
 
 Noria separates core business domains from pluggable communication protocols, enforcing absolute isolation (0 coupling, 100% cohesion).
 
+```
+┌────────────────────────────────────────────────────────┐
+│                      INFRASTRUCTURE                    │
+│   (whatsapp-listener, jina, puppeteer, etc.)           │
+└───────────────────────────┬────────────────────────────┘
+                            │ (implements adapters)
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│                           CORE                         │
+│       (pipeline.js, registry.js, events.js)            │
+└───────────────────────────┬────────────────────────────┘
+                            │ (uses pure functions)
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│                          DOMAINS                       │
+│        (scholarships, jobs evaluation logic)           │
+└────────────────────────────────────────────────────────┘
+```
+
 ### 1. The Core Orchestration Engine (`src/core/`)
-Residing at the center of the architecture, the Core Orchestrator has zero dependencies on technical libraries (such as WhatsApp, Puppeteer, or Gemini). It coordinates event transitions between stages purely by referencing abstract contracts:
-- **`pipeline.js`**: Resolves declarative stages (crawler, extract, evaluate, notify), subscribes to standard events, and coordinates execution flow.
-- **`registry.js`**: Enforces strict class signature compliance at boot.
+Residing at the center of the architecture, the Core Orchestrator coordinates event transitions between stages purely by referencing abstract contracts, without retaining technical client references directly:
+- **`pipeline.js`**: Resolves pipeline configurations, subscribes to standard events, and coordinates execution flow.
+- **`registry.js`**: Manages functional registrations for domains and adapters, ensuring strict interface compliance.
+- **`events.js`**: Defines the system event types.
 
-### 2. Opportunity Providers (`src/providers/`)
-Self-contained, highly cohesive business packages representing a specific opportunity category (e.g. `scholarships` or `jobs`):
+### 2. Pure Business Domains (`src/domains/`)
+Self-contained, highly cohesive business packages representing a specific opportunity category (e.g. `scholarships` or `jobs`). Every export is either a pure function or static data. No classes. No inheritance:
 - `schema.js`: Structured JSON schemas evaluated by the AI.
-- `analyzer.js`: Custom scoring prompts based on applicant profiles.
-- `notifier.js`: Custom message templates.
+- `promptBuilder.js`: Pure prompt-building functions (`buildPrompt`) and applicant profile resolvers (`resolveProfile`).
+- `templateBuilder.js`: Pure template layout formatters (`buildTemplate`).
 - `config.js`: Custom scoring weights and override rules.
+- `index.js`: Exposes domain resources as a plain object manifest.
 
-Providers are purely passive domain modules. They do not know *how* raw web text is scraped or *how* alerts are transmitted over the network.
+Domains are purely passive domain modules. They do not know *how* raw web text is scraped or *how* alerts are transmitted over the network.
 
-### 3. Pluggable Technical Plugins (`src/plugins/`)
+### 3. Pluggable Infrastructure Adapters (`src/infrastructure/`)
 Interchangeable driver adapters satisfying the domain interfaces. Grouped strictly by technical role:
-- **Scrapers** (`src/plugins/scrapers/`): concrete crawlers (Jina, Puppeteer) translating URLs to text.
-- **Notifiers** (`src/plugins/notifiers/`): concrete networks (WhatsApp, WeChat) delivering alerts.
-- **Listeners** (`src/plugins/listeners/`): concrete protocols listening for user input.
+- **Scrapers** (`src/infrastructure/scraper/`): Concrete crawlers (Jina, Puppeteer, resilient native fetch) translating URLs to text.
+- **LLM** (`src/infrastructure/llm/`): Stateless adapters (Gemini) communicating with AI services, incorporating model fallback chains and queue managers.
+- **Messaging** (`src/infrastructure/messaging/`):
+  - `whatsapp-sender.js`: A stateless function module (`sendMessage`) for delivering alerts.
+  - `whatsapp-listener.js`: Stateful class managing client events and pre-fetching. Keep in mind this is the only remaining class-based driver to support state preservation (session keys, WS reconnects).
 
 ---
 
@@ -37,37 +60,40 @@ Noria's execution stages are coordinated completely dynamically through decouple
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        NORIA LIFECYCLE LOOP                            │
-└────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
 
   [WhatsApp Listener]
          │
-         │ Extracts url
+         │ Extracts URL
          ▼
   (Event: scraper:start)
          │
-         ▼
-  [Scraper Plugin] ──(Checks cache/duplicates & flag-clear)──► [URL Cache]
+         ├──► [Pipeline Orchestrator] 
+         │         │
+         │         ├─► [Memory Cache Check] (evicts duplicate URLs)
+         │         │
+         │         ▼ (Tiered Scraping Call)
+         │    [Scrapers: Jina / Puppeteer / Resilient Fetch]
+         │         │
+         │         ▼ (Validates content & emits scraper:success)
+         │         
+         │         ▼ (Resolves Domain & Profile)
+         │    [Domain Prompt Builder]
+         │         │
+         │         ▼ (Generates structured AI response)
+         │    [Gemini LLM Adapter]
+         │         │
+         │         ▼ (Applies validation rules)
+         │         
+         ▼ [If Match Score >= 50]
+  (Event: analyzer:match_found)
          │
-         ├─► Primary: [Jina Reader API]
-         ├─► Fallback: [Puppeteer Scraper]
-         └─► Resilient Native Fetch Recovery (Raw HTML processing)
+         ├──► [Domain Template Builder] (Formats text layout)
          │
-         ▼ (Extracts text & validates)
-  (Event: scraper:success)
+         ▼ (Delivers notification message)
+  [WhatsApp Sender Adapter]
          │
-         ▼
-  (Event: analyzer:start)
-         │
-         ▼
-  [Gemini Analyzer Plugin] ──► [Scholarships / Jobs provider] (builds prompt)
-         │
-         ▼ (Executes Gemini generation & validates response & handles 429 fallback)
-  (Event: analyzer:match_found)  [If Match Score >= 50]
-         │
-         ▼
-  [WhatsApp Notifier Plugin] ──► [Scholarships / Jobs provider] (formats layout)
-         │
-         ▼ (Delivers alert message)
+         ▼ (Records system statistics)
   (Event: notifier:send)
 ```
 
@@ -100,35 +126,38 @@ To allow users to force re-evaluation of URLs, a multi-level cache clearing syst
 
 ---
 
-## 🔍 Dynamic Interface Validation & Statically Enforced Registry
+## 🔍 Dynamic Interface Validation & Registry
 
-To keep the application robust while supporting plug-and-play extensions, the `PluginRegistry` (`src/core/registry.js`) performs strict dynamic prototype checks upon registration:
+To keep the application robust while supporting plug-and-play extensions, the `PluginRegistry` (`src/core/registry.js`) performs strict verification check blocks:
 
-### 1. Provider Contract Enforcements
-Any registered opportunity provider class must implement:
-- `getAnalyzer()`: Returns the opportunity analyzer prompt builder.
-- `getNotifier()`: Returns the layout notifier formatter.
-- `getSchema()`: Returns the structured response schema.
-- `getMetadata()`: Returns module description metadata.
+### 1. Domain Module Validation
+Every registered domain module must export:
+- `buildPrompt`: Function to generate the LLM prompt.
+- `resolveProfile`: Function to map config to profiles.
+- `buildTemplate`: Function to build the output template.
+- `schema`: Static response schema object.
 
-### 2. Plugin Contract Enforcements
-Plugins are checked against their specific type constraints:
-- `listener` plugins: Must implement `initialize()`, `on()`, and `close()`.
-- `scraper` plugins: Must implement `scrape(url, options)`.
-- `analyzer` plugins: Must implement `analyze(content, context)` and `setProvider(provider)`.
-- `notifier` plugins: Must implement `send(target, message)`, `setProvider(provider)`, and `format(data)`.
+### 2. Infrastructure Adapter Validation
+Infrastructure components are registered under distinct categories:
+- `scraper` adapters: must implement `scrape(url)`.
+- `llm` adapters: must implement `generateStructuredData(prompt, schema, options)`.
+- `sender` adapters: must implement `sendMessage(client, target, message, options)`.
 
-If any signature is missing, the registration fast-fails during boot to avoid runtime errors.
+### 3. Listener Class Validation
+Because connection listeners retain active listener hooks and WS handles, the registry enforces prototype validation. Classes must implement:
+- `initialize()`
+- `on()`
+- `close()`
 
 ---
 
 ## 🚀 Guidelines for Adding Upcoming Opportunity Categories (e.g., Real Estate)
 
-1. Create a self-contained provider package under `src/providers/realestate/`.
-2. Define `index.js` extending `BaseProvider`, and export your provider class.
-3. Define `schema.js`, `analyzer.js`, `notifier.js`, and `config.js` with your specific prompt scoring parameters.
-4. Register the new provider class inside `src/config/plugins.registry.js` using `registry.registerProvider('realestate', RealEstateProvider)`.
+1. Create a self-contained domain folder under `src/domains/realestate/`.
+2. Define `promptBuilder.js`, `templateBuilder.js`, `schema.js`, and `config.js` with your specific opportunity prompt scoring parameters.
+3. Expose them via `index.js` as a manifest plain object conforming to the Domain interface.
+4. Register the new domain module inside `src/config/plugins.registry.js` using `registry.registerDomain('realestate', realEstateDomain)`.
 5. Create a declarative config pipeline under `pipelines/realestate.yaml` mapping the crawl listener, scrape technology, and notifications channel.
 6. Enable the pipeline by appending `realestate` to the `ACTIVE_PIPELINES` variable in your `.env` file.
 
-With this intuitive decoupled architecture, **no core engine files are touched**, and the new opportunity is fully operational.
+With this functional decoupled architecture, **no core orchestrator engine files are touched**, and the new domain category is fully operational.

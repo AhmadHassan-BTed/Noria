@@ -1,5 +1,19 @@
 'use strict';
 
+/**
+ * Core — Pipeline Orchestrator (Data-Coupling)
+ *
+ * The central nervous system of Noria. Reads pipeline YAML configs,
+ * resolves domain modules and infrastructure adapters from the registry,
+ * and wires event-driven data flow between them.
+ *
+ * KEY ARCHITECTURAL RULES:
+ *   • NO class instances are passed between stages.
+ *   • NO setProvider() calls anywhere.
+ *   • Every inter-stage communication is via plain data (strings, JSON objects).
+ *   • The flow reads like an intuitive, procedural story.
+ */
+
 const fs = require('fs');
 const yaml = require('js-yaml');
 const { registry } = require('./registry');
@@ -64,64 +78,72 @@ class PipelineOrchestrator {
     const services = {};
     const providerName = pipelineConfig.provider;
 
-    services.provider = registry.instantiateProvider(providerName, pipelineConfig.config || {});
+    // ── Resolve domain module (plain object — no class instantiation) ──────
+    services.domain = registry.getDomain(providerName);
 
     const stages = pipelineConfig.stages;
 
+    // ── Listener (the only class-based component) ─────────────────────────
     if (stages.listen) {
       const pluginName = stages.listen.plugin || stages.listen;
       const listenConfig = {
         ...(stages.listen.config || {}),
         ...(customConfig.listen || {}),
       };
-      services.listener = registry.instantiatePlugin(
-        'listener',
-        pluginName,
-        listenConfig
-      );
+      services.listener = registry.createListener(pluginName, listenConfig);
       await services.listener.initialize();
     }
 
+    // ── Scrapers (stateless function modules) ─────────────────────────────
     if (stages.scrape) {
       const scrapeConfig = stages.scrape;
       const primaryScraperName = scrapeConfig.primary || scrapeConfig;
       const fallbackScraperName = scrapeConfig.fallback;
 
-      services.primaryScraper = registry.instantiatePlugin('scraper', primaryScraperName, {});
+      services.primaryScraper = registry.getAdapter('scraper', primaryScraperName);
 
       if (fallbackScraperName) {
-        services.fallbackScraper = registry.instantiatePlugin('scraper', fallbackScraperName, {});
+        services.fallbackScraper = registry.getAdapter('scraper', fallbackScraperName);
+      }
+
+      // Resilient fetch is always available as last-resort fallback
+      try {
+        services.resilientScraper = registry.getAdapter('scraper', 'resilient-fetch');
+      } catch {
+        // Optional — not all setups register it
       }
     }
 
+    // ── LLM adapter (stateless function module) ───────────────────────────
     if (stages.analyze) {
       const analyzerConfig = stages.analyze;
       const analyzerName = analyzerConfig.plugin || analyzerConfig;
-      const analyzeConfig = {
-        ...(analyzerConfig.config || {}),
-        ...(customConfig.analyze || {}),
+
+      // Map analyzer plugin name to LLM adapter name
+      const llmName = analyzerName.replace('-analyzer', '');
+      services.llm = registry.getAdapter('llm', llmName);
+
+      // Store analysis config for later use
+      services.llmConfig = {
+        model: customConfig.analyze?.model || analyzerConfig.config?.model,
+        temperature: customConfig.analyze?.temperature || analyzerConfig.config?.temperature,
       };
-      services.analyzer = registry.instantiatePlugin(
-        'analyzer',
-        analyzerName,
-        analyzeConfig
-      );
-      services.analyzer.setProvider(services.provider);
     }
 
+    // ── Sender adapter (stateless function module) ────────────────────────
     if (stages.notify) {
       const notifierConfig = stages.notify;
       const notifierName = notifierConfig.plugin || notifierConfig;
-      const notifyConfig = {
-        ...(notifierConfig.config || {}),
-        ...(customConfig.notify || {}),
+
+      // Map notifier plugin name to sender adapter name
+      const senderName = notifierName.replace('-notifier', '-sender');
+      services.sender = registry.getAdapter('sender', senderName);
+
+      // Store notification config
+      services.notifyConfig = {
+        phoneNumber: customConfig.notify?.phoneNumber || notifierConfig.config?.phoneNumber,
+        sessionId: customConfig.notify?.sessionId || customConfig.listen?.sessionId || 'default',
       };
-      services.notifier = registry.instantiatePlugin(
-        'notifier',
-        notifierName,
-        notifyConfig
-      );
-      services.notifier.setProvider(services.provider);
     }
 
     this.activeServices.set(instanceId, services);
@@ -139,12 +161,12 @@ class PipelineOrchestrator {
 
     const provider = pipelineConfig.provider;
 
-    // 1. Listen stage triggers scraper:start
+    // ═══════════════════════════════════════════════════════════════════════
+    // 1. LISTEN → SCRAPER.START
+    //    Listener emits 'link_extracted' → broker emits SCRAPER.START
+    // ═══════════════════════════════════════════════════════════════════════
     if (services.listener) {
       services.listener.on('link_extracted', (payload) => {
-        // Backward/forward compatibility:
-        // - legacy: listener emits a bare string URL
-        // - current: listener emits { url: string, ... }
         const url =
           typeof payload === 'string'
             ? payload
@@ -152,7 +174,8 @@ class PipelineOrchestrator {
               ? payload.url
               : undefined;
 
-        const messageText = payload && typeof payload === 'object' ? payload.messageText : undefined;
+        const messageText =
+          payload && typeof payload === 'object' ? payload.messageText : undefined;
 
         this.broker.emit(EventTypes.SCRAPER.START, {
           pipelineName,
@@ -164,9 +187,12 @@ class PipelineOrchestrator {
       });
     }
 
-    // 2. Handle scraper:start
+    // ═══════════════════════════════════════════════════════════════════════
+    // 2. SCRAPER.START → Scrape → Analyze → (Match?) → Notify
+    //    The entire pipeline stage flow, reading like a procedural story.
+    // ═══════════════════════════════════════════════════════════════════════
     this.broker.on(EventTypes.SCRAPER.START, async (event) => {
-      // If the event is not for this instance, ignore
+      // ── Instance gating ─────────────────────────────────────────────────
       if (event.instanceId && event.instanceId !== instanceId) {
         return;
       }
@@ -178,17 +204,26 @@ class PipelineOrchestrator {
       console.log(`[Pipeline:${instanceId}] Starting scraper for URL: ${url}`);
 
       try {
-        // A. Caching Check (Deduplication)
+        // ── A. Cache check (deduplication) ─────────────────────────────────
         const path = require('path');
-        const clearCacheFlag = path.join(__dirname, '..', '..', 'data', `clear-cache-${instanceId}.flag`);
+        const clearCacheFlag = path.join(
+          __dirname,
+          '..',
+          '..',
+          'data',
+          `clear-cache-${instanceId}.flag`
+        );
         const { urlCache } = require('../utils/cache');
+
         if (fs.existsSync(clearCacheFlag)) {
           console.log(`[Pipeline:${instanceId}] Clear cache flag detected. Clearing URL cache...`);
           urlCache.clear();
           try {
             fs.unlinkSync(clearCacheFlag);
           } catch (err) {
-            console.warn(`[Pipeline:${instanceId}] Failed to delete clear-cache flag: ${err.message}`);
+            console.warn(
+              `[Pipeline:${instanceId}] Failed to delete clear-cache flag: ${err.message}`
+            );
           }
         }
 
@@ -197,7 +232,7 @@ class PipelineOrchestrator {
           return;
         }
 
-        // B. Scraper execution (Primary with Fallback and Resilient Native Fetch Recovery)
+        // ── B. SCRAPE — Infrastructure call, returns plain data ────────────
         let scrapedData;
         try {
           if (services.primaryScraper) {
@@ -218,48 +253,24 @@ class PipelineOrchestrator {
               `[Pipeline:${instanceId}] Fallback scraper failed: ${fallbackErr.message}. Initiating resilient native fetch recovery...`
             );
             try {
-              const fetchRes = await fetch(url, {
-                headers: {
-                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                  'Accept-Language': 'en-US,en;q=0.5',
-                }
-              });
-              if (!fetchRes.ok) {
-                throw new Error(`Resilient Fetch returned status ${fetchRes.status}`);
+              if (services.resilientScraper) {
+                scrapedData = await services.resilientScraper.scrape(url);
+                console.log(
+                  `[Pipeline:${instanceId}] Native fetch recovery completed successfully (${scrapedData.text.length} chars).`
+                );
+              } else {
+                // Inline fallback if resilient-fetch adapter not registered
+                const resilientFetch = require('../infrastructure/scraper/resilientFetch');
+                scrapedData = await resilientFetch.scrape(url);
+                console.log(
+                  `[Pipeline:${instanceId}] Native fetch recovery completed successfully (${scrapedData.text.length} chars).`
+                );
               }
-              const rawHtml = await fetchRes.text();
-              
-              // Clean HTML text content
-              let textContent = rawHtml;
-              textContent = textContent.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ');
-              textContent = textContent.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ');
-              textContent = textContent.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, ' ');
-              textContent = textContent.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, ' ');
-              textContent = textContent.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, ' ');
-              textContent = textContent.replace(/<\/p>|<\/div>|<\/h[1-6]>|<\/li>|<br\s*\/?>/gi, '\n');
-              textContent = textContent.replace(/<[^>]+>/g, ' ');
-              textContent = textContent
-                .replace(/&nbsp;/gi, ' ')
-                .replace(/&amp;/gi, '&')
-                .replace(/&lt;/gi, '<')
-                .replace(/&gt;/gi, '>')
-                .replace(/&quot;/gi, '"')
-                .replace(/&#39;/gi, "'")
-                .replace(/&mdash;/gi, '—')
-                .replace(/&ndash;/gi, '–');
-              textContent = textContent.replace(/[ \t]+/g, ' ');
-              textContent = textContent.replace(/\n\s*\n+/g, '\n\n').trim();
-              
-              if (!textContent) {
-                throw new Error('Resilient Fetch extracted empty content.');
-              }
-              
-              scrapedData = { url, text: textContent };
-              console.log(`[Pipeline:${instanceId}] Native fetch recovery completed successfully (${textContent.length} chars).`);
             } catch (fetchErr) {
-              console.error(`[Pipeline:${instanceId}] Resilient fetch recovery also failed: ${fetchErr.message}`);
-              throw fallbackErr; // Throw original fallback error if fetch also failed
+              console.error(
+                `[Pipeline:${instanceId}] Resilient fetch recovery also failed: ${fetchErr.message}`
+              );
+              throw fallbackErr;
             }
           }
         }
@@ -268,7 +279,7 @@ class PipelineOrchestrator {
           throw new Error('Scraper failed to extract any content.');
         }
 
-        // C. Validate scraper payload
+        // ── C. Validate scraped payload ───────────────────────────────────
         const { validateScraperPayload } = require('../utils/validators');
         const validatedPayload = validateScraperPayload({ url, text: scrapedData.text });
 
@@ -278,46 +289,40 @@ class PipelineOrchestrator {
         // Emit SCRAPER.SUCCESS
         this.broker.emit(EventTypes.SCRAPER.SUCCESS, { pipelineName, instanceId, url });
 
-        // Trigger Analyzer stage
-        this.broker.emit(EventTypes.ANALYZER.START, {
-          pipelineName,
-          instanceId,
-          provider,
-          url,
-          text: validatedPayload.text,
-          messageText,
-        });
-      } catch (err) {
-        console.error(`[Pipeline:${instanceId}] Scrape stage failed:`, err.message);
-        this.broker.emit(EventTypes.SCRAPER.FAILED, { pipelineName, instanceId, url, error: err.message });
-        this.broker.emit(EventTypes.SYSTEM.ERROR, {
-          source: `scraper:${instanceId}`,
-          url,
-          message: err.message,
-          stack: err.stack,
-        });
-      }
-    });
-
-    // 3. Handle analyzer:start
-    this.broker.on(EventTypes.ANALYZER.START, async (event) => {
-      if (event.instanceId && event.instanceId !== instanceId) {
-        return;
-      }
-      if (!event.instanceId && event.pipelineName && event.pipelineName !== pipelineName) {
-        return;
-      }
-
-      const { url, text, messageText } = event;
-      console.log(`[Pipeline:${instanceId}] Starting analyzer for URL: ${url}`);
-
-      try {
-        if (!services.analyzer) {
-          throw new Error('Analyzer service not registered for this pipeline.');
+        // ── D. ANALYZE — Domain prompt + Infrastructure LLM ───────────────
+        if (!services.llm || !services.domain) {
+          throw new Error('LLM adapter or domain module not registered for this pipeline.');
         }
 
-        // A. Analyze the content using the active analyzer plugin
-        const validatedResponse = await services.analyzer.analyze(text, { url, messageText });
+        const { config: appConfig } = require('../config');
+        const domain = services.domain;
+
+        // D1. Resolve applicant profile (domain function on plain config data)
+        const profile = domain.resolveProfile(appConfig.getAll());
+
+        // D2. Truncate text to LLM-safe length
+        const maxTextLength = 15000;
+        const safeText = validatedPayload.text.slice(0, maxTextLength);
+
+        // D3. Build the prompt (pure domain function — returns a string)
+        const prompt = domain.buildPrompt(safeText, profile, messageText);
+
+        // D4. Call LLM (infrastructure function — returns plain JSON)
+        console.log(`[Pipeline:${instanceId}] Starting analyzer for URL: ${url}`);
+        const aiData = await services.llm.generateStructuredData(
+          prompt,
+          domain.schema,
+          services.llmConfig || {}
+        );
+
+        // D5. Validate AI response
+        const { validateAnalyzerResponse } = require('../utils/validators');
+        let validatedResponse;
+        try {
+          validatedResponse = validateAnalyzerResponse(aiData, domain.schema, url);
+        } catch (validErr) {
+          throw new Error(`Response validation failed: ${validErr.message}`);
+        }
 
         // Add original URL to results
         validatedResponse.url = url;
@@ -326,6 +331,7 @@ class PipelineOrchestrator {
           `[Pipeline:${instanceId}] Analysis match score: ${validatedResponse.match_score}`
         );
 
+        // ── E. MATCH CHECK — Pure logic on plain data ─────────────────────
         if (validatedResponse.match_score >= 50) {
           this.broker.emit(EventTypes.ANALYZER.MATCH_FOUND, {
             pipelineName,
@@ -334,6 +340,29 @@ class PipelineOrchestrator {
             url,
             result: validatedResponse,
           });
+
+          // ── F. NOTIFY — Domain template + Infrastructure sender ─────────
+          if (services.sender) {
+            console.log(`[Pipeline:${instanceId}] Match found! Preparing notification...`);
+
+            // F1. Build notification message (pure domain function)
+            const notificationMessage = domain.buildTemplate(validatedResponse);
+
+            // F2. Resolve the WhatsApp client (from connection manager)
+            const {
+              getConnectionManager,
+            } = require('../infrastructure/messaging/connection-manager');
+            const sessionId = services.notifyConfig?.sessionId || 'default';
+            const client = getConnectionManager()?.getClient(sessionId);
+
+            const phoneNumber = services.notifyConfig?.phoneNumber;
+
+            // F3. Send message (stateless infrastructure function)
+            await services.sender.sendMessage(client, phoneNumber, notificationMessage);
+
+            this.broker.emit(EventTypes.NOTIFIER.SEND, { pipelineName, instanceId, url });
+            console.log(`[Pipeline:${instanceId}] Notification sent successfully!`);
+          }
         } else {
           this.broker.emit(EventTypes.ANALYZER.NO_MATCH, {
             pipelineName,
@@ -344,46 +373,9 @@ class PipelineOrchestrator {
           });
         }
       } catch (err) {
-        console.error(`[Pipeline:${instanceId}] Analyze stage failed:`, err.message);
-        this.broker.emit(EventTypes.ANALYZER.FAILED, { pipelineName, instanceId, url, error: err.message });
+        console.error(`[Pipeline:${instanceId}] Pipeline stage failed:`, err.message);
         this.broker.emit(EventTypes.SYSTEM.ERROR, {
-          source: `analyzer:${instanceId}`,
-          url,
-          message: err.message,
-          stack: err.stack,
-        });
-      }
-    });
-
-    // 4. Handle analyzer:match_found
-    this.broker.on(EventTypes.ANALYZER.MATCH_FOUND, async (event) => {
-      if (event.instanceId && event.instanceId !== instanceId) {
-        return;
-      }
-      if (!event.instanceId && event.pipelineName && event.pipelineName !== pipelineName) {
-        return;
-      }
-
-      const { url, result } = event;
-      console.log(`[Pipeline:${instanceId}] Match found! Preparing notification...`);
-
-      try {
-        if (!services.notifier) {
-          throw new Error('Notifier service not registered for this pipeline.');
-        }
-
-        // A. Format the message
-        const message = services.notifier.format(result);
-
-        // B. Send notification using the dynamic, configured notifier plugin instance
-        await services.notifier.send(services.notifier.phoneNumber, message);
-
-        this.broker.emit(EventTypes.NOTIFIER.SEND, { pipelineName, instanceId, url });
-        console.log(`[Pipeline:${instanceId}] Notification sent successfully!`);
-      } catch (err) {
-        console.error(`[Pipeline:${instanceId}] Notify stage failed:`, err.message);
-        this.broker.emit(EventTypes.SYSTEM.ERROR, {
-          source: `notifier:${instanceId}`,
+          source: `pipeline:${instanceId}`,
           url,
           message: err.message,
           stack: err.stack,
