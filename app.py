@@ -196,8 +196,10 @@ st.markdown("""
         transition: color 0.2s ease-in-out !important;
     }
 
-    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] summary:hover {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] summary:hover,
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] summary:hover * {
         color: #25D366 !important;
+        fill: #25D366 !important;
     }
 
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] details[open] summary {
@@ -208,7 +210,7 @@ st.markdown("""
 
     /* Style for device header toggle buttons to look like expanders */
     div[class*="st-key-dev_hdr_btn"] button {
-        background-color: #1A1A1A !important;
+        background-color: #1F1F1F !important;
         color: #FFFFFF !important;
         border: 1px solid #2D2D2D !important;
         border-radius: 10px !important;
@@ -222,13 +224,13 @@ st.markdown("""
     div[class*="st-key-dev_hdr_btn"] button:hover {
         color: #25D366 !important;
         border-color: #25D366 !important;
-        background-color: #222222 !important;
+        background-color: #282828 !important;
     }
 
     /* Nested containers (subsections / sub-cards, Level 2) styling to differ in shade */
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"],
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #1A1A1A !important;
+        background-color: #141414 !important;
         border-color: #2D2D2D !important;
         box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
         padding: 20px !important;
@@ -245,7 +247,7 @@ st.markdown("""
     /* Grandchild nested containers (Level 3 sub-cards) styling */
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
     div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #101010 !important;
+        background-color: #0A0A0A !important;
         border-color: #2D2D2D !important;
         box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5) !important;
         padding: 16px !important;
