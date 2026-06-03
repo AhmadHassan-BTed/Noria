@@ -35,8 +35,9 @@ def render_profiles_view(profiles, running_instances):
         # Display all profiles as dynamic native cards
         for p_id, p_info in sorted(profiles.items()):
             with st.expander(f"👤 {p_info['name']}", expanded=True):
-                # Profile Quick Actions (inside expander at the top)
                 card_header_cols = st.columns([5, 1.5, 1.5, 1.5])
+                with card_header_cols[0]:
+                    st.markdown("### ⚙️ Operations Control Panel")
                 with card_header_cols[1]:
                     if st.button("🧹 Clear Cache", key=f"clear_cache_profile_{p_id}", use_container_width=True):
                         profile_scans = [
