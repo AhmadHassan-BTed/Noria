@@ -152,8 +152,17 @@ st.markdown("""
         transform: translateX(4px) !important;
     }
 
-    /* General containers & cards */
-    div[data-testid="stVerticalBlockBorderWrapper"] {
+    /* Reset the topmost root vertical block wrapper to avoid colored/broken page container */
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] {
+        border: none !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* General containers & cards (Level 1) */
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
         border: 1px solid #2D2D2D !important;
         border-radius: 14px !important;
         background-color: #2B2B2B !important;
@@ -163,12 +172,12 @@ st.markdown("""
         transition: border-color 0.2s ease-in-out !important;
     }
 
-    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #333333 !important;
     }
 
-    /* Nested containers (subsections / sub-cards) styling to differ in shade */
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
+    /* Nested containers (subsections / sub-cards, Level 2) styling to differ in shade */
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #1A1A1A !important;
         border-color: #2D2D2D !important;
         box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
@@ -177,22 +186,22 @@ st.markdown("""
         margin-bottom: 10px !important;
     }
 
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #25D366 !important;
         box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(37, 211, 102, 0.1) !important;
     }
 
     /* Grandchild nested containers (Level 3 sub-cards) styling */
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #101010 !important;
         border-color: #2D2D2D !important;
         box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5) !important;
         padding: 16px !important;
     }
 
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #25D366 !important;
         box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(37, 211, 102, 0.15) !important;
     }
@@ -239,9 +248,9 @@ st.markdown("""
     }
 
     /* Inputs inside Level 2 container should be darker */
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="input"],
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="textarea"],
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="select"] {
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="input"],
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="textarea"],
+    div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="select"] {
         background-color: #101010 !important;
     }
 
@@ -2009,8 +2018,11 @@ else:
         default_app_focus = p_info.get("applicant_focus", p_info.get("applicant_research_focus", ""))
         
     with st.container(border=True):
-        if is_new:
-            profile_display_name = st.text_input("Profile / Customer Display Name", placeholder="e.g. John Doe").strip()
+        profile_display_name = st.text_input(
+            "Profile / Customer Display Name",
+            value=default_name,
+            placeholder="e.g. John Doe"
+        ).strip()
         
         form_col1, form_col2 = st.columns([1, 1])
         
@@ -2138,22 +2150,25 @@ else:
                             time.sleep(1)
                             st.rerun()
                 else:
-                    existing_devices = profiles[editing_profile].get("devices", {})
-                    profiles[editing_profile] = {
-                        "id": editing_profile,
-                        "name": default_name,
-                        "gemini_key": gemini_key,
-                        "jina_key": jina_key,
-                        "applicant_name": app_name,
-                        "applicant_nationality": app_nationality,
-                        "applicant_degree_tier": app_degree,
-                        "applicant_target_fields": app_fields,
-                        "applicant_focus": app_focus,
-                        "target_phone": target_phone,
-                        "devices": existing_devices
-                    }
-                    save_profiles(profiles)
-                    st.toast("Profile changes saved.")
-                    del st.session_state.editing_profile
-                    time.sleep(1)
-                    st.rerun()
+                    if not profile_display_name:
+                        st.error("Please enter a Profile name.")
+                    else:
+                        existing_devices = profiles[editing_profile].get("devices", {})
+                        profiles[editing_profile] = {
+                            "id": editing_profile,
+                            "name": profile_display_name,
+                            "gemini_key": gemini_key,
+                            "jina_key": jina_key,
+                            "applicant_name": app_name,
+                            "applicant_nationality": app_nationality,
+                            "applicant_degree_tier": app_degree,
+                            "applicant_target_fields": app_fields,
+                            "applicant_focus": app_focus,
+                            "target_phone": target_phone,
+                            "devices": existing_devices
+                        }
+                        save_profiles(profiles)
+                        st.toast("Profile changes saved.")
+                        del st.session_state.editing_profile
+                        time.sleep(1)
+                        st.rerun()
