@@ -15,19 +15,16 @@ from ui.components.device_card import render_device_linker_fragment, render_link
 
 def render_profiles_view(profiles, running_instances):
     st.title("👤 Applicant Profiles Directory")
-    st.write("Manage applicant profiles, configure Gemini API keys, pair WhatsApp channels, and orchestrate opportunity evaluation scans.")
-    st.write("---")
+    st.caption("Manage profiles, API keys, WhatsApp channels, and opportunity scans.")
 
     # Directory View Header
     cols = st.columns([5, 1])
     with cols[0]:
-        st.write(f"Registered Customer Profiles: **{len(profiles)}**")
+        st.caption(f"Registered Profiles: **{len(profiles)}**")
     with cols[1]:
         if st.button("➕ Add Profile", use_container_width=True):
             st.session_state.editing_profile = "new"
             st.rerun()
-    
-    st.write("")
 
     if not profiles:
         st.info("No applicant profiles registered yet. Click 'Add Profile' to create one.")
@@ -35,11 +32,9 @@ def render_profiles_view(profiles, running_instances):
         # Display all profiles as dynamic native cards
         for p_id, p_info in sorted(profiles.items()):
             with st.expander(f"👤 {p_info['name']}", expanded=True):
-                card_header_cols = st.columns([5, 1.5, 1.5, 1.5])
-                with card_header_cols[0]:
-                    st.markdown("### ⚙️ Operations Control Panel")
+                card_header_cols = st.columns([6, 1, 1, 1])
                 with card_header_cols[1]:
-                    if st.button("🧹 Clear Cache", key=f"clear_cache_profile_{p_id}", use_container_width=True):
+                    if st.button("🧹 Cache", key=f"clear_cache_profile_{p_id}", use_container_width=True):
                         profile_scans = [
                             name for name, info in running_instances.items()
                             if info.get("profileId") == p_id
@@ -67,28 +62,22 @@ def render_profiles_view(profiles, running_instances):
                             time.sleep(1)
                             st.rerun()
                 
-                st.write("---")
-                
                 # Profile Details & Status columns
                 details_col, status_col = st.columns([1, 1])
                 
                 with details_col:
-                    st.markdown("**Profile Parameters**")
-                    st.markdown(f"""
-                    * **Full Name:** {p_info.get('applicant_name', 'Not set')}
-                    * **Nationality:** {p_info.get('applicant_nationality', 'Not set')}
-                    * **Degree Tier & Grades:** {p_info.get('applicant_degree_tier', 'Not set')}
-                    * **Target Fields:** `{p_info.get('applicant_target_fields', 'Not set')}`
-                    * **Research Focus:** `{p_info.get('applicant_focus', p_info.get('applicant_research_focus', 'Not set'))}`
-                    """)
-                    
-                    # API Config Indicator
+                    st.markdown("#### Profile Parameters")
                     has_gemini = "Yes" if p_info.get("gemini_key") else "No"
                     has_jina = "Yes" if p_info.get("jina_key") else "No"
-                    st.markdown(f"**Gemini Configured:** `{has_gemini}` | **Jina Configured:** `{has_jina}`")
+                    st.markdown(f"""
+                    * **{p_info.get('applicant_name', 'Not set')}** · {p_info.get('applicant_nationality', 'Not set')} · {p_info.get('applicant_degree_tier', 'Not set')}
+                    * **Fields:** `{p_info.get('applicant_target_fields', 'Not set')}`
+                    * **Research:** `{p_info.get('applicant_focus', p_info.get('applicant_research_focus', 'Not set'))}`
+                    * **APIs:** Gemini: `{has_gemini}` | Jina: `{has_jina}`
+                    """)
                     
                 with status_col:
-                    st.markdown("**📡 WhatsApp Device Authentications**")
+                    st.markdown("#### 📡 WhatsApp Devices")
                     
                     linking_active = (st.session_state.linking_profile == p_id)
                     
@@ -112,7 +101,7 @@ def render_profiles_view(profiles, running_instances):
                                 else:
                                     st.markdown(f"✅ **Device Active:** `+{d_phone}`")
                         
-                        st.write("")
+
                         if st.button("🔗 Link WhatsApp Device", key=f"link_device_btn_{p_id}", use_container_width=True, type="primary"):
                             # Spawn background helper process to retrieve linking details
                             linker_sess_id = f"session_{p_id}_linker_{int(time.time())}"
@@ -164,17 +153,17 @@ def render_profiles_view(profiles, running_instances):
                             except Exception as e:
                                 st.error(f"Failed to spawn linker socket: {e}")
                 
-                st.write("---")
+
 
                 # Render Linked Devices details (including sub-cards and toggle buttons)
                 render_linked_devices_fragment(p_id, p_info, profiles, running_instances)
-                st.write("---")
+
                 
                 # Fetch persistent unassigned scans
                 created_scans = load_created_scans()
                 user_configured_scans = created_scans.get(p_id, {})
                 
-                st.markdown("### 🆕 Configured Scans Pool (Pills)")
+                st.markdown("#### 🆕 Configured Scans")
                 
                 active_focus = st.session_state.focused_scan.get(p_id, None)
                 add_scan_open = st.session_state.show_add_scan.get(p_id, False)
@@ -227,7 +216,7 @@ def render_profiles_view(profiles, running_instances):
                 if active_focus and active_focus in user_configured_scans:
                     scan_cfg = user_configured_scans[active_focus]
                     
-                    st.write("")
+
                     with st.container(border=True):
                         st.markdown(f"#### 🏷️ Configure & Activate Scan: `{active_focus}`")
                         det_cols = st.columns([3, 1])
@@ -269,7 +258,7 @@ def render_profiles_view(profiles, running_instances):
                                 st.rerun()
                                 
                         if not matching_instances:
-                            st.write("---")
+
                             if not p_info.get("gemini_key"):
                                 st.error("⚠️ **Gemini API Key is missing!** You must configure a Gemini API key for this profile before you can activate a scan. Please click **Edit** at the top of the card to configure your API keys.")
                             elif not devices:
@@ -376,9 +365,8 @@ def render_profiles_view(profiles, running_instances):
                                             
                 # Render Inline Add Scan Configurator Form if open
                 if add_scan_open:
-                    st.write("")
                     with st.container(border=True):
-                        st.markdown("### 🚀 Create Configured Scan Pill")
+                        st.markdown("#### 🚀 Create Scan Pill")
                         
                         # Aggregate verified channels, groups, and chats across all linked devices
                         combined_verified_channels = []

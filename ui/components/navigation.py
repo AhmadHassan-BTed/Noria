@@ -1,10 +1,14 @@
 import streamlit as st
 
 def render_sidebar_navigation():
-    # Render Noria Header Logo and Styling
-    st.sidebar.markdown("""
-<div style="display: flex; align-items: center; justify-content: center; gap: 12px; padding: 18px 12px; background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-top: 10px; margin-bottom: 25px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);">
-    <svg width="42" height="42" viewBox="0 0 299 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+    current_page = st.session_state.get("current_page", "Profiles")
+
+    with st.sidebar:
+        with st.container(key="sidebar_top_section"):
+            # Render Noria Header Logo and Styling
+            st.markdown("""
+<div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 5px; margin-bottom: 2px;">
+    <svg width="36" height="36" viewBox="0 0 299 300" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M149.789 0C67.9177 0 1.27639 66.4656 1.24166 148.157C1.23297 174.271 8.0751 199.761 21.0734 222.228L0 299.017L78.7453 278.412C100.444 290.218 124.869 296.436 149.728 296.445H149.789C231.651 296.445 298.292 229.971 298.327 148.279C298.345 108.689 282.906 71.4631 254.861 43.4616C226.815 15.4515 189.522 0.0173223 149.789 0ZM149.789 271.423H149.737C127.587 271.423 105.853 265.473 86.8985 254.256L82.3921 251.589L35.6694 263.818L48.138 218.373L45.2032 213.714C32.8474 194.105 26.3179 171.439 26.3266 148.175C26.3526 80.2715 81.7409 25.0307 149.841 25.0307C182.819 25.0394 213.816 37.8665 237.121 61.1477C260.435 84.4202 273.26 115.366 273.251 148.27C273.225 216.173 217.837 271.423 149.789 271.423Z" fill="#25D366"/>
       <path d="M156.792 213.075L141.536 213.075L141.536 85.9421L156.792 85.9421L156.792 213.075Z" fill="#25D366"/>
       <path d="M97.9276 187.898L90.2996 174.686L200.4 111.119L208.028 124.331L97.9276 187.898Z" fill="#25D366"/>
@@ -16,45 +20,45 @@ def render_sidebar_navigation():
       <path d="M51.5605 175.825C51.5605 172.511 54.2468 169.825 57.5605 169.825H101.824C105.138 169.825 107.824 172.511 107.824 175.825V181.364C107.824 192.41 98.87 201.364 87.8243 201.364H71.5605C60.5148 201.364 51.5605 192.41 51.5605 181.364V175.825Z" fill="#212121" stroke="#25D366" stroke-width="16"/>
       <path d="M190.503 175.825C190.503 172.511 193.189 169.825 196.503 169.825H240.767C244.081 169.825 246.767 172.511 246.767 175.825V181.364C246.767 192.41 237.813 201.364 226.767 201.364H210.503C199.457 201.364 190.503 192.41 190.503 181.364V175.825Z" fill="#212121" stroke="#25D366" stroke-width="16"/>
     </svg>
-    <span style="color: #FFFFFF; font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 28px; letter-spacing: 0.5px;">Noria</span>
+    <span style="color: #FFFFFF; font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 23px; letter-spacing: 0.5px;">Noria</span>
 </div>
-<div style="font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #8E9297; text-align: center; margin-bottom: 20px;">SaaS Orchestration Console</div>
-<div style="height: 1px; background: rgba(255, 255, 255, 0.05); margin: 20px 0;"></div>
+<div style="font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: #8E9297; text-align: center; margin-bottom: 14px;">Agentic Control Center</div>
+<div style="height: 1px; background: rgba(255, 255, 255, 0.05); margin-bottom: 14px;"></div>
 """, unsafe_allow_html=True)
 
-    # Navigation Buttons
-    current_page = st.session_state.get("current_page", "Profiles")
-    
-    if st.sidebar.button("👤 Applicant Profiles", use_container_width=True, type="primary" if current_page == "Profiles" else "secondary"):
-        st.session_state.current_page = "Profiles"
-        st.rerun()
-    
-    if st.sidebar.button("📡 Opportunity Scans", use_container_width=True, type="primary" if current_page == "Scans" else "secondary"):
-        st.session_state.current_page = "Scans"
-        st.rerun()
+            # Navigation Buttons
+            if st.button("👤 Applicant Profiles", use_container_width=True, type="primary" if current_page == "Profiles" else "secondary"):
+                st.session_state.current_page = "Profiles"
+                st.rerun()
 
-    # Sidebar Content Panels
-    st.sidebar.markdown("""
-<div style="height: 1px; background: rgba(255, 255, 255, 0.05); margin: 20px 0;"></div>
+            if st.button("📡 Opportunity Scans", use_container_width=True, type="primary" if current_page == "Scans" else "secondary"):
+                st.session_state.current_page = "Scans"
+                st.rerun()
 
-<div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 3px solid #25D366; border-radius: 8px; padding: 14px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
-    <div style="font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #25D366; margin-bottom: 6px;">About</div>
-    <div style="font-family: 'Inter', sans-serif; font-size: 12.5px; line-height: 1.5; color: #8E9297;">
-        An agentic extractor for messaging platforms. Noria receives messages & URLs via chat; scrapes web data to evaluate the content against custom scoring matrices (e.g., jobs, scholarships); and sends a structured summary with a calculated match score directly to the assigned messenger number.
+            # Sidebar Content Panels
+            st.markdown("""
+<div style="height: 1px; background: rgba(255, 255, 255, 0.05); margin: 18px 0;"></div>
+
+<div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 3px solid #25D366; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px;">
+    <div style="font-family: 'Outfit', sans-serif; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #25D366; margin-bottom: 4px;">About</div>
+    <div style="font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.5; color: #8E9297;">
+        Agentic extractor for messaging platforms. Receives messages & URLs; scrapes & evaluates content against scoring matrices; sends structured summaries with match scores.
     </div>
 </div>
 
-<div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 3px solid #25D366; border-radius: 8px; padding: 14px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
-    <div style="font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #25D366; margin-bottom: 6px;">Unified Control</div>
-    <div style="font-family: 'Inter', sans-serif; font-size: 12.5px; line-height: 1.5; color: #8E9297;">
-        Manage independent customer profiles, API keys, and launch dynamic opportunity scans entirely from the unified profile directory.
+<div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 3px solid #25D366; border-radius: 6px; padding: 10px 12px; margin-bottom: 0px;">
+    <div style="font-family: 'Outfit', sans-serif; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #25D366; margin-bottom: 4px;">Unified Control</div>
+    <div style="font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.5; color: #8E9297;">
+        Manage customer profiles, API keys, and dynamic opportunity scans from the unified profile directory.
     </div>
 </div>
 
-<div style="height: 1px; background: rgba(255, 255, 255, 0.05); margin: 20px 0 15px 0;"></div>
+""", unsafe_allow_html=True)
 
-<div style="text-align: center; font-family: 'Inter', sans-serif; font-size: 11px; color: #8E9297; padding-bottom: 10px;">
+        with st.container(key="sidebar_bottom_section"):
+            st.markdown("""
+<div class="sidebar-footer">
     Designed & Engineered by <br>
-    <a href="https://github.com/AhmadHassan-BTed" target="_blank" style="color: #25D366; text-decoration: none; font-weight: 600; font-family: 'Outfit', sans-serif; transition: color 0.2s;">Ahmad Hassan (B-Ted)</a>
+    <a href="https://github.com/AhmadHassan-BTed" target="_blank" style="font-size: 14px;">Ahmad Hassan (B-Ted)</a>
 </div>
 """, unsafe_allow_html=True)

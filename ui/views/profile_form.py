@@ -6,7 +6,7 @@ def render_profile_form_view(editing_profile, profiles):
     is_new = (editing_profile == "new")
     
     if is_new:
-        st.subheader("➕ Create New Applicant Profile")
+        st.markdown("## ➕ Create New Applicant Profile")
         default_name = ""
         default_gemini = ""
         default_jina = ""
@@ -17,7 +17,7 @@ def render_profile_form_view(editing_profile, profiles):
         default_app_focus = ""
     else:
         p_info = profiles[editing_profile]
-        st.subheader(f"✏️ Edit Profile: {p_info['name']}")
+        st.markdown(f"## ✏️ Edit Profile: {p_info['name']}")
         default_name = p_info["name"]
         default_gemini = p_info["gemini_key"]
         default_jina = p_info.get("jina_key", "")
@@ -37,7 +37,7 @@ def render_profile_form_view(editing_profile, profiles):
         form_col1, form_col2 = st.columns([1, 1])
         
         with form_col1:
-            st.markdown("### 🔑 API Authentication")
+            st.markdown("##### 🔑 API Authentication")
             gemini_key = st.text_input(
                 "Google Gemini API Key",
                 value=default_gemini,
@@ -49,7 +49,7 @@ def render_profile_form_view(editing_profile, profiles):
                 type="password"
             )
             
-            st.markdown("### 🔔 Notification Settings")
+            st.markdown("##### 🔔 Notification Settings")
             # Parse country code and number from target_phone
             default_cc = "+92"
             default_phone_num = ""
@@ -116,14 +116,14 @@ def render_profile_form_view(editing_profile, profiles):
             target_phone = f"{country_code}{phone_input}".replace(" ", "").replace("-", "")
             
         with form_col2:
-            st.markdown("### 🧑‍💼 Applicant Evaluation Parameters")
+            st.markdown("##### 🧑‍💼 Applicant Parameters")
             app_name = st.text_input("Full Name", value=default_app_name)
             app_nationality = st.text_input("Nationality", value=default_app_nationality)
             app_degree = st.text_input("Degree Tier & Grades", value=default_app_degree)
             app_fields = st.text_area("Target Fields of Study", value=default_app_fields)
             app_focus = st.text_area("Research Focus / Key Interests", value=default_app_focus)
             
-        st.write("---")
+
         act_cols = st.columns([6, 1, 1])
         with act_cols[1]:
             if st.button("Cancel", use_container_width=True):

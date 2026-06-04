@@ -5,6 +5,31 @@ import logging
 # Suppress benign Streamlit ScriptRunContext warnings
 logging.getLogger("streamlit").setLevel(logging.ERROR)
 
+def suppress_streamlit_shutdown_websocket_error():
+    """Avoid noisy Streamlit websocket tracebacks during normal server shutdown."""
+    try:
+        from streamlit.runtime.runtime import RuntimeStoppedError
+        from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
+    except Exception:
+        return
+
+    if getattr(BrowserWebSocketHandler.on_message, "_noria_shutdown_patch", False):
+        return
+
+    original_on_message = BrowserWebSocketHandler.on_message
+
+    def patched_on_message(self, payload):
+        try:
+            return original_on_message(self, payload)
+        except RuntimeStoppedError:
+            return None
+
+    patched_on_message._noria_shutdown_patch = True
+    BrowserWebSocketHandler.on_message = patched_on_message
+
+
+suppress_streamlit_shutdown_websocket_error()
+
 from ui.styles import apply_custom_styles
 from ui.state import (
     load_profiles,

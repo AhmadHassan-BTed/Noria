@@ -347,7 +347,7 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
     profiles = load_profiles()
     p_info = profiles.get(p_id, p_info)
 
-    st.markdown("### 📱 Linked Devices")
+    st.markdown("#### 📱 Linked Devices")
     devices = p_info.get("devices", {})
     if not devices:
         st.info("No active devices linked to this profile. Pair a device upfront using the button above.")
@@ -451,7 +451,7 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                             if st.button(f"❌ Rejects: {rejects_count}", key=f"btn_rejects_{p_id}_{dev_phone}", use_container_width=True):
                                 show_rejects_dialog(rejects)
                         
-                        st.markdown("<div style='margin-bottom: 14px;'></div>", unsafe_allow_html=True)
+
                         
                         st.markdown(f"**Subscribed Channels:** `{len(channels_list)}` | **Groups:** `{len(groups_list)}` | **Direct Chats:** `{len(chats_list)}`")
                         
@@ -512,7 +512,7 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                                         except Exception as e:
                                             st.error(f"Error: {e}")
                         
-                        st.write("---")
+
                         
                         # ── Device Log Viewer ──────────────────────────────────
                         device_sess_id = f"session_{p_id}_dev_{dev_phone}"
@@ -583,7 +583,7 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                                     st.code(log_text, language="text")
                                     st.caption(f"Showing last {len(log_lines)} log entries. Logs auto-refresh every 2 seconds.")
                         
-                        st.write("---")
+
                         
                         col_cache, col_unlink = st.columns([1, 1])
                         with col_cache:

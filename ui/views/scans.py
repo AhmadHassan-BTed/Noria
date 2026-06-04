@@ -7,11 +7,10 @@ from ui.state import PREDEFINED_SCANS, get_session_status, save_running_processe
 
 def render_scans_view(running_instances, profiles):
     st.title("📡 Active Scanning Operations")
-    st.write("Monitor live opportunity extraction pipelines, review discovery diagnostics, and terminate active scans.")
-    st.write("---")
+    st.caption("Monitor live extraction pipelines, review diagnostics, and manage active scans.")
     
     # 1. Master List of Active Scans
-    st.subheader("📡 Active Opportunity Scans")
+    st.markdown("#### 📡 Active Scans")
     
     # Filter out linkers to only show scanning operations in the scans view
     scanning_instances = {name: info for name, info in running_instances.items() if info.get("category") != "Linker"}
@@ -24,14 +23,8 @@ def render_scans_view(running_instances, profiles):
             with st.container(border=True):
                 col_info, col_status, col_action = st.columns([3, 1, 1])
                 with col_info:
-                    st.markdown(f"#### `{scan_name}`")
-                    st.markdown(f"""
-                    * **Powered By Profile:** {info['profileName']} (`{info['profileId']}`)
-                    * **Pipeline Category:** {info['category']}
-                    * **Monitored Channels:** `{info.get('channels') or 'All subscribed links'}`
-                    * **Target Phone:** `{info['phone'] or 'Default target'}`
-                    * **Started At:** {info['startedAt']}
-                    """)
+                    st.markdown(f"##### `{scan_name}`")
+                    st.caption(f"""Profile: {info['profileName']} · Pipeline: {info['category']} · Channels: `{info.get('channels') or 'All'}`  \nTarget: `{info['phone'] or 'Default'}` · Started: {info['startedAt']}""")
                 with col_status:
                     status_info = get_session_status(info["sessionId"])
                     scan_status = status_info.get("status", "UNKNOWN")
@@ -68,10 +61,7 @@ def render_scans_view(running_instances, profiles):
                         except Exception as e:
                             st.error(f"Failed to terminate process: {e}")
 
-    st.write("---")
-    
-    # 2. Master Form to Launch a New Scan
-    st.subheader("🚀 Launch New Opportunity Scan")
+    st.markdown("#### 🚀 Launch New Scan")
     
     if not profiles:
         st.warning("You must create an Applicant Profile first before you can launch an opportunity scan.")
@@ -86,9 +76,7 @@ def render_scans_view(running_instances, profiles):
             selected_profile = profiles[selected_p_id]
             
             # Show a brief summary card of selected profile credentials/target
-            st.markdown(f"**Selected Profile Target Fields:** `{selected_profile.get('applicant_target_fields', 'Not set')}`")
-            
-            st.write("---")
+            st.caption(f"Target fields: `{selected_profile.get('applicant_target_fields', 'Not set')}`")
             
             global_scan_mode = st.radio(
                 "Choose Scan Configuration Method",
@@ -223,9 +211,8 @@ def render_scans_view(running_instances, profiles):
                         st.error(f"Failed to launch scan process: {e}")
 
     # 3. Scanned Opportunities History Feed
-    st.write("---")
-    st.subheader("📋 Scanned Opportunities Feed")
-    st.write("Real-time feed of all scraped URLs, their qualification status, and evaluation verdicts.")
+    st.markdown("#### 📋 Scanned Opportunities Feed")
+    st.caption("Real-time feed of scraped URLs, qualification status, and verdicts.")
     
     # Gather all history
     history_files = []
