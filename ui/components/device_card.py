@@ -5,6 +5,7 @@ import signal
 import subprocess
 import io
 import urllib.parse
+import json
 import streamlit.components.v1 as components
 
 try:
@@ -128,10 +129,7 @@ def render_device_linker_fragment(p_id, p_info, profiles, running_instances):
                         pil_img = qr_img.get_image()
                         pil_img.save(buf, format='PNG')
                     elif hasattr(qr_img, 'save'):
-                        try:
-                            qr_img.save(buf, format='PNG')
-                        except TypeError:
-                            qr_img.save(buf)
+                        qr_img.save(buf)
                     else:
                         buf.write(bytes(qr_img))
                     
