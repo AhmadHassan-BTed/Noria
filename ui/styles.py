@@ -452,9 +452,10 @@ def apply_custom_styles():
         }
 
         /* Prevent Streamlit columns from getting Level 2/3 bordered container styles and hover effects */
-        div.block-container div[data-testid="column"],
-        div.block-container div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"],
-        div.block-container div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlockBorderWrapper"] {
+        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"],
+        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"],
+        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlockBorderWrapper"],
+        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlockBorderWrapper"] {
             background-color: transparent !important;
             border: none !important;
             box-shadow: none !important;
@@ -463,9 +464,10 @@ def apply_custom_styles():
         }
 
         /* Disable hover transition effects for columns and their children */
-        div.block-container div[data-testid="column"]:hover,
-        div.block-container div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
-        div.block-container div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
             border: none !important;
             border-color: transparent !important;
             box-shadow: none !important;
