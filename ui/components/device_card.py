@@ -18,7 +18,8 @@ from ui.state import (
     read_session_logs,
     clear_session_logs,
     save_profiles,
-    save_running_processes
+    save_running_processes,
+    load_scan_history
 )
 
 @st.fragment(run_every=2)
@@ -263,9 +264,92 @@ def render_device_linker_fragment(p_id, p_info, profiles, running_instances):
         st.session_state.linker_sess_id = None
         st.rerun()
 
+@st.dialog("🔍 Matches History", width="large")
+def show_matches_dialog(matches):
+    if not matches:
+        st.info("No matches found yet.")
+        return
+    
+    st.write(f"Showing {len(matches)} match(es) detected by active scans.")
+    for idx, match in enumerate(reversed(matches)):
+        with st.container(border=True):
+            col_ts, col_score = st.columns([3, 1])
+            with col_ts:
+                st.caption(f"🕒 Detected: {match.get('timestamp', 'Unknown')}")
+            with col_score:
+                st.markdown(f"🏆 Score: **{match.get('score', 0)}/100**")
+            
+            st.markdown(f"🔗 **Source URL:** [{match.get('url')}]({match.get('url')})")
+            
+            st.markdown("**Original Message:**")
+            st.code(match.get("originalMessage", ""), language="text")
+            
+            st.markdown("**Sent Notification:**")
+            st.code(match.get("sentMessage", ""), language="text")
+            
+            if match.get("reason"):
+                st.markdown(f"*Verdict Explanation:* {match.get('reason')}")
+
+@st.dialog("❌ Rejects History", width="large")
+def show_rejects_dialog(rejects):
+    if not rejects:
+        st.info("No rejects found yet.")
+        return
+        
+    st.write(f"Showing {len(rejects)} reject(es) evaluated by active scans.")
+    for idx, reject in enumerate(reversed(rejects)):
+        with st.container(border=True):
+            col_ts, col_score = st.columns([3, 1])
+            with col_ts:
+                st.caption(f"🕒 Evaluated: {reject.get('timestamp', 'Unknown')}")
+            with col_score:
+                st.markdown(f"📉 Score: **{reject.get('score', 0)}/100**")
+            
+            st.markdown(f"🔗 **Source URL:** [{reject.get('url')}]({reject.get('url')})")
+            
+            st.markdown("**Original Message:**")
+            st.code(reject.get("originalMessage", ""), language="text")
+            
+            st.markdown("**Rejection Reason:**")
+            st.info(reject.get("reason") or "No detailed explanation provided.")
+
+@st.dialog("📡 All Scans History", width="large")
+def show_scans_dialog(history_entries):
+    if not history_entries:
+        st.info("No scans have run or generated history yet.")
+        return
+        
+    st.write(f"Showing {len(history_entries)} total scan(s) evaluated by this device.")
+    for idx, entry in enumerate(reversed(history_entries)):
+        with st.container(border=True):
+            col_ts, col_status, col_score = st.columns([2, 1, 1])
+            with col_ts:
+                st.caption(f"🕒 Time: {entry.get('timestamp', 'Unknown')}")
+            with col_status:
+                is_match = entry.get("type") == "match"
+                badge_color = "var(--whatsapp-green)" if is_match else "#ff4b4b"
+                status_lbl = "🟢 Passed" if is_match else "🔴 Rejected"
+                st.markdown(f"<span style='color: {badge_color}; font-weight: bold;'>{status_lbl}</span>", unsafe_allow_html=True)
+            with col_score:
+                st.markdown(f"🏆 Score: **{entry.get('score', 0)}/100**")
+                
+            st.markdown(f"🔗 **Source URL:** [{entry.get('url')}]({entry.get('url')})")
+            
+            st.markdown("**Original Message:**")
+            st.code(entry.get("originalMessage", ""), language="text")
+            
+            st.markdown("**Verdict / One-liner Reason:**")
+            st.info(entry.get("reason") or "No detailed explanation provided.")
+
 @st.fragment(run_every=2)
 def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
-    st.markdown("### 📱 Linked Devices (Sub-cards)")
+    # Load fresh data inside the fragment to prevent stale parameters on fragment reruns
+    from ui.state import cleanup_zombie_processes, load_profiles
+    running_instances = cleanup_zombie_processes()
+    profiles = load_profiles()
+    p_info = profiles.get(p_id, p_info)
+
+    st.markdown("### 📱 Linked Devices")
     devices = p_info.get("devices", {})
     if not devices:
         st.info("No active devices linked to this profile. Pair a device upfront using the button above.")
@@ -282,7 +366,6 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                 arrow = "▼" if is_dev_expanded else "▶"
                 if st.button(f"{arrow} 📱 +{dev_phone}", key=f"dev_hdr_btn_{p_id}_{dev_phone}", use_container_width=True):
                     st.session_state[dev_expanded_key] = not is_dev_expanded
-                    st.rerun()
                 
                 if is_dev_expanded:
                     with st.container(border=True):
@@ -343,31 +426,34 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                         
                         # Calculate active scans, matches, rejects, and total statistics
                         scans_count = len(device_scans)
-                        matches_count = 0
-                        total_count = 0
-                        for scan_name in device_scans:
-                            log_path = f"data/daemon-{scan_name}.log"
-                            if os.path.exists(log_path):
-                                try:
-                                    with open(log_path, "r", encoding="utf-8", errors="replace") as f:
-                                        content = f.read()
-                                        matches_count += content.count("Match found!")
-                                        total_count += content.count("Analysis match score")
-                                except Exception:
-                                    pass
                         
-                        rejects_count = max(0, total_count - matches_count)
+                        history_entries = []
+                        for scan_name in device_scans:
+                            history_entries.extend(load_scan_history(scan_name))
+                            
+                        # Sort history entries by timestamp
+                        try:
+                            history_entries.sort(key=lambda x: x.get("timestamp", ""))
+                        except Exception:
+                            pass
+                            
+                        matches = [entry for entry in history_entries if entry.get("type") == "match"]
+                        rejects = [entry for entry in history_entries if entry.get("type") == "reject"]
+                        matches_count = len(matches)
+                        rejects_count = len(rejects)
 
-                        st.markdown(f"""
-                        <div style="background-color: var(--bg-level-3); border: 1px solid var(--border-level-3); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; text-align: center;">
-                            <span style="color: var(--text-color); font-family: \'Outfit\', sans-serif; font-weight: 600; font-size: 14px;">
-                                📡 Running Scans: <span style="color: var(--whatsapp-green);">{scans_count}</span> &nbsp;|&nbsp; 
-                                🔍 Matches: <span style="color: var(--whatsapp-green);">{matches_count}</span> &nbsp;|&nbsp; 
-                                ❌ Rejects: <span style="color: var(--whatsapp-green);">{rejects_count}</span> &nbsp;|&nbsp; 
-                                📊 Total: <span style="color: var(--whatsapp-green);">{total_count}</span>
-                            </span>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        metric_col1, metric_col2, metric_col3 = st.columns([1, 1, 1])
+                        with metric_col1:
+                            if st.button(f"📡 Scans: {scans_count}", key=f"btn_scans_lbl_{p_id}_{dev_phone}", use_container_width=True):
+                                show_scans_dialog(history_entries)
+                        with metric_col2:
+                            if st.button(f"🔍 Matches: {matches_count}", key=f"btn_matches_{p_id}_{dev_phone}", use_container_width=True):
+                                show_matches_dialog(matches)
+                        with metric_col3:
+                            if st.button(f"❌ Rejects: {rejects_count}", key=f"btn_rejects_{p_id}_{dev_phone}", use_container_width=True):
+                                show_rejects_dialog(rejects)
+                        
+                        st.markdown("<div style='margin-bottom: 14px;'></div>", unsafe_allow_html=True)
                         
                         st.markdown(f"**Subscribed Channels:** `{len(channels_list)}` | **Groups:** `{len(groups_list)}` | **Direct Chats:** `{len(chats_list)}`")
                         
@@ -425,7 +511,6 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                                                 
                                             st.toast(f"Scan '{scan_name}' stopped successfully.")
                                             time.sleep(1)
-                                            st.rerun()
                                         except Exception as e:
                                             st.error(f"Error: {e}")
                         
@@ -542,4 +627,3 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                                 save_profiles(profiles)
                                 st.toast("Device unlinked successfully.")
                                 time.sleep(1)
-                                st.rerun()

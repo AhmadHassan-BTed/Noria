@@ -276,3 +276,15 @@ def cleanup_zombie_processes():
         save_running_processes(cleaned)
     
     return cleaned
+
+def load_scan_history(scan_name):
+    history_path = f"data/history-{scan_name}.json"
+    if os.path.exists(history_path):
+        try:
+            with open(history_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    return data
+        except Exception:
+            return []
+    return []

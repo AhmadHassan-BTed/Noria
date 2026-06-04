@@ -16,8 +16,42 @@
 
 const fs = require('fs');
 const yaml = require('js-yaml');
+const path = require('path');
 const { registry } = require('./registry');
 const { EventTypes } = require('./events');
+
+function saveToHistory(instanceId, type, url, originalMessage, sentMessage, score, reason) {
+  try {
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    const historyFile = path.join(dataDir, `history-${instanceId}.json`);
+    let history = [];
+    if (fs.existsSync(historyFile)) {
+      try {
+        history = JSON.parse(fs.readFileSync(historyFile, 'utf8'));
+      } catch (err) {
+        history = [];
+      }
+    }
+    if (!Array.isArray(history)) {
+      history = [];
+    }
+    history.push({
+      timestamp: new Date().toISOString(),
+      type,
+      url,
+      originalMessage: originalMessage || `[No message text, URL: ${url}]`,
+      sentMessage: sentMessage || '',
+      score: typeof score === 'number' ? score : 0,
+      reason: reason || '',
+    });
+    fs.writeFileSync(historyFile, JSON.stringify(history, null, 2), 'utf8');
+  } catch (err) {
+    console.error(`[Pipeline:${instanceId}] Failed to write history: ${err.message}`);
+  }
+}
 
 class PipelineOrchestrator {
   constructor(broker) {
@@ -341,12 +375,23 @@ class PipelineOrchestrator {
             result: validatedResponse,
           });
 
+          // Build notification message (pure domain function)
+          const notificationMessage = domain.buildTemplate ? domain.buildTemplate(validatedResponse) : '';
+
+          // Save match to history
+          saveToHistory(
+            instanceId,
+            'match',
+            url,
+            messageText,
+            notificationMessage,
+            validatedResponse.match_score,
+            validatedResponse.verdict || validatedResponse.reason
+          );
+
           // ── F. NOTIFY — Domain template + Infrastructure sender ─────────
           if (services.sender) {
             console.log(`[Pipeline:${instanceId}] Match found! Preparing notification...`);
-
-            // F1. Build notification message (pure domain function)
-            const notificationMessage = domain.buildTemplate(validatedResponse);
 
             // F2. Resolve the WhatsApp client (from connection manager)
             const {
@@ -371,6 +416,17 @@ class PipelineOrchestrator {
             url,
             result: validatedResponse,
           });
+
+          // Save reject to history
+          saveToHistory(
+            instanceId,
+            'reject',
+            url,
+            messageText,
+            '',
+            validatedResponse.match_score,
+            validatedResponse.verdict || validatedResponse.reason
+          );
         }
       } catch (err) {
         console.error(`[Pipeline:${instanceId}] Pipeline stage failed:`, err.message);

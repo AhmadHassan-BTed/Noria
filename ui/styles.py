@@ -418,6 +418,47 @@ def apply_custom_styles():
         ::-webkit-scrollbar-thumb:hover {
             background: var(--whatsapp-green);
         }
+
+        /* -------------------------------------------------------------
+           LOG VIEWER TOGGLE SPECIAL RED STYLING
+           ------------------------------------------------------------- */
+        div[class*="st-key-toggle_logs"] {
+            border: 1px solid var(--border-level-3) !important;
+            border-radius: 8px !important;
+            padding: 8px 14px !important;
+            background-color: var(--bg-level-3) !important;
+            margin-top: 12px !important;
+            margin-bottom: 12px !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+        
+        div[class*="st-key-toggle_logs"]:hover {
+            border-color: #FF4B4B !important;
+            background-color: rgba(255, 75, 75, 0.03) !important;
+            box-shadow: 0 2px 8px rgba(255, 75, 75, 0.05) !important;
+        }
+
+        /* Toggle checked track background */
+        div[class*="st-key-toggle_logs"] input[type="checkbox"]:checked ~ div {
+            background-color: #FF4B4B !important;
+        }
+        div[class*="st-key-toggle_logs"] input[type="checkbox"]:checked + div {
+            background-color: #FF4B4B !important;
+        }
+
+        /* Focus outline when checked */
+        div[class*="st-key-toggle_logs"] input[type="checkbox"]:focus-visible ~ div {
+            box-shadow: 0 0 0 3px rgba(255, 75, 75, 0.4) !important;
+        }
+
+        /* Prevent Streamlit columns (inside stHorizontalBlock) from getting Level 2/3 bordered container styles */
+        div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlockBorderWrapper"] {
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
     </style>
     """, unsafe_allow_html=True)
 

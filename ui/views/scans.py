@@ -3,7 +3,7 @@ import os
 import subprocess
 import signal
 import time
-from ui.state import PREDEFINED_SCANS, get_session_status, save_running_processes
+from ui.state import PREDEFINED_SCANS, get_session_status, save_running_processes, load_scan_history
 
 def render_scans_view(running_instances, profiles):
     st.title("📡 Active Scanning Operations")
@@ -221,3 +221,90 @@ def render_scans_view(running_instances, profiles):
                         st.rerun()
                     except Exception as e:
                         st.error(f"Failed to launch scan process: {e}")
+
+    # 3. Scanned Opportunities History Feed
+    st.write("---")
+    st.subheader("📋 Scanned Opportunities Feed")
+    st.write("Real-time feed of all scraped URLs, their qualification status, and evaluation verdicts.")
+    
+    # Gather all history
+    history_files = []
+    if os.path.exists("data"):
+        for f in os.listdir("data"):
+            if f.startswith("history-") and f.endswith(".json"):
+                scan_name = f[len("history-"):-len(".json")]
+                history_files.append(scan_name)
+                
+    all_scans_history = []
+    for scan_name in history_files:
+        entries = load_scan_history(scan_name)
+        for entry in entries:
+            entry["scan_name"] = scan_name
+            all_scans_history.append(entry)
+            
+    try:
+        all_scans_history.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+    except Exception:
+        pass
+        
+    if not all_scans_history:
+        st.info("No scans have run or generated history yet. Once a scan processes a message, the feed will display results here.")
+    else:
+        # Filter controls
+        filter_col1, filter_col2 = st.columns([1, 1])
+        with filter_col1:
+            status_filter = st.selectbox(
+                "Filter by Status",
+                ["All", "Passed (Matches Only)", "Rejected Only"],
+                key="scans_status_filter"
+            )
+        with filter_col2:
+            unique_scans = sorted(list(set(entry["scan_name"] for entry in all_scans_history)))
+            scan_filter = st.selectbox(
+                "Filter by Scan Name",
+                ["All"] + unique_scans,
+                key="scans_name_filter"
+            )
+            
+        filtered_history = all_scans_history
+        if status_filter == "Passed (Matches Only)":
+            filtered_history = [e for e in filtered_history if e.get("type") == "match"]
+        elif status_filter == "Rejected Only":
+            filtered_history = [e for e in filtered_history if e.get("type") == "reject"]
+            
+        if scan_filter != "All":
+            filtered_history = [e for e in filtered_history if e.get("scan_name") == scan_filter]
+            
+        if not filtered_history:
+            st.info("No matching scanned opportunities found for the selected filters.")
+        else:
+            st.caption(f"Showing {len(filtered_history)} evaluated item(s)")
+            
+            for entry in filtered_history:
+                is_match = entry.get("type") == "match"
+                badge_color = "var(--whatsapp-green)" if is_match else "#ff4b4b"
+                status_lbl = "🟢 Passed" if is_match else "🔴 Rejected"
+                score = entry.get("score", 0)
+                reason_text = entry.get("reason", "No reason provided")
+                
+                # Format timestamp
+                ts = entry.get("timestamp", "")
+                if ts:
+                    try:
+                        ts = ts.split(".")[0].replace("T", " ")
+                    except Exception:
+                        pass
+                
+                # Render a premium container for each scan item
+                with st.container(border=True):
+                    header_col1, header_col2, header_col3 = st.columns([2, 1, 1])
+                    with header_col1:
+                        st.markdown(f"**Scan:** `{entry['scan_name']}`")
+                    with header_col2:
+                        st.markdown(f"<span style='color: {badge_color}; font-weight: bold;'>{status_lbl}</span>", unsafe_allow_html=True)
+                    with header_col3:
+                        st.markdown(f"**Score:** `{score}/100`")
+                        
+                    st.markdown(f"🔗 **URL:** [{entry.get('url')}]({entry.get('url')})")
+                    st.markdown(f"💬 **Verdict:** {reason_text}")
+                    st.caption(f"🕒 Evaluated: {ts}")
