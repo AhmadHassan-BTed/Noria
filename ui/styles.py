@@ -6,7 +6,18 @@ def apply_custom_styles():
         page_title="Noria — Control Center",
         page_icon="📡",
         layout="wide",
-        initial_sidebar_state="expanded"
+        initial_sidebar_state="expanded",
+        menu_items={
+            'About': '''
+# Noria — Control Center
+An agentic extractor for messaging platforms.
+
+To run this app:
+```bash
+streamlit run app.py
+```
+'''
+        }
     )
 
     # Premium Custom CSS to enforce the WhatsApp Dark Theme (#212121 / #25D366 / #FFFFFF)
@@ -433,23 +444,11 @@ def apply_custom_styles():
         }
         
         div[class*="st-key-toggle_logs"]:hover {
-            border-color: #FF4B4B !important;
-            background-color: rgba(255, 75, 75, 0.03) !important;
-            box-shadow: 0 2px 8px rgba(255, 75, 75, 0.05) !important;
+            border-color: var(--whatsapp-green) !important;
+            background-color: var(--whatsapp-green-alpha) !important;
+            box-shadow: 0 2px 8px rgba(37, 211, 102, 0.05) !important;
         }
 
-        /* Toggle checked track background */
-        div[class*="st-key-toggle_logs"] input[type="checkbox"]:checked ~ div {
-            background-color: #FF4B4B !important;
-        }
-        div[class*="st-key-toggle_logs"] input[type="checkbox"]:checked + div {
-            background-color: #FF4B4B !important;
-        }
-
-        /* Focus outline when checked */
-        div[class*="st-key-toggle_logs"] input[type="checkbox"]:focus-visible ~ div {
-            box-shadow: 0 0 0 3px rgba(255, 75, 75, 0.4) !important;
-        }
 
         /* Prevent Streamlit columns from getting Level 2/3 bordered container styles and hover effects */
         div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"],
