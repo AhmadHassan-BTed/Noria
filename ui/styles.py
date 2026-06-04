@@ -452,7 +452,8 @@ def apply_custom_styles():
         }
 
         /* Prevent Streamlit columns (inside stHorizontalBlock) from getting Level 2/3 bordered container styles */
-        div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlockBorderWrapper"] {
+        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlockBorderWrapper"],
+        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlockBorderWrapper"] {
             background-color: transparent !important;
             border: none !important;
             box-shadow: none !important;
