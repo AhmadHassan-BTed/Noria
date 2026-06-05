@@ -1,50 +1,44 @@
 'use strict';
 
 /**
- * Infrastructure — Gemini LLM Adapter
+ * Infrastructure — Groq LLM Adapter
  *
- * Stateless adapter for Google Gemini API interactions.
+ * Stateless adapter for Groq API interactions.
  * All state (model cache, request queue) is module-scoped singleton.
  * External callers pass only plain data (prompt string, schema object, options).
  *
- * NO classes exported. NO setProvider(). NO inheritance.
+ * Conforms fully to Noria's data-coupling and stateless design.
  */
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { RequestQueue } = require('./requestQueue');
 const { withRetry } = require('../../utils/retry');
 const { metrics } = require('../../utils/metrics');
 
 // ─── Module-level singleton state ─────────────────────────────────────────────
-let genAI = null;
-let currentModel = 'gemini-2.5-flash';
+let groqApiKey = null;
+let currentModel = 'llama-3.3-70b-versatile';
 let supportedModelsCache = null;
-const geminiQueue = new RequestQueue(3000);
+const groqQueue = new RequestQueue(1000); // Groq queue spacing out requests (1s delay)
 
 // ─── Initialization ───────────────────────────────────────────────────────────
 
 /**
- * Lazily initialise the GoogleGenerativeAI client.
+ * Lazily initialise the Groq API client config.
  * Called automatically on first generateStructuredData() invocation.
  *
- * @param {string} [apiKey] – Falls back to GEMINI_API_KEY env var.
+ * @param {string} [apiKey] – Falls back to GROQ_API_KEY or LLM_API_KEY env vars.
  */
 function ensureInitialized(apiKey) {
-  if (genAI) {
-    return;
+  groqApiKey = apiKey || process.env.GROQ_API_KEY || process.env.LLM_API_KEY;
+  if (!groqApiKey) {
+    throw new Error('[Groq] GROQ_API_KEY or LLM_API_KEY not set in environment');
   }
-  const key = apiKey || process.env.GEMINI_API_KEY || process.env.LLM_API_KEY;
-  if (!key) {
-    throw new Error('[Gemini] GEMINI_API_KEY not set in environment');
-  }
-  genAI = new GoogleGenerativeAI(key);
 }
 
 // ─── Model Discovery ─────────────────────────────────────────────────────────
 
 /**
- * Fetches and caches the list of supported Gemini models, prioritised for
- * the current use-case.
+ * Fetches and caches the list of supported Groq models.
  *
  * @param {string} [preferredModel] – Model name to prioritise at the top.
  * @returns {Promise<string[]>} Sorted model name list.
@@ -54,45 +48,49 @@ async function getSupportedModels(preferredModel) {
     return supportedModelsCache;
   }
 
-  const defaults = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+  const defaults = [
+    'llama-3.3-70b-versatile',
+    'llama3-70b-8192',
+    'mixtral-8x7b-32768',
+    'llama-3.1-8b-instant',
+    'gemma2-9b-it'
+  ];
   const preferred = (preferredModel && preferredModel.toLowerCase() !== 'auto') ? preferredModel : currentModel;
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.LLM_API_KEY;
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
-    );
+    const key = groqApiKey || process.env.GROQ_API_KEY || process.env.LLM_API_KEY;
+    if (!key) {
+      return defaults;
+    }
+    const res = await fetch('https://api.groq.com/openai/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${key}`
+      }
+    });
     if (!res.ok) {
       throw new Error(`Status ${res.status}`);
     }
 
     const data = await res.json();
-    if (data.error) {
-      throw new Error(data.error.message || 'API Error');
+    if (!data.data || !Array.isArray(data.data)) {
+      throw new Error('Invalid response structure');
     }
 
-    const models = data.models
-      .filter((m) => m.supportedGenerationMethods.includes('generateContent'))
-      .map((m) => m.name.replace('models/', ''))
-      .filter((m) => m.includes('gemini'));
+    const models = data.data
+      .filter((m) => m.active !== false)
+      .map((m) => m.id);
 
     const sorted = [];
     if (models.includes(preferred)) {
       sorted.push(preferred);
     }
 
-    const priorityOrder = [
-      'gemini-2.5-flash',
-      'gemini-1.5-flash',
-      'gemini-2.0-flash-exp',
-      'gemini-1.5-pro',
-      'gemini-1.0-pro',
-    ];
-    for (const m of priorityOrder) {
-      if (models.includes(m) && !sorted.includes(m)) {
-        sorted.push(m);
+    for (const d of defaults) {
+      if (models.includes(d) && !sorted.includes(d)) {
+        sorted.push(d);
       }
     }
+
     for (const m of models) {
       if (!sorted.includes(m)) {
         sorted.push(m);
@@ -101,7 +99,7 @@ async function getSupportedModels(preferredModel) {
 
     supportedModelsCache = sorted.length > 0 ? sorted : defaults;
   } catch (err) {
-    console.warn(`[Gemini] Failed to fetch supported models list: ${err.message}. Using defaults.`);
+    console.warn(`[Groq] Failed to fetch supported models list: ${err.message}. Using defaults.`);
     supportedModelsCache = defaults;
   }
 
@@ -111,21 +109,16 @@ async function getSupportedModels(preferredModel) {
 // ─── Core Generation ──────────────────────────────────────────────────────────
 
 /**
- * Sends a prompt + schema to Gemini and returns parsed structured JSON.
- *
- * Handles:
- *   • Automatic model fallback on 429 / quota-exceeded
- *   • Exponential back-off retries
- *   • JSON parsing & cleanup
+ * Sends a prompt + schema to Groq and returns parsed structured JSON.
  *
  * @param {string} prompt           – The full LLM prompt string.
- * @param {object} schema           – Gemini response schema object.
+ * @param {object} schema           – The response schema object.
  * @param {object} [options]
  * @param {string} [options.model]           – Override preferred model name.
  * @param {number} [options.temperature]     – Sampling temperature (default 0.1).
  * @param {string} [options.systemInstruction] – Optional system instruction.
  * @param {string} [options.apiKey]          – Override API key.
- * @returns {Promise<object>} Parsed JSON response from Gemini.
+ * @returns {Promise<object>} Parsed JSON response from Groq.
  */
 async function generateStructuredData(prompt, schema, options = {}) {
   const { temperature = 0.1, systemInstruction, apiKey } = options;
@@ -136,41 +129,57 @@ async function generateStructuredData(prompt, schema, options = {}) {
   let lastErr;
 
   for (const modelName of modelsToTry) {
-    console.log(`[Gemini] Attempting analysis using model: ${modelName}`);
+    console.log(`[Groq] Attempting analysis using model: ${modelName}`);
 
-    const model = genAI.getGenerativeModel({
-      model: modelName,
-      systemInstruction: systemInstruction || undefined,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: schema,
-        temperature,
-      },
-    });
+    const key = groqApiKey || process.env.GROQ_API_KEY || process.env.LLM_API_KEY;
 
-    let result;
     try {
-      result = await withRetry(
+      const result = await withRetry(
         async () => {
-          const res = await geminiQueue.add(async () => {
-            return await model.generateContent(prompt);
+          return await groqQueue.add(async () => {
+            const systemPrompt = (systemInstruction || "You are a precise extraction engine.") +
+              "\nYou must return a JSON object conforming exactly to the following schema:\n" +
+              JSON.stringify(schema, null, 2);
+
+            const apiResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${key}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: modelName,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: prompt }
+                ],
+                response_format: { type: 'json_object' },
+                temperature: temperature
+              })
+            });
+
+            if (!apiResponse.ok) {
+              const text = await apiResponse.text();
+              throw new Error(`Groq API error (${apiResponse.status}): ${text}`);
+            }
+
+            metrics.recordAnalyzerAttempt();
+            return await apiResponse.json();
           });
-          metrics.recordGeminiRequest();
-          return res;
         },
         {
           maxRetries: 5,
           baseDelayMs: 1000,
           onRetry: ({ attempt, delay, error }) => {
             console.warn(
-              `[Gemini] Retry ${attempt}/5 for model ${modelName} after ${delay}ms: ${error}`
+              `[Groq] Retry ${attempt}/5 for model ${modelName} after ${delay}ms: ${error}`
             );
             metrics.recordAnalyzerRetry();
           },
         }
       );
 
-      const rawResponse = result.response.text();
+      const rawResponse = result.choices[0].message.content;
 
       let aiData;
       try {
@@ -180,28 +189,33 @@ async function generateStructuredData(prompt, schema, options = {}) {
           .trim();
         aiData = JSON.parse(cleaned);
       } catch (parseErr) {
-        throw new Error(`Malformed JSON: ${parseErr.message}`);
+        throw new Error(`Malformed JSON response: ${parseErr.message}`);
       }
 
-      // Successfully completed. Update active model for subsequent calls.
+      // Record tokens used
+      if (result.usage && result.usage.total_tokens) {
+        metrics.recordGroqTokens(result.usage.total_tokens);
+      }
+
       if (currentModel !== modelName) {
-        console.log(`[Gemini] Switched primary active model to: ${modelName}`);
+        console.log(`[Groq] Switched primary active model to: ${modelName}`);
         currentModel = modelName;
       }
       return aiData;
     } catch (err) {
-      console.warn(`[Gemini] Model ${modelName} failed: ${err.message}`);
+      console.warn(`[Groq] Model ${modelName} failed: ${err.message}`);
       lastErr = err;
 
       const lowerMsg = err.message.toLowerCase();
       const isQuotaOrRateLimit =
         lowerMsg.includes('429') ||
         lowerMsg.includes('quota') ||
-        lowerMsg.includes('too many requests');
+        lowerMsg.includes('too many requests') ||
+        lowerMsg.includes('rate limit');
 
       if (isQuotaOrRateLimit && modelName !== modelsToTry[modelsToTry.length - 1]) {
         console.warn(
-          `[Gemini] Quota exceeded for ${modelName}. Falling back to next available model...`
+          `[Groq] Quota/Rate limit exceeded for ${modelName}. Falling back to next available model...`
         );
         continue;
       } else {
@@ -210,15 +224,12 @@ async function generateStructuredData(prompt, schema, options = {}) {
     }
   }
 
-  throw new Error(`[Gemini] All fallback models failed. Last error: ${lastErr.message}`);
+  throw new Error(`[Groq] All fallback models failed. Last error: ${lastErr.message}`);
 }
 
-// ─── Test Helpers ─────────────────────────────────────────────────────────────
-
-/** Resets all module-level state. Only for testing. */
 function _resetForTesting() {
-  genAI = null;
-  currentModel = 'gemini-2.5-flash';
+  groqApiKey = null;
+  currentModel = 'llama-3.3-70b-versatile';
   supportedModelsCache = null;
 }
 

@@ -3,7 +3,8 @@ import os
 import subprocess
 import signal
 import time
-from ui.state import PREDEFINED_SCANS, get_session_status, save_running_processes, load_scan_history
+from ui.state import PREDEFINED_SCANS, get_session_status, save_running_processes, load_scan_history, is_demo_mode
+from ui.views.profiles import show_local_agent_download_modal
 
 def render_scans_view(running_instances, profiles):
     st.title("📡 Active Scanning Operations")
@@ -145,7 +146,9 @@ def render_scans_view(running_instances, profiles):
             global_sess_id = f"session_{selected_p_id}"
 
             if st.button("Launch Scan", type="primary", use_container_width=True):
-                if not global_scan_name:
+                if is_demo_mode():
+                    show_local_agent_download_modal()
+                elif not global_scan_name:
                     st.error("Please enter a name for this scan.")
                 else:
                     # Auto-suffix to avoid collision if running predefined/duplicate named scan
@@ -170,9 +173,25 @@ def render_scans_view(running_instances, profiles):
                     if global_phone:
                         cmd.extend(["--phone", global_phone])
 
+                    import json
+                    llm_chain = selected_profile.get("llm_chain")
+                    if not llm_chain:
+                        llm_chain = [
+                            {
+                                "provider": selected_profile.get("llm_provider", "Gemini"),
+                                "apiKey": selected_profile.get("llm_api_key", selected_profile.get("gemini_key", "")),
+                                "model": selected_profile.get("llm_model", "Auto")
+                            }
+                        ]
+
                     custom_env = os.environ.copy()
                     custom_env.update({
-                        "GEMINI_API_KEY": selected_profile["gemini_key"],
+                        "LLM_CHAIN": json.dumps(llm_chain),
+                        "LLM_PROVIDER": selected_profile.get("llm_provider", "Gemini"),
+                        "LLM_API_KEY": selected_profile.get("llm_api_key", selected_profile.get("gemini_key", "")),
+                        "LLM_MODEL": selected_profile.get("llm_model", "Auto"),
+                        "GEMINI_API_KEY": selected_profile.get("gemini_key", "") or selected_profile.get("llm_api_key", ""),
+                        "GROQ_API_KEY": selected_profile.get("llm_api_key", "") if selected_profile.get("llm_provider") == "Groq" else "",
                         "JINA_API_KEY": selected_profile.get("jina_key", ""),
                         "APPLICANT_NAME": selected_profile["applicant_name"],
                         "APPLICANT_NATIONALITY": selected_profile["applicant_nationality"],

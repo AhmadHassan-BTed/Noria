@@ -1,14 +1,71 @@
 import streamlit as st
 import time
+import urllib.request
+import json
 from ui.state import save_profiles
+
+def fetch_gemini_models(api_key):
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+        req = urllib.request.Request(url, headers={"User-Agent": "Noria-App"})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode())
+            models = [
+                m["name"].replace("models/", "")
+                for m in data.get("models", [])
+                if "generateContent" in m.get("supportedGenerationMethods", [])
+                and "gemini" in m["name"].lower()
+            ]
+            return models
+    except Exception as e:
+        return []
+
+def fetch_groq_models(api_key):
+    try:
+        url = "https://api.groq.com/openai/v1/models"
+        req = urllib.request.Request(
+            url,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "User-Agent": "Noria-App"
+            }
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode())
+            models = [
+                m["id"]
+                for m in data.get("data", [])
+                if m.get("active", True)
+            ]
+            return models
+    except Exception as e:
+        return []
 
 def render_profile_form_view(editing_profile, profiles):
     is_new = (editing_profile == "new")
     
+    if "editing_llms" not in st.session_state or st.session_state.get("llms_profile_id") != editing_profile:
+        st.session_state.llms_profile_id = editing_profile
+        if is_new:
+            st.session_state.editing_llms = [
+                {"provider": "Gemini", "api_key": "", "model": "Auto"}
+            ]
+        else:
+            p_info = profiles[editing_profile]
+            if "llm_chain" in p_info and p_info["llm_chain"]:
+                st.session_state.editing_llms = [dict(item) for item in p_info["llm_chain"]]
+            else:
+                st.session_state.editing_llms = [
+                    {
+                        "provider": p_info.get("llm_provider", "Gemini"),
+                        "api_key": p_info.get("llm_api_key", p_info.get("gemini_key", "")),
+                        "model": p_info.get("llm_model", "Auto")
+                    }
+                ]
+
     if is_new:
         st.markdown("## ➕ Create New Applicant Profile")
         default_name = ""
-        default_gemini = ""
         default_jina = ""
         default_app_name = ""
         default_app_nationality = ""
@@ -19,7 +76,6 @@ def render_profile_form_view(editing_profile, profiles):
         p_info = profiles[editing_profile]
         st.markdown(f"## ✏️ Edit Profile: {p_info['name']}")
         default_name = p_info["name"]
-        default_gemini = p_info["gemini_key"]
         default_jina = p_info.get("jina_key", "")
         default_app_name = p_info["applicant_name"]
         default_app_nationality = p_info["applicant_nationality"]
@@ -38,15 +94,82 @@ def render_profile_form_view(editing_profile, profiles):
         
         with form_col1:
             st.markdown("##### 🔑 API Authentication")
-            gemini_key = st.text_input(
-                "Google Gemini API Key",
-                value=default_gemini,
-                type="password"
-            )
+            st.markdown("##### 🔑 LLM Provider Chain (Fallbacks)")
+            st.caption("Configure one or more LLM providers. If a provider fails (e.g. rate limits or quota), the system automatically attempts the next fallback in the list.")
+
+            new_llms = []
+            for idx, llm_cfg in enumerate(st.session_state.editing_llms):
+                with st.container(border=True):
+                    col_prov, col_key, col_model, col_del = st.columns([1.2, 2.5, 1.5, 0.5])
+                    with col_prov:
+                        prov = st.selectbox(
+                            "Provider",
+                            options=["Gemini", "Groq"],
+                            index=0 if llm_cfg["provider"] == "Gemini" else 1,
+                            key=f"llm_prov_{idx}"
+                        )
+                    with col_key:
+                        key_val = st.text_input(
+                            "API Key",
+                            value=llm_cfg["api_key"],
+                            type="password",
+                            key=f"llm_key_{idx}"
+                        )
+                    with col_model:
+                        models = ["Auto"]
+                        if key_val.strip():
+                            cache_key = f"models_{prov}_{key_val.strip()[:10]}"
+                            if cache_key in st.session_state:
+                                fetched_models = st.session_state[cache_key]
+                            else:
+                                with st.spinner("Loading..."):
+                                    if prov == "Gemini":
+                                        fetched_models = fetch_gemini_models(key_val.strip())
+                                    else:
+                                        fetched_models = fetch_groq_models(key_val.strip())
+                                    st.session_state[cache_key] = fetched_models
+                            
+                            if fetched_models:
+                                models.extend(fetched_models)
+                        
+                        default_model = llm_cfg["model"]
+                        def_idx = models.index(default_model) if default_model in models else 0
+                        model_selected = st.selectbox(
+                            "Model",
+                            options=models,
+                            index=def_idx,
+                            key=f"llm_model_{idx}"
+                        )
+                    with col_del:
+                        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+                        if st.button("🗑️", key=f"llm_del_{idx}", help="Remove this LLM from chain", use_container_width=True):
+                            st.session_state.editing_llms.pop(idx)
+                            st.rerun()
+                    
+                    new_llms.append({
+                        "provider": prov,
+                        "api_key": key_val,
+                        "model": model_selected
+                    })
+
+            st.session_state.editing_llms = new_llms
+
+            col_add_space, col_add_btn = st.columns([4, 1.5])
+            with col_add_btn:
+                if st.button("➕ Add LLM", use_container_width=True):
+                    st.session_state.editing_llms.append({
+                        "provider": "Gemini",
+                        "api_key": "",
+                        "model": "Auto"
+                    })
+                    st.rerun()
+
+            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
             jina_key = st.text_input(
                 "Jina Reader API Key (Optional)",
                 value=default_jina,
-                type="password"
+                type="password",
+                key=f"profile_jina_key_{editing_profile}"
             )
             
             st.markdown("##### 🔔 Notification Settings")
@@ -142,10 +265,15 @@ def render_profile_form_view(editing_profile, profiles):
                         if p_id in profiles:
                             st.error("A profile with this name already exists.")
                         else:
+                            primary_llm = st.session_state.editing_llms[0] if st.session_state.editing_llms else {"provider": "Gemini", "api_key": "", "model": "Auto"}
                             profiles[p_id] = {
                                 "id": p_id,
                                 "name": profile_display_name,
-                                "gemini_key": gemini_key,
+                                "llm_chain": st.session_state.editing_llms,
+                                "llm_provider": primary_llm["provider"],
+                                "llm_api_key": primary_llm["api_key"],
+                                "llm_model": primary_llm["model"],
+                                "gemini_key": primary_llm["api_key"] if primary_llm["provider"] == "Gemini" else "",
                                 "jina_key": jina_key,
                                 "applicant_name": app_name,
                                 "applicant_nationality": app_nationality,
@@ -166,10 +294,15 @@ def render_profile_form_view(editing_profile, profiles):
                         st.error("Please enter a Profile name.")
                     else:
                         existing_devices = profiles[editing_profile].get("devices", {})
+                        primary_llm = st.session_state.editing_llms[0] if st.session_state.editing_llms else {"provider": "Gemini", "api_key": "", "model": "Auto"}
                         profiles[editing_profile] = {
                             "id": editing_profile,
                             "name": profile_display_name,
-                            "gemini_key": gemini_key,
+                            "llm_chain": st.session_state.editing_llms,
+                            "llm_provider": primary_llm["provider"],
+                            "llm_api_key": primary_llm["api_key"],
+                            "llm_model": primary_llm["model"],
+                            "gemini_key": primary_llm["api_key"] if primary_llm["provider"] == "Gemini" else "",
                             "jina_key": jina_key,
                             "applicant_name": app_name,
                             "applicant_nationality": app_nationality,

@@ -74,7 +74,7 @@ describe('Metrics Utility', () => {
     expect(report).toContain('Attempts:       1');
     expect(report).toContain('Matches:        1');
     expect(report).toContain('Sends:          1');
-    expect(report).toContain('Gemini Tokens:  1000');
+    expect(report).toContain('LLM Tokens:     1000');
   });
 
   test('should expose a default shared metrics instance', () => {

@@ -57,7 +57,16 @@ class Metrics {
   recordGeminiTokens(count) {
     this.gemini.tokens += count;
   }
+  recordGroqTokens(count) {
+    this.gemini.tokens += count;
+  }
+  recordLLMTokens(count) {
+    this.gemini.tokens += count;
+  }
   recordGeminiRequest() {
+    this.gemini.requests++;
+  }
+  recordAnalyzerRequest() {
     this.gemini.requests++;
   }
   recordGeminiError() {
@@ -85,7 +94,7 @@ class Metrics {
 ║ ANALYZER                                      ║
 ║   Attempts:  ${String(this.analyzer.attempts).padStart(6)}  Matches:   ${String(this.analyzer.matches).padStart(6)} ║
 ║   Rejects:   ${String(this.analyzer.rejects).padStart(6)}  Failures:  ${String(this.analyzer.failures).padStart(6)} ║
-║   Retries:   ${String(this.analyzer.retries).padStart(6)}  Gemini Tokens: ${String(this.gemini.tokens).padStart(5)} ║
+║   Retries:   ${String(this.analyzer.retries).padStart(6)}  LLM Tokens:    ${String(this.gemini.tokens).padStart(5)} ║
 ╠═══════════════════════════════════════════════╣
 ║ WHATSAPP                                      ║
 ║   Sends:     ${String(this.whatsapp.sends).padStart(6)}  Failures:  ${String(this.whatsapp.failures).padStart(6)} ║

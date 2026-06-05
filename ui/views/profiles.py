@@ -9,9 +9,32 @@ from ui.state import (
     save_profiles,
     save_running_processes,
     get_session_status,
-    PREDEFINED_SCANS
+    PREDEFINED_SCANS,
+    is_demo_mode
 )
 from ui.components.device_card import render_device_linker_fragment, render_linked_devices_fragment
+
+@st.dialog("🚀 Connect Your Local Noria Agent")
+def show_local_agent_download_modal():
+    st.markdown("""
+    ### Noria is a Private, On-Device Agent
+    To ensure your WhatsApp data remains private and runs 24/7 without cloud server interruptions, the scanning engine runs directly on your computer.
+    
+    1. **Download Noria Local Agent**
+       Get the pre-packaged executable or the repository launcher (no installation of Python or Git required for the executable).
+       
+    2. **Run the Executable**
+       Double-click to start Noria locally. It will automatically open the Control Center in your browser.
+       
+    3. **Scan QR Code & Monitor**
+       Link your device and watch it work!
+    """)
+    st.link_button(
+        "⬇️ Download Noria for Windows (.bat / Release)",
+        url="https://github.com/AhmadHassan-BTed/Noria",
+        use_container_width=True,
+        type="primary"
+    )
 
 def render_profiles_view(profiles, running_instances):
     st.title("👤 Applicant Profiles Directory")
@@ -67,13 +90,19 @@ def render_profiles_view(profiles, running_instances):
                 
                 with details_col:
                     st.markdown("#### Profile Parameters")
-                    has_gemini = "Yes" if p_info.get("gemini_key") else "No"
+                    llm_chain = p_info.get("llm_chain", [])
+                    if llm_chain:
+                        llm_desc = f"{len(llm_chain)} LLM(s) ({', '.join([item.get('provider') for item in llm_chain])})"
+                    else:
+                        llm_prov = p_info.get("llm_provider", "Gemini")
+                        llm_mdl = p_info.get("llm_model", "Auto")
+                        llm_desc = f"{llm_prov} ({llm_mdl})"
                     has_jina = "Yes" if p_info.get("jina_key") else "No"
                     st.markdown(f"""
                     * **{p_info.get('applicant_name', 'Not set')}** · {p_info.get('applicant_nationality', 'Not set')} · {p_info.get('applicant_degree_tier', 'Not set')}
                     * **Fields:** `{p_info.get('applicant_target_fields', 'Not set')}`
                     * **Research:** `{p_info.get('applicant_focus', p_info.get('applicant_research_focus', 'Not set'))}`
-                    * **APIs:** Gemini: `{has_gemini}` | Jina: `{has_jina}`
+                    * **LLM:** {llm_desc} | Jina: `{has_jina}`
                     """)
                     
                 with status_col:
@@ -103,55 +132,73 @@ def render_profiles_view(profiles, running_instances):
                         
 
                         if st.button("🔗 Link WhatsApp Device", key=f"link_device_btn_{p_id}", use_container_width=True, type="primary"):
-                            # Spawn background helper process to retrieve linking details
-                            linker_sess_id = f"session_{p_id}_linker_{int(time.time())}"
-                            cmd = [
-                                "node", "src/launcher.js",
-                                "--template", "scholarships",
-                                "--instance", linker_sess_id,
-                                "--sessionId", linker_sess_id
-                            ]
-                            
-                            custom_env = os.environ.copy()
-                            custom_env.update({
-                                "GEMINI_API_KEY": p_info["gemini_key"],
-                                "JINA_API_KEY": p_info.get("jina_key", ""),
-                                "APPLICANT_NAME": p_info["applicant_name"],
-                                "APPLICANT_NATIONALITY": p_info["applicant_nationality"],
-                                "APPLICANT_DEGREE_TIER": p_info["applicant_degree_tier"],
-                                "APPLICANT_TARGET_FIELDS": p_info["applicant_target_fields"],
-                                "APPLICANT_RESEARCH_FOCUS": p_info.get("applicant_focus", "")
-                            })
-                            
-                            try:
-                                daemon_log = open(f"data/daemon-{linker_sess_id}.log", "a", encoding="utf-8")
-                                p = subprocess.Popen(
-                                    cmd,
-                                    stdout=daemon_log,
-                                    stderr=subprocess.STDOUT,
-                                    env=custom_env,
-                                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0
-                                )
+                            if is_demo_mode():
+                                show_local_agent_download_modal()
+                            else:
+                                # Spawn background helper process to retrieve linking details
+                                linker_sess_id = f"session_{p_id}_linker_{int(time.time())}"
+                                cmd = [
+                                    "node", "src/launcher.js",
+                                    "--template", "scholarships",
+                                    "--instance", linker_sess_id,
+                                    "--sessionId", linker_sess_id
+                                ]
                                 
-                                running_instances[linker_sess_id] = {
-                                    "pid": p.pid,
-                                    "template": "scholarships",
-                                    "category": "Linker",
-                                    "sessionId": linker_sess_id,
-                                    "profileId": p_id,
-                                    "profileName": p_info["name"],
-                                    "channels": "",
-                                    "phone": "",
-                                    "startedAt": time.strftime("%Y-%m-%d %H:%M:%S")
-                                }
-                                save_running_processes(running_instances)
+                                import json
+                                llm_chain = p_info.get("llm_chain")
+                                if not llm_chain:
+                                    llm_chain = [
+                                        {
+                                            "provider": p_info.get("llm_provider", "Gemini"),
+                                            "apiKey": p_info.get("llm_api_key", p_info.get("gemini_key", "")),
+                                            "model": p_info.get("llm_model", "Auto")
+                                        }
+                                    ]
+                                custom_env = os.environ.copy()
+                                custom_env.update({
+                                    "LLM_CHAIN": json.dumps(llm_chain),
+                                    "LLM_PROVIDER": p_info.get("llm_provider", "Gemini"),
+                                    "LLM_API_KEY": p_info.get("llm_api_key", p_info.get("gemini_key", "")),
+                                    "LLM_MODEL": p_info.get("llm_model", "Auto"),
+                                    "GEMINI_API_KEY": p_info.get("gemini_key", "") or p_info.get("llm_api_key", ""),
+                                    "GROQ_API_KEY": p_info.get("llm_api_key", "") if p_info.get("llm_provider") == "Groq" else "",
+                                    "JINA_API_KEY": p_info.get("jina_key", ""),
+                                    "APPLICANT_NAME": p_info["applicant_name"],
+                                    "APPLICANT_NATIONALITY": p_info["applicant_nationality"],
+                                    "APPLICANT_DEGREE_TIER": p_info["applicant_degree_tier"],
+                                    "APPLICANT_TARGET_FIELDS": p_info["applicant_target_fields"],
+                                    "APPLICANT_RESEARCH_FOCUS": p_info.get("applicant_focus", "")
+                                })
                                 
-                                st.session_state.linking_profile = p_id
-                                st.session_state.linker_sess_id = linker_sess_id
-                                st.session_state.linker_progress = 5
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Failed to spawn linker socket: {e}")
+                                try:
+                                    daemon_log = open(f"data/daemon-{linker_sess_id}.log", "a", encoding="utf-8")
+                                    p = subprocess.Popen(
+                                        cmd,
+                                        stdout=daemon_log,
+                                        stderr=subprocess.STDOUT,
+                                        env=custom_env,
+                                        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0
+                                    )
+                                    
+                                    running_instances[linker_sess_id] = {
+                                        "pid": p.pid,
+                                        "template": "scholarships",
+                                        "category": "Linker",
+                                        "sessionId": linker_sess_id,
+                                        "profileId": p_id,
+                                        "profileName": p_info["name"],
+                                        "channels": "",
+                                        "phone": "",
+                                        "startedAt": time.strftime("%Y-%m-%d %H:%M:%S")
+                                    }
+                                    save_running_processes(running_instances)
+                                    
+                                    st.session_state.linking_profile = p_id
+                                    st.session_state.linker_sess_id = linker_sess_id
+                                    st.session_state.linker_progress = 5
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Failed to spawn linker socket: {e}")
                 
 
 
@@ -259,8 +306,8 @@ def render_profiles_view(profiles, running_instances):
                                 
                         if not matching_instances:
 
-                            if not p_info.get("gemini_key"):
-                                st.error("⚠️ **Gemini API Key is missing!** You must configure a Gemini API key for this profile before you can activate a scan. Please click **Edit** at the top of the card to configure your API keys.")
+                            if not p_info.get("llm_api_key") and not p_info.get("gemini_key"):
+                                st.error("⚠️ **LLM API Key is missing!** You must configure an API key for this profile before you can activate a scan. Please click **Edit** at the top of the card to configure your API keys.")
                             elif not devices:
                                 st.warning("You must link a WhatsApp device to this profile first before you can activate this scan.")
                             else:
@@ -275,93 +322,111 @@ def render_profiles_view(profiles, running_instances):
                                 with activation_col2:
                                     st.write(" ")
                                     if st.button("🚀 Activate Scan", key=f"btn_activate_{p_id}_{active_focus}", type="primary", use_container_width=True):
-                                        device_sess_id = f"session_{p_id}_dev_{selected_device_phone}"
-                                        actual_scan_name = active_focus
-                                        
-                                        # Auto-suffix name if conflict occurs
-                                        if actual_scan_name in running_instances:
-                                            suffix = 2
-                                            candidate_name = f"{actual_scan_name}_{suffix}"
-                                            while candidate_name in running_instances:
-                                                suffix += 1
+                                        if is_demo_mode():
+                                            show_local_agent_download_modal()
+                                        else:
+                                            device_sess_id = f"session_{p_id}_dev_{selected_device_phone}"
+                                            actual_scan_name = active_focus
+                                            
+                                            # Auto-suffix name if conflict occurs
+                                            if actual_scan_name in running_instances:
+                                                suffix = 2
                                                 candidate_name = f"{actual_scan_name}_{suffix}"
-                                            actual_scan_name = candidate_name
+                                                while candidate_name in running_instances:
+                                                    suffix += 1
+                                                    candidate_name = f"{actual_scan_name}_{suffix}"
+                                                actual_scan_name = candidate_name
+                                                
+                                            cmd = [
+                                                "node", "src/launcher.js",
+                                                "--template", scan_cfg["template"],
+                                                "--instance", actual_scan_name,
+                                                "--sessionId", device_sess_id
+                                            ]
                                             
-                                        cmd = [
-                                            "node", "src/launcher.js",
-                                            "--template", scan_cfg["template"],
-                                            "--instance", actual_scan_name,
-                                            "--sessionId", device_sess_id
-                                        ]
-                                        
-                                        # Pass sourceMode, channels, groups, and chats if present
-                                        src_mode = scan_cfg.get("sourceMode")
-                                        if src_mode:
-                                            cmd.extend(["--sourceMode", src_mode])
-                                        if scan_cfg.get("channels"):
-                                            cmd.extend(["--channels", scan_cfg["channels"]])
-                                        if scan_cfg.get("groups"):
-                                            cmd.extend(["--groups", scan_cfg["groups"]])
-                                        if scan_cfg.get("chats"):
-                                            cmd.extend(["--chats", scan_cfg["chats"]])
-                                            
-                                        notification_target = p_info.get("target_phone") or selected_device_phone
-                                        cmd.extend(["--phone", notification_target])
-
-                                        custom_env = os.environ.copy()
-                                        custom_env.update({
-                                            "GEMINI_API_KEY": p_info["gemini_key"],
-                                            "JINA_API_KEY": p_info.get("jina_key", ""),
-                                            "APPLICANT_NAME": p_info["applicant_name"],
-                                            "APPLICANT_NATIONALITY": p_info["applicant_nationality"],
-                                            "APPLICANT_DEGREE_TIER": p_info["applicant_degree_tier"],
-                                            "APPLICANT_TARGET_FIELDS": p_info["applicant_target_fields"],
-                                            "APPLICANT_RESEARCH_FOCUS": p_info.get("applicant_focus", "")
-                                        })
-                                        # Reset the status file to prevent rendering stale previous statuses
-                                        status_path = f"data/status-{device_sess_id}.json"
-                                        try:
-                                            with open(status_path, "w") as f:
-                                                json.dump({
-                                                    "status": "CONNECTING",
-                                                    "reason": "Starting background daemon..."
-                                                 }, f)
-                                        except Exception:
-                                            pass
-
-                                        try:
-                                            daemon_log = open(f"data/daemon-{actual_scan_name}.log", "a", encoding="utf-8")
-                                            p = subprocess.Popen(
-                                                cmd,
-                                                stdout=daemon_log,
-                                                stderr=subprocess.STDOUT,
-                                                env=custom_env,
-                                                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0
-                                            )
-                                            
-                                            running_instances[actual_scan_name] = {
-                                                "pid": p.pid,
-                                                "template": scan_cfg["template"],
-                                                "category": scan_cfg["category"],
-                                                "sessionId": device_sess_id,
-                                                "profileId": p_id,
-                                                "profileName": p_info["name"],
-                                                "channels": scan_cfg.get("channels", ""),
-                                                "groups": scan_cfg.get("groups", ""),
-                                                "chats": scan_cfg.get("chats", ""),
-                                                "sourceMode": scan_cfg.get("sourceMode", "individual,groups,channels"),
-                                                "phone": notification_target,
-                                                "devicePhone": selected_device_phone,
-                                                "startedAt": time.strftime("%Y-%m-%d %H:%M:%S")
-                                            }
-                                            save_running_processes(running_instances)
-                                            
-                                            st.success(f"Scan '{actual_scan_name}' activated on device +{selected_device_phone}.")
-                                            st.session_state.focused_scan[p_id] = None
-                                            time.sleep(1)
-                                            st.rerun()
-                                        except Exception as e:
-                                            st.error(f"Failed to launch scan process: {e}")
+                                            # Pass sourceMode, channels, groups, and chats if present
+                                            src_mode = scan_cfg.get("sourceMode")
+                                            if src_mode:
+                                                cmd.extend(["--sourceMode", src_mode])
+                                            if scan_cfg.get("channels"):
+                                                cmd.extend(["--channels", scan_cfg["channels"]])
+                                            if scan_cfg.get("groups"):
+                                                cmd.extend(["--groups", scan_cfg["groups"]])
+                                            if scan_cfg.get("chats"):
+                                                cmd.extend(["--chats", scan_cfg["chats"]])
+                                                
+                                            notification_target = p_info.get("target_phone") or selected_device_phone
+                                            cmd.extend(["--phone", notification_target])
+     
+                                            import json
+                                            llm_chain = p_info.get("llm_chain")
+                                            if not llm_chain:
+                                                llm_chain = [
+                                                    {
+                                                        "provider": p_info.get("llm_provider", "Gemini"),
+                                                        "apiKey": p_info.get("llm_api_key", p_info.get("gemini_key", "")),
+                                                        "model": p_info.get("llm_model", "Auto")
+                                                    }
+                                                ]
+                                            custom_env = os.environ.copy()
+                                            custom_env.update({
+                                                "LLM_CHAIN": json.dumps(llm_chain),
+                                                "LLM_PROVIDER": p_info.get("llm_provider", "Gemini"),
+                                                "LLM_API_KEY": p_info.get("llm_api_key", p_info.get("gemini_key", "")),
+                                                "LLM_MODEL": p_info.get("llm_model", "Auto"),
+                                                "GEMINI_API_KEY": p_info.get("gemini_key", "") or p_info.get("llm_api_key", ""),
+                                                "GROQ_API_KEY": p_info.get("llm_api_key", "") if p_info.get("llm_provider") == "Groq" else "",
+                                                "JINA_API_KEY": p_info.get("jina_key", ""),
+                                                "APPLICANT_NAME": p_info["applicant_name"],
+                                                "APPLICANT_NATIONALITY": p_info["applicant_nationality"],
+                                                "APPLICANT_DEGREE_TIER": p_info["applicant_degree_tier"],
+                                                "APPLICANT_TARGET_FIELDS": p_info["applicant_target_fields"],
+                                                "APPLICANT_RESEARCH_FOCUS": p_info.get("applicant_focus", "")
+                                            })
+                                            # Reset the status file to prevent rendering stale previous statuses
+                                            status_path = f"data/status-{device_sess_id}.json"
+                                            try:
+                                                with open(status_path, "w") as f:
+                                                    json.dump({
+                                                        "status": "CONNECTING",
+                                                        "reason": "Starting background daemon..."
+                                                     }, f)
+                                            except Exception:
+                                                pass
+     
+                                            try:
+                                                daemon_log = open(f"data/daemon-{actual_scan_name}.log", "a", encoding="utf-8")
+                                                p = subprocess.Popen(
+                                                    cmd,
+                                                    stdout=daemon_log,
+                                                    stderr=subprocess.STDOUT,
+                                                    env=custom_env,
+                                                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0
+                                                )
+                                                
+                                                running_instances[actual_scan_name] = {
+                                                    "pid": p.pid,
+                                                    "template": scan_cfg["template"],
+                                                    "category": scan_cfg["category"],
+                                                    "sessionId": device_sess_id,
+                                                    "profileId": p_id,
+                                                    "profileName": p_info["name"],
+                                                    "channels": scan_cfg.get("channels", ""),
+                                                    "groups": scan_cfg.get("groups", ""),
+                                                    "chats": scan_cfg.get("chats", ""),
+                                                    "sourceMode": scan_cfg.get("sourceMode", "individual,groups,channels"),
+                                                    "phone": notification_target,
+                                                    "devicePhone": selected_device_phone,
+                                                    "startedAt": time.strftime("%Y-%m-%d %H:%M:%S")
+                                                }
+                                                save_running_processes(running_instances)
+                                                
+                                                st.success(f"Scan '{actual_scan_name}' activated on device +{selected_device_phone}.")
+                                                st.session_state.focused_scan[p_id] = None
+                                                time.sleep(1)
+                                                st.rerun()
+                                            except Exception as e:
+                                                st.error(f"Failed to launch scan process: {e}")
                                             
                 # Render Inline Add Scan Configurator Form if open
                 if add_scan_open:

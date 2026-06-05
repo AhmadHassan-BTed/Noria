@@ -19,6 +19,8 @@ const { WhatsAppListener } = require('../infrastructure/messaging/whatsapp-liste
 
 // ─── Infrastructure: LLM Adapter (stateless functions) ──────────────────────
 const geminiAdapter = require('../infrastructure/llm/gemini');
+const groqAdapter = require('../infrastructure/llm/groq');
+const fallbackAdapter = require('../infrastructure/llm/fallback');
 
 // ─── Infrastructure: Scraper Adapters (stateless functions) ─────────────────
 const jinaScraper = require('../infrastructure/scraper/jina');
@@ -40,6 +42,8 @@ function initialize() {
 
   // ── LLM Adapters ──────────────────────────────────────────────────────────
   registry.registerAdapter('llm', 'gemini', geminiAdapter);
+  registry.registerAdapter('llm', 'groq', groqAdapter);
+  registry.registerAdapter('llm', 'fallback', fallbackAdapter);
   console.log('[Registry] LLM adapters registered');
 
   // ── Scraper Adapters ──────────────────────────────────────────────────────

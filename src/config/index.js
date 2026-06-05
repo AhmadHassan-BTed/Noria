@@ -53,8 +53,15 @@ class Config {
   validate() {
     const errors = [];
 
-    if (!this.env.GEMINI_API_KEY) {
-      errors.push('GEMINI_API_KEY is required');
+    const provider = (this.env.LLM_PROVIDER || 'gemini').toLowerCase();
+    if (provider === 'groq') {
+      if (!this.env.GROQ_API_KEY && !this.env.LLM_API_KEY) {
+        errors.push('GROQ_API_KEY or LLM_API_KEY is required when using Groq provider');
+      }
+    } else {
+      if (!this.env.GEMINI_API_KEY && !this.env.LLM_API_KEY) {
+        errors.push('GEMINI_API_KEY or LLM_API_KEY is required when using Gemini provider');
+      }
     }
 
     if (!this.env.NOTIFICATION_TARGET) {

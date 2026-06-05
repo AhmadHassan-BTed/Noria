@@ -153,13 +153,15 @@ class PipelineOrchestrator {
       const analyzerConfig = stages.analyze;
       const analyzerName = analyzerConfig.plugin || analyzerConfig;
 
-      // Map analyzer plugin name to LLM adapter name
-      const llmName = analyzerName.replace('-analyzer', '');
+      // Map analyzer plugin name to LLM adapter name dynamically if configured
+      const providerEnv = (process.env.LLM_PROVIDER || '').toLowerCase();
+      const hasChain = !!process.env.LLM_CHAIN;
+      const llmName = hasChain ? 'fallback' : ((providerEnv === 'gemini' || providerEnv === 'groq') ? providerEnv : analyzerName.replace('-analyzer', ''));
       services.llm = registry.getAdapter('llm', llmName);
 
       // Store analysis config for later use
       services.llmConfig = {
-        model: customConfig.analyze?.model || analyzerConfig.config?.model,
+        model: process.env.LLM_MODEL || customConfig.analyze?.model || analyzerConfig.config?.model,
         temperature: customConfig.analyze?.temperature || analyzerConfig.config?.temperature,
       };
     }

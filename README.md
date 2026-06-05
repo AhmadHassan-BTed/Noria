@@ -185,6 +185,16 @@ Start the orchestrated pipelines:
 npm start
 ```
 
+### 5. Noria Dashboard (Control Center UI)
+For a visual administration dashboard, run the Streamlit-based **Noria Control Center** using our one-click launchers:
+
+* **Windows Executable**: Double-click **[Noria.exe](file:///p:/noria/dist/Noria.exe)** inside the `dist/` folder.
+* **Windows Command Launcher**: Run **[run_noria.bat](file:///p:/noria/run_noria.bat)**.
+* **macOS / Linux**: Run **[run_noria.sh](file:///p:/noria/run_noria.sh)** in your terminal (make it executable first: `chmod +x run_noria.sh`).
+
+This launcher automatically validates/installs all dependencies, starts the Streamlit server, and opens the interface at `http://localhost:8501` in your browser. From the dashboard, you can visually create applicant profiles, link WhatsApp accounts by scanning QR codes, configure and trigger scans, and inspect parsed opportunities in real-time.
+
+
 ---
 
 ## 🧪 Developer Workflow & Commands

@@ -1,4 +1,4 @@
-.PHONY: help install dev start test lint format clean docker-build docker-up docker-down
+.PHONY: help install dev start test lint format clean docker-build docker-up docker-down build-exe
 
 help:
 	@echo "Noria — Development Commands"
@@ -11,6 +11,7 @@ help:
 	@echo "  make dev              Start development server (auto-reload)"
 	@echo "  make start            Start production server"
 	@echo "  make build            Build for production"
+	@echo "  make build-exe        Build Noria.exe standalone executable (Windows)"
 	@echo ""
 	@echo "Quality:"
 	@echo "  make lint             Run ESLint"
@@ -44,6 +45,9 @@ start:
 
 build:
 	npm run build
+
+build-exe:
+	npm run build:exe
 
 lint:
 	npm run lint

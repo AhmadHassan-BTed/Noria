@@ -10,6 +10,14 @@ PROCESS_FILE = "data/processes.json"
 PROFILE_FILE = "data/profiles.json"
 CREATED_SCANS_FILE = "data/created_scans.json"
 
+def is_demo_mode():
+    return (
+        os.environ.get("NORIA_MODE") == "demo" or
+        "SPACE_ID" in os.environ or
+        "STREAMLIT_SHARE_UUID" in os.environ or
+        os.environ.get("HOSTNAME") == "streamlit"
+    )
+
 PREDEFINED_SCANS = {
     "daad_scholarships": {
         "name": "DAAD Germany Scholarships",
