@@ -624,9 +624,14 @@ streamlit run app.py
         /* =============================================================
            INPUTS & FORM FIELDS
            ============================================================= */
-        div[data-baseweb="input"], div[data-baseweb="textarea"], div[data-baseweb="select"] {
-            background-color: var(--bg-level-2) !important;
-            border: 1px solid var(--border-level-1) !important;
+        div[data-baseweb="input"], 
+        div[data-baseweb="textarea"], 
+        div[data-baseweb="select"],
+        div[data-testid="stSelectbox"] > div,
+        div[data-testid="stTextArea"] > div,
+        div[data-testid="stTextInput"] > div {
+            background-color: var(--bg-level-3) !important;
+            border: 1px solid var(--border-level-2) !important;
             border-radius: var(--radius-sm) !important;
             color: var(--text-color) !important;
         }
@@ -635,22 +640,7 @@ streamlit run app.py
             background-color: transparent !important;
         }
 
-        /* Inputs inside Level 2 */
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="input"],
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-baseweb="input"],
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="textarea"],
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-baseweb="textarea"],
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="select"],
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-baseweb="select"],
-        div.block-container > div[data-testid="stVerticalBlock"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="input"],
-        div.block-container > div[data-testid="stVerticalBlock"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-baseweb="input"],
-        div.block-container > div[data-testid="stVerticalBlock"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="textarea"],
-        div.block-container > div[data-testid="stVerticalBlock"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-baseweb="textarea"],
-        div.block-container > div[data-testid="stVerticalBlock"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="select"],
-        div.block-container > div[data-testid="stVerticalBlock"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-baseweb="select"] {
-            background-color: var(--bg-level-3) !important;
-            border-color: var(--border-level-2) !important;
-        }
+        /* Inputs inside Level 2 — Unused, unified styling is now applied globally */
 
         input, textarea, select {
             color: var(--text-color) !important;
