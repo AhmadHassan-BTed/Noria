@@ -33,21 +33,21 @@ Opportunities define careers, yet discovery remains a chaotic manual process. No
   <tr>
     <td align="center" width="50%">
       <img src="docs/images/Applicant_Profiles.png" alt="Applicant Profiles Directory" />
-      <br /><sub><b>Applicant Profiles Directory</b> — manage profiles, linked devices, scan configs, and WhatsApp connections</sub>
+      <br /><sub><b>Applicant Profiles Directory</b> - manage profiles, linked devices, scan configs, and WhatsApp connections</sub>
     </td>
     <td align="center" width="50%">
       <img src="docs/images/Opportunity_Scans.png" alt="Active Scanning Operations" />
-      <br /><sub><b>Active Scanning Operations</b> — launch scans, select predefined pipelines, and monitor the live opportunity feed</sub>
+      <br /><sub><b>Active Scanning Operations</b> - launch scans, select predefined pipelines, and monitor the live opportunity feed</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
       <img src="docs/images/Profile_Edit.png" alt="Profile Editor" />
-      <br /><sub><b>Profile Editor</b> — configure LLM provider chain, API keys, applicant parameters, and notification targets</sub>
+      <br /><sub><b>Profile Editor</b> - configure LLM provider chain, API keys, applicant parameters, and notification targets</sub>
     </td>
     <td align="center" width="50%">
       <img src="docs/images/System_Settings.png" alt="Control Center Settings" />
-      <br /><sub><b>Control Center Settings</b> — Windows startup toggle, local data retention, and full application reset</sub>
+      <br /><sub><b>Control Center Settings</b> - Windows startup toggle, local data retention, and full application reset</sub>
     </td>
   </tr>
 </table>
@@ -85,7 +85,7 @@ graph TD
         Messaging["messaging/ <br> (WhatsApp Sender & Listener)"]:::infra
     end
 
-    subgraph UI ["ui/ + app.py (Control Center — Streamlit)"]
+    subgraph UI ["ui/ + app.py (Control Center - Streamlit)"]
         ControlCenter["app.py <br> (Entry Point)"]:::config
         Views["ui/views/ <br> (Profile, Scans, Settings)"]:::config
         Styles["ui/styles.py <br> (Dark Theme CSS)"]:::config
@@ -223,7 +223,7 @@ Create a `.env` file from the template:
 ```bash
 cp .env.example .env
 ```
-Provide the required keys — use Gemini, Groq, or both:
+Provide the required keys - use Gemini, Groq, or both:
 ```env
 # LLM providers (use one or both)
 GEMINI_API_KEY=your_gemini_api_key    # https://aistudio.google.com/
@@ -239,7 +239,7 @@ NOTIFICATION_TARGET=+923001234567
 ACTIVE_PIPELINES=scholarships,jobs
 ```
 
-> **Applicant profiles** (name, nationality, degree, fields) are created and managed inside the **Control Center UI** — not in `.env`.
+> **Applicant profiles** (name, nationality, degree, fields) are created and managed inside the **Control Center UI** - not in `.env`.
 
 ### 4. Run
 Start the orchestrated pipelines:
@@ -251,7 +251,7 @@ npm start
 
 For a visual administration dashboard, run the Streamlit-based **Noria Control Center**:
 
-#### 🟢 Windows — Standalone Executable (Recommended)
+#### 🟢 Windows - Standalone Executable (Recommended)
 Download and double-click **`Noria.exe`** from the [v1.0.0 Release](https://github.com/AhmadHassan-BTed/Noria/releases/tag/v1.0.0).
 
 The executable is fully self-contained:
@@ -260,10 +260,10 @@ The executable is fully self-contained:
 - Opens the Control Center as a **standalone app window** (not a browser tab) via Chrome or Edge `--app` mode
 - No `run_noria.bat` or manual setup required
 
-#### 🛠 Windows — Developer Launcher
+#### 🛠 Windows - Developer Launcher
 If running from source, use **[run_noria.bat](run_noria.bat)** from the repo root.
 
-#### 🐧 macOS / Linux — Shell Launcher
+#### 🐧 macOS / Linux - Shell Launcher
 Run **[run_noria.sh](run_noria.sh)** in your terminal:
 ```bash
 chmod +x run_noria.sh && ./run_noria.sh
