@@ -5,7 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-06-05  ← **First Stable Public Release**
+
+### Added
+- Standalone Windows Executable (`Noria.exe`) — resolves all paths from the exe's own directory, eliminating path-not-found errors when double-clicked
+- Control Center opens as a **dedicated app window** (Chrome/Edge `--app` mode) instead of a browser tab, providing a native desktop feel
+- Streamlit launched directly via `python -m streamlit run` — no bat file dependency at runtime
+- Automatic dependency installation (pip + npm) on first launch from the exe
+- Unified dark UI — all input fields, textareas, dropdowns, and password fields use consistent dark backgrounds with clean single borders
+- Direct-child CSS selectors (`> div`) in `ui/styles.py` to prevent styling artifacts on eye-toggle and dropdown icon elements
+- Guided API key helper banners in the profile form with links to Gemini, Groq, and Jina Reader consoles
+- `Connect Local Agent` section on landing page for linking the local scanning engine
+- Release notes document (`docs/RELEASE_NOTES_v1.0.0.md`)
+
+### Fixed
+- `[ERROR] run_noria.bat was not found` — launcher now resolves bat and app paths relative to the exe location
+- Double border on password field eye-toggle icon caused by overriding the inner `div` background
+- Grey/black mixed input field backgrounds caused by wide CSS selectors affecting BaseWeb sub-elements
+- Dropdown selects appearing grey while other fields were dark
+
+### Changed
+- Version badge updated to `v1.0.0` in README
+- README launcher section rewritten to clearly distinguish standalone exe vs developer bat launcher
+- `ARCHITECTURE.md` now includes a Control Center UI & Standalone Launcher section documenting path resolution strategy and app-mode window design
+
+---
+
 ## [2.1.0] - 2026-06-03
+
 
 ### Added
 - Created a live Control Center Dashboard using Streamlit (`app.py`) for management and evaluation execution

@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/NORIA-v1.1.0-blue?style=for-the-badge&logo=javascript&logoColor=white" alt="Noria Version" />
+  <img src="https://img.shields.io/badge/NORIA-v1.0.0-blue?style=for-the-badge&logo=javascript&logoColor=white" alt="Noria Version" />
   <img src="https://img.shields.io/badge/LICENSED-MIT-yellow?style=for-the-badge" alt="MIT License" />
   <img src="https://img.shields.io/badge/TESTS-232%20PASSING-brightgreen?style=for-the-badge" alt="Tests" />
 </p>
@@ -186,13 +186,28 @@ npm start
 ```
 
 ### 5. Noria Dashboard (Control Center UI)
-For a visual administration dashboard, run the Streamlit-based **Noria Control Center** using our one-click launchers:
 
-* **Windows Executable**: Double-click **[Noria.exe](file:///p:/noria/dist/Noria.exe)** inside the `dist/` folder.
-* **Windows Command Launcher**: Run **[run_noria.bat](file:///p:/noria/run_noria.bat)**.
-* **macOS / Linux**: Run **[run_noria.sh](file:///p:/noria/run_noria.sh)** in your terminal (make it executable first: `chmod +x run_noria.sh`).
+For a visual administration dashboard, run the Streamlit-based **Noria Control Center**:
 
-This launcher automatically validates/installs all dependencies, starts the Streamlit server, and opens the interface at `http://localhost:8501` in your browser. From the dashboard, you can visually create applicant profiles, link WhatsApp accounts by scanning QR codes, configure and trigger scans, and inspect parsed opportunities in real-time.
+#### 🟢 Windows — Standalone Executable (Recommended)
+Download and double-click **`Noria.exe`** from the [v1.0.0 Release](https://github.com/AhmadHassan-BTed/Noria/releases/tag/v1.0.0).
+
+The executable is fully self-contained:
+- Automatically installs Python and Node.js dependencies on first run
+- Starts the Streamlit server in the background
+- Opens the Control Center as a **standalone app window** (not a browser tab) via Chrome or Edge `--app` mode
+- No `run_noria.bat` or manual setup required
+
+#### 🛠 Windows — Developer Launcher
+If running from source, use **[run_noria.bat](run_noria.bat)** from the repo root.
+
+#### 🐧 macOS / Linux — Shell Launcher
+Run **[run_noria.sh](run_noria.sh)** in your terminal:
+```bash
+chmod +x run_noria.sh && ./run_noria.sh
+```
+
+From the dashboard you can create applicant profiles, link your WhatsApp by scanning the QR code, configure and trigger scans, and monitor parsed opportunities in real-time.
 
 
 ---

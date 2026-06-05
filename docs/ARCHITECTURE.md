@@ -150,6 +150,50 @@ Because connection listeners retain active listener hooks and WS handles, the re
 
 ---
 
+## 🖥️ Control Center UI & Standalone Launcher (v1.0.0)
+
+Noria ships a Streamlit-based visual Control Center alongside the core pipeline engine. Starting from v1.0.0, this is delivered as a fully standalone Windows executable.
+
+### Launcher Architecture
+
+```
+  ┌──────────────────────────────────────────────────────┐
+  │                     Noria.exe                        │
+  │             (C# standalone launcher)                 │
+  │                                                      │
+  │  1. Resolves repo root via Assembly.GetExecutingAssembly().Location  │
+  │  2. Checks Python / Node.js availability             │
+  │  3. Runs: pip install -r requirements.txt            │
+  │  4. Runs: npm install                                │
+  │  5. Spawns: python -m streamlit run app.py           │
+  │             --server.headless true                   │
+  │  6. Opens: chrome --app=http://localhost:8501        │
+  │            (or msedge --app=... as fallback)         │
+  └──────────────────────────────────────────────────────┘
+```
+
+**Key design decisions:**
+- Paths are resolved **relative to the exe** (`Assembly.GetExecutingAssembly().Location`) — not the current working directory. This eliminates the `run_noria.bat was not found` error that occurred when the exe was double-clicked from a non-repo directory.
+- Streamlit is launched via `python -m streamlit run` — no shell script dependency needed.
+- The browser is opened in `--app` mode, making the Control Center appear as a **native desktop window**, not a browser tab.
+- The console window stays alive as long as Streamlit runs; closing it shuts down the server cleanly.
+
+### UI Layer Architecture
+
+```
+  app.py (Streamlit entry point)
+    │
+    ├── ui/styles.py          ← Global CSS injection
+    ├── ui/components/
+    │   └── navigation.py     ← Sidebar & routing
+    └── ui/views/
+        ├── dashboard.py      ← Real-time scan monitor
+        ├── profile_form.py   ← Applicant profile CRUD
+        └── ...               ← Other views
+```
+
+---
+
 ## 🚀 Guidelines for Adding Upcoming Opportunity Categories (e.g., Real Estate)
 
 1. Create a self-contained domain folder under `src/domains/realestate/`.
