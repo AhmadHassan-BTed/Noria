@@ -154,21 +154,8 @@ streamlit run app.py
             color: var(--text-color) !important;
         }
 
-        /* Hide Streamlit Community Cloud header clutter (Share, Star, GitHub, Edit links) to match local layout */
-        header[data-testid="stHeader"] a {
-            display: none !important;
-        }
-        header[data-testid="stHeader"] button:not([data-testid="stHeaderMenuButton"]):not([aria-label="open user menu"]) {
-            display: none !important;
-        }
-
-        /* Top signature decoration line */
         div[data-testid="stDecoration"] {
             background-image: linear-gradient(90deg, var(--whatsapp-green), var(--whatsapp-green-hover)) !important;
-            height: 4px !important;
-            z-index: 999999 !important;
-            display: block !important;
-            visibility: visible !important;
         }
 
         /* =============================================================
