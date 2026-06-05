@@ -90,7 +90,7 @@ async function getSupportedModels(preferredModel) {
   return [];
 }
 
-function ensureInitialized(apiKey) {
+function ensureInitialized(_apiKey) {
   // Dispatcher is stateless and initialized dynamically per request
 }
 

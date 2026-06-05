@@ -137,8 +137,8 @@ async function generateStructuredData(prompt, schema, options = {}) {
       const result = await withRetry(
         async () => {
           return await groqQueue.add(async () => {
-            const systemPrompt = (systemInstruction || "You are a precise extraction engine.") +
-              "\nYou must return a JSON object conforming exactly to the following schema:\n" +
+            const systemPrompt = (systemInstruction || 'You are a precise extraction engine.') +
+              '\nYou must return a JSON object conforming exactly to the following schema:\n' +
               JSON.stringify(schema, null, 2);
 
             const apiResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
