@@ -59,7 +59,7 @@ def render_profile_form_view(editing_profile, profiles):
         with form_col1:
             st.markdown("##### 🔑 LLM Provider Chain (Fallbacks)")
             st.markdown(
-                "<div style='font-size: 12px; margin-bottom: 8px; color: #8E9297 !important;'>"
+                "<div style='font-size: 14.5px; margin-bottom: 8px; color: #8E9297 !important;'>"
                 "ℹ️ Need API Keys? "
                 "<a href='https://aistudio.google.com/' target='_blank' style='color: #25D366 !important; font-weight: 600;'>Get Gemini Key</a> | "
                 "<a href='https://console.groq.com/' target='_blank' style='color: #25D366 !important; font-weight: 600;'>Get Groq Key</a>"
@@ -154,7 +154,7 @@ def render_profile_form_view(editing_profile, profiles):
 
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
             st.markdown(
-                "<div style='font-size: 12px; margin-bottom: 8px; color: #8E9297 !important;'>"
+                "<div style='font-size: 14.5px; margin-bottom: 8px; color: #8E9297 !important;'>"
                 "ℹ️ Need Jina Key? "
                 "<a href='https://jina.ai/reader/' target='_blank' style='color: #25D366 !important; font-weight: 600;'>Get Jina Reader Key</a>"
                 "</div>",
