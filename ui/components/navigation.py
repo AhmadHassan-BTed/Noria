@@ -35,6 +35,10 @@ def render_sidebar_navigation():
                 st.session_state.current_page = "Scans"
                 st.rerun()
 
+            if st.button("⚙️ System Settings", use_container_width=True, type="primary" if current_page == "Settings" else "secondary"):
+                st.session_state.current_page = "Settings"
+                st.rerun()
+
             # Sidebar Content Panels
             st.markdown("""
 <div style="height: 1px; background: rgba(255, 255, 255, 0.05); margin: 18px 0;"></div>
@@ -59,6 +63,7 @@ def render_sidebar_navigation():
             st.markdown("""
 <div class="sidebar-footer">
     Designed & Engineered by <br>
-    <a href="https://github.com/AhmadHassan-BTed" target="_blank" style="font-size: 14px;">Ahmad Hassan (B-Ted)</a>
+    <a href="https://github.com/AhmadHassan-BTed" target="_blank" style="font-size: 14px;">Ahmad Hassan (B-Ted)</a><br>
+    <span style="font-size: 10px; color: #8E9297; display: block; margin-top: 5px;">Version 1.1.0</span>
 </div>
 """, unsafe_allow_html=True)

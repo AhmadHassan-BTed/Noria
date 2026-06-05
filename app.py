@@ -40,6 +40,7 @@ from ui.components.navigation import render_sidebar_navigation
 from ui.views.profile_form import render_profile_form_view
 from ui.views.scans import render_scans_view
 from ui.views.profiles import render_profiles_view
+from ui.views.settings import render_settings_view
 
 # Streamlit config and styling
 apply_custom_styles()
@@ -77,6 +78,8 @@ editing_profile = st.session_state.get("editing_profile", None)
 
 if current_page == "Scans":
     render_scans_view(running_instances, profiles)
+elif current_page == "Settings":
+    render_settings_view()
 elif editing_profile is not None:
     render_profile_form_view(editing_profile, profiles)
 else:
