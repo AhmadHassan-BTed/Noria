@@ -200,12 +200,23 @@ Create a `.env` file from the template:
 ```bash
 cp .env.example .env
 ```
-Provide the required keys:
+Provide the required keys — use Gemini, Groq, or both:
 ```env
-GEMINI_API_KEY=your_gemini_api_key
-NOTIFICATION_TARGET=your_phone_number
+# LLM providers (use one or both)
+GEMINI_API_KEY=your_gemini_api_key    # https://aistudio.google.com/
+GROQ_API_KEY=your_groq_api_key        # https://console.groq.com/
+
+# Optional: faster web scraping
+JINA_API_KEY=your_jina_api_key        # https://jina.ai/reader/
+
+# WhatsApp notification target
+NOTIFICATION_TARGET=+923001234567
+
+# Active pipelines
 ACTIVE_PIPELINES=scholarships,jobs
 ```
+
+> **Applicant profiles** (name, nationality, degree, fields) are created and managed inside the **Control Center UI** — not in `.env`.
 
 ### 4. Run
 Start the orchestrated pipelines:

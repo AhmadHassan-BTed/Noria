@@ -89,18 +89,26 @@ This is the **first stable, public release** of Noria — a private, on-device a
 
 ## ⚙️ Configuration
 
-Copy `.env.example` to `.env` and fill in:
+Copy `.env.example` to `.env`. The minimum required keys are:
 
 ```env
+# Pick one or both LLM providers
 GEMINI_API_KEY=your_gemini_api_key
-NOTIFICATION_TARGET=your_phone_number
+GROQ_API_KEY=your_groq_api_key
+
+# WhatsApp number for opportunity alerts
+NOTIFICATION_TARGET=+923001234567
+
+# Which pipelines to run
 ACTIVE_PIPELINES=scholarships,jobs
 ```
 
-Get your API keys:
-- **Gemini**: https://aistudio.google.com/
-- **Groq**: https://console.groq.com/
-- **Jina Reader**: https://jina.ai/reader/
+**Optional — Multi-LLM fallback chain** (overrides the single keys above):
+```env
+LLM_CHAIN=[{"provider":"gemini","apiKey":"key1","model":"Auto"},{"provider":"groq","apiKey":"key2","model":"Auto"}]
+```
+
+> **Note:** Applicant profiles (name, nationality, degree, fields of study, etc.) are configured visually inside the **Control Center UI** — not in `.env`. The env file only holds infrastructure keys and pipeline settings.
 
 ---
 
