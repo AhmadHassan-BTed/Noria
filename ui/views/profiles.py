@@ -30,8 +30,8 @@ def show_local_agent_download_modal():
        Link your device and watch it work!
     """)
     st.link_button(
-        "⬇️ Download Noria for Windows (.bat / Release)",
-        url="https://github.com/AhmadHassan-BTed/Noria",
+        "⬇️ Download Noria for Windows (Noria.exe)",
+        url="https://github.com/AhmadHassan-BTed/Noria/releases/latest/download/Noria.exe",
         use_container_width=True,
         type="primary"
     )
