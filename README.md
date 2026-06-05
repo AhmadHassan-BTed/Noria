@@ -81,8 +81,14 @@ graph TD
 
     subgraph Infrastructure ["src/infrastructure/ (Stateless Adapters)"]
         Scrapers["scraper/ <br> (Jina, Puppeteer, Resilient Fetch)"]:::infra
-        LLM["llm/ <br> (Gemini Adapter & Request Queue)"]:::infra
+        LLM["llm/ <br> (Gemini & Groq Adapters + Fallback Chain)"]:::infra
         Messaging["messaging/ <br> (WhatsApp Sender & Listener)"]:::infra
+    end
+
+    subgraph UI ["ui/ + app.py (Control Center — Streamlit)"]
+        ControlCenter["app.py <br> (Entry Point)"]:::config
+        Views["ui/views/ <br> (Profile, Scans, Settings)"]:::config
+        Styles["ui/styles.py <br> (Dark Theme CSS)"]:::config
     end
 
     subgraph Config ["src/config/ (Composition Root / Wiring)"]
@@ -94,6 +100,8 @@ graph TD
     PluginRegistry --> Infrastructure
     Pipeline --> Registry
     Pipeline --> Events
+    ControlCenter --> Views
+    Views --> PluginRegistry
 ```
 
 ---
@@ -110,7 +118,7 @@ sequenceDiagram
     participant Core as Pipeline Orchestrator
     participant Scraper as Scraper Adapter
     participant Cache as Memory Cache
-    participant Analyzer as Gemini Adapter
+    participant Analyzer as LLM Adapter (Gemini / Groq)
     participant Sender as WhatsApp Sender
 
     TargetChat->>Listener: Shares raw URL message
@@ -124,7 +132,7 @@ sequenceDiagram
         Core->>Core: Validate web text size & contents
         Core->>Core: Emit scraper:success
         Core->>Core: Build Prompt (Domain promptBuilder)
-        Core->>Analyzer: Call Gemini structured generation
+        Core->>Analyzer: Call LLM via Fallback Chain (Gemini → Groq)
         Analyzer-->>Core: Return match results & verdict
         alt Match Score >= 50 (High Alignment)
             Core->>Core: Emit analyzer:match_found
@@ -163,19 +171,34 @@ Dynamic verification occurs at boot-time inside the Registry ([registry.js](file
 
 ```
 noria/
+├── app.py                         # Streamlit Control Center entry point
+├── run_noria.bat                  # Windows developer launcher
+├── run_noria.sh                   # macOS/Linux developer launcher
+├── .env.example                   # Environment variable template
+├── dist/                          # Compiled Windows executable (Noria.exe)
 ├── docs/                          # Guides & system architecture docs
-│   └── ARCHITECTURE.md            # Detailed Hexagonal Architecture specifications
-├── pipelines/                     # Declarative YAML workflow configurations
-│   ├── jobs.yaml                  # Crawler stage coordinates for Jobs
-│   └── scholarships.yaml          # Crawler stage coordinates for Scholarships
-├── src/                           # Platform code
-│   ├── config/                    # Environment settings loader & registry wiring
+│   ├── ARCHITECTURE.md            # Hexagonal Architecture specifications
+│   ├── CHANGELOG.md               # Version history
+│   └── RELEASE_NOTES_v1.0.0.md   # v1.0.0 release notes
+├── pipelines/                     # Declarative YAML pipeline configurations
+│   ├── jobs.yaml                  # Job opportunity scan config
+│   └── scholarships.yaml          # Scholarship scan config
+├── scripts/                       # Build & release tooling
+│   ├── build_exe.py               # Compiles Noria.exe via csc.exe
+│   ├── launcher.cs                # C# standalone Windows launcher source
+│   └── publish_release.py        # GitHub Release publisher (tag + notes + exe)
+├── src/                           # Core platform code
+│   ├── config/                    # Environment loader & registry wiring
 │   ├── core/                      # Pipeline orchestrator, event types, registry
-│   ├── domains/                   # Pure business logic prompts & notification templates
-│   ├── infrastructure/            # Stateless adapters (LLM, Scraper, WhatsApp)
+│   ├── domains/                   # Pure business logic (prompts & templates)
+│   ├── infrastructure/            # Stateless adapters (Gemini, Groq, Scraper, WhatsApp)
 │   ├── queue/                     # Decoupled global event broker
-│   ├── utils/                     # System-wide helper libraries (Retry, Cache)
-│   └── index.js                   # Boot entrypoint
+│   ├── utils/                     # Shared helpers (Retry, Cache)
+│   └── index.js                   # Node.js boot entrypoint
+├── ui/                            # Streamlit Control Center UI
+│   ├── styles.py                  # Global dark theme CSS injection
+│   ├── components/                # Shared UI components (navigation, etc.)
+│   └── views/                     # Page views (profiles, scans, settings)
 └── tests/                         # Unit test suite mirroring src/
 ```
 
