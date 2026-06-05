@@ -51,9 +51,9 @@ def render_sidebar_navigation():
 </div>
 
 <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 3px solid #25D366; border-radius: 6px; padding: 10px 12px; margin-bottom: 0px;">
-    <div style="font-family: 'Outfit', sans-serif; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #25D366; margin-bottom: 4px;">Unified Control</div>
-    <div style="font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.5; color: #8E9297;">
-        Manage customer profiles, API keys, and dynamic opportunity scans from the unified profile directory.
+    <div style="font-family: 'Outfit', sans-serif; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #25D366 !important; margin-bottom: 4px;">Workspace Control</div>
+    <div style="font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.5; color: #8E9297 !important;">
+        Manage your applicant profiles, API keys, and opportunity scans from this unified dashboard.
     </div>
 </div>
 
@@ -63,7 +63,7 @@ def render_sidebar_navigation():
             st.markdown("""
 <div class="sidebar-footer">
     Designed & Engineered by <br>
-    <a href="https://github.com/AhmadHassan-BTed" target="_blank" style="font-size: 14px;">Ahmad Hassan (B-Ted)</a><br>
-    <span style="font-size: 10px; color: #8E9297; display: block; margin-top: 5px;">Version 1.1.0</span>
+    <a href="https://github.com/AhmadHassan-BTed" target="_blank" style="font-size: 14px; color: #25D366 !important;">Ahmad Hassan (B-Ted)</a><br>
+    <span style="font-size: 11px; color: #8E9297 !important; display: block; margin-top: 6px; font-weight: 500;">Version <strong style="color: #25D366 !important;">1.1.0</strong></span>
 </div>
 """, unsafe_allow_html=True)

@@ -1,45 +1,8 @@
 import streamlit as st
 import time
-import urllib.request
 import json
 from ui.state import save_profiles
-
-def fetch_gemini_models(api_key):
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
-        req = urllib.request.Request(url, headers={"User-Agent": "Noria-App"})
-        with urllib.request.urlopen(req, timeout=5) as response:
-            data = json.loads(response.read().decode())
-            models = [
-                m["name"].replace("models/", "")
-                for m in data.get("models", [])
-                if "generateContent" in m.get("supportedGenerationMethods", [])
-                and "gemini" in m["name"].lower()
-            ]
-            return models
-    except Exception as e:
-        return []
-
-def fetch_groq_models(api_key):
-    try:
-        url = "https://api.groq.com/openai/v1/models"
-        req = urllib.request.Request(
-            url,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "User-Agent": "Noria-App"
-            }
-        )
-        with urllib.request.urlopen(req, timeout=5) as response:
-            data = json.loads(response.read().decode())
-            models = [
-                m["id"]
-                for m in data.get("data", [])
-                if m.get("active", True)
-            ]
-            return models
-    except Exception as e:
-        return []
+from ui.components.countries import COUNTRIES
 
 def render_profile_form_view(editing_profile, profiles):
     is_new = (editing_profile == "new")
@@ -85,16 +48,24 @@ def render_profile_form_view(editing_profile, profiles):
         
     with st.container(border=True):
         profile_display_name = st.text_input(
-            "Profile / Customer Display Name",
+            "Profile Display Name",
             value=default_name,
-            placeholder="e.g. John Doe"
+            placeholder="e.g. John Doe",
+            help="A custom name or label for this applicant profile (e.g., John Doe - Frontend dev)."
         ).strip()
         
         form_col1, form_col2 = st.columns([1, 1])
         
         with form_col1:
-            st.markdown("##### 🔑 API Authentication")
             st.markdown("##### 🔑 LLM Provider Chain (Fallbacks)")
+            st.markdown(
+                "<div style='font-size: 12px; margin-bottom: 8px; color: #8E9297 !important;'>"
+                "ℹ️ Need API Keys? "
+                "<a href='https://aistudio.google.com/' target='_blank' style='color: #25D366 !important; font-weight: 600;'>Get Gemini Key</a> | "
+                "<a href='https://console.groq.com/' target='_blank' style='color: #25D366 !important; font-weight: 600;'>Get Groq Key</a>"
+                "</div>",
+                unsafe_allow_html=True
+            )
             st.caption("Configure one or more LLM providers. If a provider fails (e.g. rate limits or quota), the system automatically attempts the next fallback in the list.")
 
             new_llms = []
@@ -109,31 +80,48 @@ def render_profile_form_view(editing_profile, profiles):
                             key=f"llm_prov_{idx}"
                         )
                     with col_key:
+                        if prov == "Gemini":
+                            llm_help = (
+                                "**Step-by-Step Guide to get a Gemini API Key:**\n\n"
+                                "1. Click the link above or go to [Google AI Studio](https://aistudio.google.com/).\n"
+                                "2. Log in with your Google account.\n"
+                                "3. Click the **Get API key** button in the top left.\n"
+                                "4. Click **Create API key** (select or create a project).\n"
+                                "5. Copy your generated key and paste it here."
+                            )
+                        else:
+                            llm_help = (
+                                "**Step-by-Step Guide to get a Groq API Key:**\n\n"
+                                "1. Click the link above or go to the [Groq Console](https://console.groq.com/).\n"
+                                "2. Log in or create a free Groq account.\n"
+                                "3. Click on **API Keys** in the left sidebar.\n"
+                                "4. Click the **Create API Key** button.\n"
+                                "5. Copy your new API key and paste it here."
+                            )
                         key_val = st.text_input(
                             "API Key",
                             value=llm_cfg["api_key"],
                             type="password",
-                            key=f"llm_key_{idx}"
+                            key=f"llm_key_{idx}",
+                            help=llm_help
                         )
                     with col_model:
-                        models = ["Auto"]
-                        if key_val.strip():
-                            cache_key = f"models_{prov}_{key_val.strip()[:10]}"
-                            if cache_key in st.session_state:
-                                fetched_models = st.session_state[cache_key]
-                            else:
-                                with st.spinner("Loading..."):
-                                    if prov == "Gemini":
-                                        fetched_models = fetch_gemini_models(key_val.strip())
-                                    else:
-                                        fetched_models = fetch_groq_models(key_val.strip())
-                                    st.session_state[cache_key] = fetched_models
-                            
-                            if fetched_models:
-                                models.extend(fetched_models)
+                        if prov == "Gemini":
+                            models = ["Auto", "gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+                        else:
+                            models = [
+                                "Auto",
+                                "llama-3.3-70b-versatile",
+                                "llama3-70b-8192",
+                                "mixtral-8x7b-32768",
+                                "llama-3.1-8b-instant",
+                                "gemma2-9b-it"
+                            ]
                         
                         default_model = llm_cfg["model"]
-                        def_idx = models.index(default_model) if default_model in models else 0
+                        if default_model not in models:
+                            models.append(default_model)
+                        def_idx = models.index(default_model)
                         model_selected = st.selectbox(
                             "Model",
                             options=models,
@@ -165,11 +153,27 @@ def render_profile_form_view(editing_profile, profiles):
                     st.rerun()
 
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+            st.markdown(
+                "<div style='font-size: 12px; margin-bottom: 8px; color: #8E9297 !important;'>"
+                "ℹ️ Need Jina Key? "
+                "<a href='https://jina.ai/reader/' target='_blank' style='color: #25D366 !important; font-weight: 600;'>Get Jina Reader Key</a>"
+                "</div>",
+                unsafe_allow_html=True
+            )
+            jina_help = (
+                "**Step-by-Step Guide to get a Jina Reader API Key:**\n\n"
+                "Jina Reader converts URL links in applicant messages into clean markdown text for the LLM to analyze.\n"
+                "1. Go to [Jina Reader API](https://jina.ai/reader/).\n"
+                "2. Log in or create a free account.\n"
+                "3. Copy your API token from the dashboard.\n"
+                "4. Paste it in the field below."
+            )
             jina_key = st.text_input(
                 "Jina Reader API Key (Optional)",
                 value=default_jina,
                 type="password",
-                key=f"profile_jina_key_{editing_profile}"
+                key=f"profile_jina_key_{editing_profile}",
+                help=jina_help
             )
             
             st.markdown("##### 🔔 Notification Settings")
@@ -177,12 +181,16 @@ def render_profile_form_view(editing_profile, profiles):
             default_cc = "+92"
             default_phone_num = ""
             default_custom_cc = "+"
+            
+            # Extract dialing codes from COUNTRIES sorted by length descending to match the longest prefix first
+            unique_dial_codes = sorted(list(set(item[2] for item in COUNTRIES)), key=len, reverse=True)
+            
             if not is_new:
                 target_phone_val = p_info.get("target_phone", "")
                 if target_phone_val:
                     target_phone_val = target_phone_val.replace(" ", "").replace("-", "")
                     # Match standard codes
-                    for cc in ["+92", "+1", "+44", "+91", "+971", "+966", "+49", "+61"]:
+                    for cc in unique_dial_codes:
                         if target_phone_val.startswith(cc):
                             default_cc = cc
                             default_phone_num = target_phone_val[len(cc):]
@@ -211,17 +219,37 @@ def render_profile_form_view(editing_profile, profiles):
                                 default_cc = "+92"
                                 default_phone_num = target_phone_val
             
-            cc_options = ["+92", "+1", "+44", "+91", "+971", "+966", "+49", "+61", "Other"]
-            cc_index = cc_options.index(default_cc) if default_cc in cc_options else 8
+            # Dynamic list of display strings for selectbox
+            cc_display_options = []
+            option_to_val = {}
             
-            cc_col, num_col = st.columns([1, 2])
+            for country_name, iso_code, dial_code in COUNTRIES:
+                display_str = f"{country_name} ({dial_code})"
+                cc_display_options.append(display_str)
+                option_to_val[display_str] = dial_code
+                
+            # Add Other option
+            cc_display_options.append("Other")
+            option_to_val["Other"] = "Other"
+            
+            # Determine the index for selectbox based on default_cc
+            cc_index = len(cc_display_options) - 1 # Default to "Other"
+            if default_cc != "Other":
+                for idx, display_str in enumerate(cc_display_options):
+                    if display_str.endswith(f"({default_cc})"):
+                        cc_index = idx
+                        break
+                        
+            cc_col, num_col = st.columns([1.8, 2])
             with cc_col:
-                selected_cc = st.selectbox(
+                selected_option = st.selectbox(
                     "Code",
-                    options=cc_options,
+                    options=cc_display_options,
                     index=cc_index,
                     key=f"profile_cc_{editing_profile}"
                 )
+                selected_cc = option_to_val.get(selected_option, "Other")
+                
                 if selected_cc == "Other":
                     custom_cc = st.text_input("Code Value", value=default_custom_cc, key=f"profile_custom_cc_{editing_profile}")
                     country_code = custom_cc.strip()

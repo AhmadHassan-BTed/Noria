@@ -311,7 +311,7 @@ streamlit run app.py
             color: var(--whatsapp-green-hover) !important;
         }
 
-        [data-testid="stSidebar"] * {
+        [data-testid="stSidebar"] *:not(.sidebar-footer):not(.sidebar-footer *) {
             color: var(--text-color) !important;
         }
 

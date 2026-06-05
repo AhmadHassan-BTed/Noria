@@ -1,3 +1,6 @@
 streamlit>=1.35.0
 qrcode>=7.4.2
 pillow>=10.3.0
+phonenumbers>=8.13.0
+pycountry>=23.12.11
+emoji-country-flag>=0.3.0
