@@ -84,121 +84,119 @@ def render_profiles_view(profiles, running_instances):
                             st.toast(f"Profile '{p_info['name']}' deleted.")
                             time.sleep(1)
                             st.rerun()
-                
-                # Profile Details & Status columns
-                details_col, status_col = st.columns([1, 1])
-                
-                with details_col:
-                    st.markdown("#### Profile Parameters")
-                    llm_chain = p_info.get("llm_chain", [])
-                    if llm_chain:
-                        llm_desc = f"{len(llm_chain)} LLM(s) ({', '.join([item.get('provider') for item in llm_chain])})"
-                    else:
-                        llm_prov = p_info.get("llm_provider", "Gemini")
-                        llm_mdl = p_info.get("llm_model", "Auto")
-                        llm_desc = f"{llm_prov} ({llm_mdl})"
-                    has_jina = "Yes" if p_info.get("jina_key") else "No"
-                    st.markdown(f"""
-                    * **{p_info.get('applicant_name', 'Not set')}** · {p_info.get('applicant_nationality', 'Not set')} · {p_info.get('applicant_degree_tier', 'Not set')}
-                    * **Fields:** `{p_info.get('applicant_target_fields', 'Not set')}`
-                    * **Research:** `{p_info.get('applicant_focus', p_info.get('applicant_research_focus', 'Not set'))}`
-                    * **LLM:** {llm_desc} | Jina: `{has_jina}`
-                    """)
+                with st.container(border=True):
+                    details_col, status_col = st.columns([1, 1])
                     
-                with status_col:
-                    st.markdown("#### 📡 WhatsApp Devices")
-                    
-                    linking_active = (st.session_state.linking_profile == p_id)
-                    
-                    if linking_active:
-                        render_device_linker_fragment(p_id, p_info, profiles, running_instances)
-                    else:
-                        devices = p_info.get("devices", {})
-                        if not devices:
-                            st.info("No active devices linked to this profile.")
+                    with details_col:
+                        st.markdown("#### Profile Parameters")
+                        llm_chain = p_info.get("llm_chain", [])
+                        if llm_chain:
+                            llm_desc = f"{len(llm_chain)} LLM(s) ({', '.join([item.get('provider') for item in llm_chain])})"
                         else:
-                            st.success(f"Registered Devices: **{len(devices)}** linked.")
-                            for d_phone in sorted(devices.keys()):
-                                device_sess_id = f"session_{p_id}_dev_{d_phone}"
-                                status_info = get_session_status(device_sess_id)
-                                curr_status = status_info.get("status", "UNKNOWN")
-                                reason = status_info.get("reason", "")
-                                if curr_status in ["SCAN_QR", "auth_failure"]:
-                                    st.markdown(f"⚠️ **Device Disconnected (Re-link required):** `+{d_phone}`")
-                                elif curr_status == "DISCONNECTED" and not ("Stopped" in reason or "user" in reason.lower()):
-                                    st.markdown(f"⚠️ **Device Offline:** `+{d_phone}`")
-                                else:
-                                    st.markdown(f"✅ **Device Active:** `+{d_phone}`")
+                            llm_prov = p_info.get("llm_provider", "Gemini")
+                            llm_mdl = p_info.get("llm_model", "Auto")
+                            llm_desc = f"{llm_prov} ({llm_mdl})"
+                        has_jina = "Yes" if p_info.get("jina_key") else "No"
+                        st.markdown(f"""
+                        * **{p_info.get('applicant_name', 'Not set')}** · {p_info.get('applicant_nationality', 'Not set')} · {p_info.get('applicant_degree_tier', 'Not set')}
+                        * **Fields:** `{p_info.get('applicant_target_fields', 'Not set')}`
+                        * **Research:** `{p_info.get('applicant_focus', p_info.get('applicant_research_focus', 'Not set'))}`
+                        * **LLM:** {llm_desc} | Jina: `{has_jina}`
+                        """)
                         
-
-                        if st.button("🔗 Link WhatsApp Device", key=f"link_device_btn_{p_id}", use_container_width=True, type="primary"):
-                            if is_demo_mode():
-                                show_local_agent_download_modal()
+                    with status_col:
+                        st.markdown("#### 📡 WhatsApp Devices")
+                        
+                        linking_active = (st.session_state.linking_profile == p_id)
+                        
+                        if linking_active:
+                            render_device_linker_fragment(p_id, p_info, profiles, running_instances)
+                        else:
+                            devices = p_info.get("devices", {})
+                            if not devices:
+                                st.info("No active devices linked to this profile.")
                             else:
-                                # Spawn background helper process to retrieve linking details
-                                linker_sess_id = f"session_{p_id}_linker_{int(time.time())}"
-                                cmd = [
-                                    "node", "src/launcher.js",
-                                    "--template", "scholarships",
-                                    "--instance", linker_sess_id,
-                                    "--sessionId", linker_sess_id
-                                ]
-                                
-                                import json
-                                llm_chain = p_info.get("llm_chain")
-                                if not llm_chain:
-                                    llm_chain = [
-                                        {
-                                            "provider": p_info.get("llm_provider", "Gemini"),
-                                            "apiKey": p_info.get("llm_api_key", p_info.get("gemini_key", "")),
-                                            "model": p_info.get("llm_model", "Auto")
-                                        }
+                                st.success(f"Registered Devices: **{len(devices)}** linked.")
+                                for d_phone in sorted(devices.keys()):
+                                    device_sess_id = f"session_{p_id}_dev_{d_phone}"
+                                    status_info = get_session_status(device_sess_id)
+                                    curr_status = status_info.get("status", "UNKNOWN")
+                                    reason = status_info.get("reason", "")
+                                    if curr_status in ["SCAN_QR", "auth_failure"]:
+                                        st.markdown(f"⚠️ **Device Disconnected (Re-link required):** `+{d_phone}`")
+                                    elif curr_status == "DISCONNECTED" and not ("Stopped" in reason or "user" in reason.lower()):
+                                        st.markdown(f"⚠️ **Device Offline:** `+{d_phone}`")
+                                    else:
+                                        st.markdown(f"✅ **Device Active:** `+{d_phone}`")
+                            
+                            if st.button("🔗 Link WhatsApp Device", key=f"link_device_btn_{p_id}", use_container_width=True, type="primary"):
+                                if is_demo_mode():
+                                    show_local_agent_download_modal()
+                                else:
+                                    # Spawn background helper process to retrieve linking details
+                                    linker_sess_id = f"session_{p_id}_linker_{int(time.time())}"
+                                    cmd = [
+                                        "node", "src/launcher.js",
+                                        "--template", "scholarships",
+                                        "--instance", linker_sess_id,
+                                        "--sessionId", linker_sess_id
                                     ]
-                                custom_env = os.environ.copy()
-                                custom_env.update({
-                                    "LLM_CHAIN": json.dumps(llm_chain),
-                                    "LLM_PROVIDER": p_info.get("llm_provider", "Gemini"),
-                                    "LLM_API_KEY": p_info.get("llm_api_key", p_info.get("gemini_key", "")),
-                                    "LLM_MODEL": p_info.get("llm_model", "Auto"),
-                                    "GEMINI_API_KEY": p_info.get("gemini_key", "") or p_info.get("llm_api_key", ""),
-                                    "GROQ_API_KEY": p_info.get("llm_api_key", "") if p_info.get("llm_provider") == "Groq" else "",
-                                    "JINA_API_KEY": p_info.get("jina_key", ""),
-                                    "APPLICANT_NAME": p_info["applicant_name"],
-                                    "APPLICANT_NATIONALITY": p_info["applicant_nationality"],
-                                    "APPLICANT_DEGREE_TIER": p_info["applicant_degree_tier"],
-                                    "APPLICANT_TARGET_FIELDS": p_info["applicant_target_fields"],
-                                    "APPLICANT_RESEARCH_FOCUS": p_info.get("applicant_focus", "")
-                                })
-                                
-                                try:
-                                    daemon_log = open(f"data/daemon-{linker_sess_id}.log", "a", encoding="utf-8")
-                                    p = subprocess.Popen(
-                                        cmd,
-                                        stdout=daemon_log,
-                                        stderr=subprocess.STDOUT,
-                                        env=custom_env,
-                                        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0
-                                    )
                                     
-                                    running_instances[linker_sess_id] = {
-                                        "pid": p.pid,
-                                        "template": "scholarships",
-                                        "category": "Linker",
-                                        "sessionId": linker_sess_id,
-                                        "profileId": p_id,
-                                        "profileName": p_info["name"],
-                                        "channels": "",
-                                        "phone": "",
-                                        "startedAt": time.strftime("%Y-%m-%d %H:%M:%S")
-                                    }
-                                    save_running_processes(running_instances)
+                                    import json
+                                    llm_chain = p_info.get("llm_chain")
+                                    if not llm_chain:
+                                        llm_chain = [
+                                            {
+                                                "provider": p_info.get("llm_provider", "Gemini"),
+                                                "apiKey": p_info.get("llm_api_key", p_info.get("gemini_key", "")),
+                                                "model": p_info.get("llm_model", "Auto")
+                                            }
+                                        ]
+                                    custom_env = os.environ.copy()
+                                    custom_env.update({
+                                        "LLM_CHAIN": json.dumps(llm_chain),
+                                        "LLM_PROVIDER": p_info.get("llm_provider", "Gemini"),
+                                        "LLM_API_KEY": p_info.get("llm_api_key", p_info.get("gemini_key", "")),
+                                        "LLM_MODEL": p_info.get("llm_model", "Auto"),
+                                        "GEMINI_API_KEY": p_info.get("gemini_key", "") or p_info.get("llm_api_key", ""),
+                                        "GROQ_API_KEY": p_info.get("llm_api_key", "") if p_info.get("llm_provider") == "Groq" else "",
+                                        "JINA_API_KEY": p_info.get("jina_key", ""),
+                                        "APPLICANT_NAME": p_info["applicant_name"],
+                                        "APPLICANT_NATIONALITY": p_info["applicant_nationality"],
+                                        "APPLICANT_DEGREE_TIER": p_info["applicant_degree_tier"],
+                                        "APPLICANT_TARGET_FIELDS": p_info["applicant_target_fields"],
+                                        "APPLICANT_RESEARCH_FOCUS": p_info.get("applicant_focus", "")
+                                    })
                                     
-                                    st.session_state.linking_profile = p_id
-                                    st.session_state.linker_sess_id = linker_sess_id
-                                    st.session_state.linker_progress = 5
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Failed to spawn linker socket: {e}")
+                                    try:
+                                        daemon_log = open(f"data/daemon-{linker_sess_id}.log", "a", encoding="utf-8")
+                                        p = subprocess.Popen(
+                                            cmd,
+                                            stdout=daemon_log,
+                                            stderr=subprocess.STDOUT,
+                                            env=custom_env,
+                                            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0
+                                        )
+                                        
+                                        running_instances[linker_sess_id] = {
+                                            "pid": p.pid,
+                                            "template": "scholarships",
+                                            "category": "Linker",
+                                            "sessionId": linker_sess_id,
+                                            "profileId": p_id,
+                                            "profileName": p_info["name"],
+                                            "channels": "",
+                                            "phone": "",
+                                            "startedAt": time.strftime("%Y-%m-%d %H:%M:%S")
+                                        }
+                                        save_running_processes(running_instances)
+                                        
+                                        st.session_state.linking_profile = p_id
+                                        st.session_state.linker_sess_id = linker_sess_id
+                                        st.session_state.linker_progress = 5
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Failed to spawn linker socket: {e}")
                 
 
 

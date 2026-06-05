@@ -407,8 +407,8 @@ streamlit run app.py
         /* =============================================================
            LEVEL 1 CONTAINERS — Profile cards, expander list items
            ============================================================= */
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stVerticalBlockBorderWrapper"],
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] {
+        div.block-container div[data-testid="stVerticalBlockBorderWrapper"],
+        div.block-container div[data-testid="stExpander"] {
             border: 1px solid var(--border-level-1) !important;
             border-radius: var(--radius-lg) !important;
             background-color: var(--bg-level-1) !important;
@@ -418,18 +418,18 @@ streamlit run app.py
             transition: border-color 0.2s ease-in-out !important;
         }
 
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stVerticalBlockBorderWrapper"]:hover,
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"]:hover {
+        div.block-container div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+        div.block-container div[data-testid="stExpander"]:hover {
             border-color: var(--border-level-2) !important;
         }
 
         /* Level 1 Expander details & summary */
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] > details {
+        div.block-container div[data-testid="stExpander"] > details {
             border: none !important;
             background: transparent !important;
         }
 
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] summary {
+        div.block-container div[data-testid="stExpander"] summary {
             background-color: var(--bg-level-1) !important;
             color: var(--text-color) !important;
             font-family: 'Outfit', sans-serif !important;
@@ -440,20 +440,20 @@ streamlit run app.py
             transition: color 0.2s ease-in-out !important;
         }
 
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] summary p {
+        div.block-container div[data-testid="stExpander"] summary p {
             font-size: 18px !important;
             font-weight: 600 !important;
         }
 
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] summary:hover {
+        div.block-container div[data-testid="stExpander"] summary:hover {
             color: var(--whatsapp-green) !important;
         }
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] summary:hover svg {
+        div.block-container div[data-testid="stExpander"] summary:hover svg {
             color: var(--whatsapp-green) !important;
             fill: currentColor !important;
         }
 
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] > div > div > div[data-testid="stExpander"] details[open] summary {
+        div.block-container div[data-testid="stExpander"] details[open] summary {
             border-bottom: 1px solid var(--border-level-1) !important;
             border-bottom-left-radius: 0 !important;
             border-bottom-right-radius: 0 !important;
@@ -484,8 +484,8 @@ streamlit run app.py
         }
 
         /* Nested containers (Level 2 sub-cards) */
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"],
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
+        div.block-container div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"],
+        div.block-container div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
             background-color: var(--bg-level-2) !important;
             border: 1px solid var(--border-level-2) !important;
             border-radius: var(--radius-md) !important;
@@ -495,8 +495,8 @@ streamlit run app.py
             margin-bottom: var(--space-sm) !important;
         }
 
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        div.block-container div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+        div.block-container div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
             border-color: var(--whatsapp-green) !important;
         }
 
@@ -517,16 +517,17 @@ streamlit run app.py
         /* =============================================================
            LEVEL 3 CONTAINERS — Code/log panels, inner blocks
            ============================================================= */
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
+        div.block-container div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"],
+        div.block-container div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] {
             background-color: var(--bg-level-3) !important;
             border: 1px solid var(--border-level-3) !important;
             box-shadow: none !important;
             padding: var(--space-md) !important;
+            border-radius: var(--radius-md) !important;
         }
 
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        div.block-container div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+        div.block-container div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"]:hover {
             border-color: var(--whatsapp-green) !important;
         }
 
@@ -579,12 +580,12 @@ streamlit run app.py
         }
 
         /* Inputs inside Level 2 */
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="input"],
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-baseweb="input"],
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="textarea"],
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-baseweb="textarea"],
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="select"],
-        div.block-container > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stExpander"] div[data-baseweb="select"] {
+        div.block-container div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="input"],
+        div.block-container div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="input"],
+        div.block-container div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="textarea"],
+        div.block-container div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="textarea"],
+        div.block-container div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="select"],
+        div.block-container div[data-testid="stExpander"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="select"] {
             background-color: var(--bg-level-3) !important;
             border-color: var(--border-level-2) !important;
         }
