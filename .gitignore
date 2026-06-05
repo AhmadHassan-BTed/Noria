@@ -12,5 +12,24 @@ coverage/
 .cache/
 __pycache__/
 *.pyc
+*.pyo
 .wwebjs_cache/
 data/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Noria runtime flags
+clear-cache-*.flag
+
+# Python build artifacts
+*.egg-info/
+.eggs/
+build/
+
+# Windows exe temp build (csc.exe output staging)
+noria_build/
+
+# OS
+Thumbs.db
+Desktop.ini
