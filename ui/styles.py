@@ -627,16 +627,36 @@ streamlit run app.py
         div[data-baseweb="input"], 
         div[data-baseweb="textarea"], 
         div[data-baseweb="select"],
+        div[data-baseweb="base-input"],
+        div[data-testid="stSelectbox"] [data-baseweb],
+        div[data-testid="stTextArea"] [data-baseweb],
+        div[data-testid="stTextInput"] [data-baseweb],
+        div[data-testid="stSelectbox"] div[role="combobox"],
         div[data-testid="stSelectbox"] > div,
         div[data-testid="stTextArea"] > div,
-        div[data-testid="stTextInput"] > div {
+        div[data-testid="stTextInput"] > div,
+        .stSelectbox > div > div,
+        .stTextArea > div > div,
+        .stTextInput > div > div,
+        div[data-testid="stSelectbox"] > div > div,
+        div[data-testid="stTextArea"] > div > div,
+        div[data-testid="stTextInput"] > div > div {
             background-color: var(--bg-level-3) !important;
             border: 1px solid var(--border-level-2) !important;
             border-radius: var(--radius-sm) !important;
             color: var(--text-color) !important;
         }
 
-        div[data-baseweb="input"] * {
+        div[data-baseweb="input"] *,
+        div[data-baseweb="textarea"] *,
+        div[data-baseweb="select"] *,
+        div[data-baseweb="base-input"] *,
+        .stSelectbox > div > div *,
+        .stTextArea > div > div *,
+        .stTextInput > div > div *,
+        div[data-testid="stSelectbox"] > div > div *,
+        div[data-testid="stTextArea"] > div > div *,
+        div[data-testid="stTextInput"] > div > div * {
             background-color: transparent !important;
         }
 

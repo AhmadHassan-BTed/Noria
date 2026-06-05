@@ -41,8 +41,19 @@ echo [3/3] Launching Noria Control Center...
 echo Close this command window to stop Noria.
 echo.
 
-:: Open browser and start Streamlit app
-start http://localhost:8501
-call streamlit run app.py
+:: Launch app window using Chrome or Edge
+reg query "HKLM\Software\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe" >nul 2>nul
+set CHROME_FOUND=%errorlevel%
+if %CHROME_FOUND% neq 0 (
+    reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe" >nul 2>nul
+    set CHROME_FOUND=%errorlevel%
+)
+
+if %CHROME_FOUND% equ 0 (
+    start chrome --app=http://localhost:8501
+) else (
+    start msedge --app=http://localhost:8501
+)
+call streamlit run app.py --server.headless true
 
 pause
