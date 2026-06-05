@@ -156,7 +156,11 @@ class PipelineOrchestrator {
       // Map analyzer plugin name to LLM adapter name dynamically if configured
       const providerEnv = (process.env.LLM_PROVIDER || '').toLowerCase();
       const hasChain = !!process.env.LLM_CHAIN;
-      const llmName = hasChain ? 'fallback' : ((providerEnv === 'gemini' || providerEnv === 'groq') ? providerEnv : analyzerName.replace('-analyzer', ''));
+      const llmName = hasChain
+        ? 'fallback'
+        : providerEnv === 'gemini' || providerEnv === 'groq'
+          ? providerEnv
+          : analyzerName.replace('-analyzer', '');
       services.llm = registry.getAdapter('llm', llmName);
 
       // Store analysis config for later use
@@ -378,7 +382,9 @@ class PipelineOrchestrator {
           });
 
           // Build notification message (pure domain function)
-          const notificationMessage = domain.buildTemplate ? domain.buildTemplate(validatedResponse) : '';
+          const notificationMessage = domain.buildTemplate
+            ? domain.buildTemplate(validatedResponse)
+            : '';
 
           // Save match to history
           saveToHistory(

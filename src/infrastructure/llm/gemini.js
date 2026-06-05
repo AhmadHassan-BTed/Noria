@@ -55,7 +55,8 @@ async function getSupportedModels(preferredModel) {
   }
 
   const defaults = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-  const preferred = (preferredModel && preferredModel.toLowerCase() !== 'auto') ? preferredModel : currentModel;
+  const preferred =
+    preferredModel && preferredModel.toLowerCase() !== 'auto' ? preferredModel : currentModel;
 
   try {
     const apiKey = process.env.GEMINI_API_KEY || process.env.LLM_API_KEY;

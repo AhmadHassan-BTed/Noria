@@ -53,9 +53,10 @@ async function getSupportedModels(preferredModel) {
     'llama3-70b-8192',
     'mixtral-8x7b-32768',
     'llama-3.1-8b-instant',
-    'gemma2-9b-it'
+    'gemma2-9b-it',
   ];
-  const preferred = (preferredModel && preferredModel.toLowerCase() !== 'auto') ? preferredModel : currentModel;
+  const preferred =
+    preferredModel && preferredModel.toLowerCase() !== 'auto' ? preferredModel : currentModel;
 
   try {
     const key = groqApiKey || process.env.GROQ_API_KEY || process.env.LLM_API_KEY;
@@ -64,8 +65,8 @@ async function getSupportedModels(preferredModel) {
     }
     const res = await fetch('https://api.groq.com/openai/v1/models', {
       headers: {
-        'Authorization': `Bearer ${key}`
-      }
+        Authorization: `Bearer ${key}`,
+      },
     });
     if (!res.ok) {
       throw new Error(`Status ${res.status}`);
@@ -76,9 +77,7 @@ async function getSupportedModels(preferredModel) {
       throw new Error('Invalid response structure');
     }
 
-    const models = data.data
-      .filter((m) => m.active !== false)
-      .map((m) => m.id);
+    const models = data.data.filter((m) => m.active !== false).map((m) => m.id);
 
     const sorted = [];
     if (models.includes(preferred)) {
@@ -137,25 +136,26 @@ async function generateStructuredData(prompt, schema, options = {}) {
       const result = await withRetry(
         async () => {
           return await groqQueue.add(async () => {
-            const systemPrompt = (systemInstruction || 'You are a precise extraction engine.') +
+            const systemPrompt =
+              (systemInstruction || 'You are a precise extraction engine.') +
               '\nYou must return a JSON object conforming exactly to the following schema:\n' +
               JSON.stringify(schema, null, 2);
 
             const apiResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${key}`,
-                'Content-Type': 'application/json'
+                Authorization: `Bearer ${key}`,
+                'Content-Type': 'application/json',
               },
               body: JSON.stringify({
                 model: modelName,
                 messages: [
                   { role: 'system', content: systemPrompt },
-                  { role: 'user', content: prompt }
+                  { role: 'user', content: prompt },
                 ],
                 response_format: { type: 'json_object' },
-                temperature: temperature
-              })
+                temperature: temperature,
+              }),
             });
 
             if (!apiResponse.ok) {

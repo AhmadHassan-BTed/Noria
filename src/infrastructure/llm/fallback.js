@@ -36,26 +36,28 @@ async function generateStructuredData(prompt, schema, options = {}) {
     {
       provider: process.env.LLM_PROVIDER || 'gemini',
       apiKey: process.env.LLM_API_KEY || process.env.GEMINI_API_KEY,
-      model: process.env.LLM_MODEL || 'Auto'
-    }
+      model: process.env.LLM_MODEL || 'Auto',
+    },
   ];
 
   let lastError = new Error('No LLM providers configured in chain');
-  
+
   for (let i = 0; i < chain.length; i++) {
     const config = chain[i];
     const providerName = (config.provider || 'gemini').toLowerCase();
     const modelName = config.model || 'Auto';
 
-    console.log(`[LLM Fallback] Attempting LLM [${i + 1}/${chain.length}]: ${providerName} (${modelName})`);
+    console.log(
+      `[LLM Fallback] Attempting LLM [${i + 1}/${chain.length}]: ${providerName} (${modelName})`
+    );
 
     try {
       const adapter = registry.getAdapter('llm', providerName);
-      
+
       const opt = {
         ...options,
         model: modelName,
-        apiKey: config.apiKey || config.api_key
+        apiKey: config.apiKey || config.api_key,
       };
 
       // Set key in environment variables so that child adapters can find it
@@ -69,7 +71,9 @@ async function generateStructuredData(prompt, schema, options = {}) {
       console.log(`[LLM Fallback] LLM [${i + 1}/${chain.length}] (${providerName}) succeeded.`);
       return res;
     } catch (err) {
-      console.warn(`[LLM Fallback] LLM [${i + 1}/${chain.length}] (${providerName}) failed: ${err.message}`);
+      console.warn(
+        `[LLM Fallback] LLM [${i + 1}/${chain.length}] (${providerName}) failed: ${err.message}`
+      );
       lastError = err;
     }
   }
@@ -97,5 +101,5 @@ function ensureInitialized(_apiKey) {
 module.exports = {
   generateStructuredData,
   getSupportedModels,
-  ensureInitialized
+  ensureInitialized,
 };
