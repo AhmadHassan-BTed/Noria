@@ -27,7 +27,35 @@ Opportunities define careers, yet discovery remains a chaotic manual process. No
 
 ---
 
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/images/Applicant_Profiles.png" alt="Applicant Profiles Directory" />
+      <br /><sub><b>Applicant Profiles Directory</b> — manage profiles, linked devices, scan configs, and WhatsApp connections</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/images/Opportunity_Scans.png" alt="Active Scanning Operations" />
+      <br /><sub><b>Active Scanning Operations</b> — launch scans, select predefined pipelines, and monitor the live opportunity feed</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/images/Profile_Edit.png" alt="Profile Editor" />
+      <br /><sub><b>Profile Editor</b> — configure LLM provider chain, API keys, applicant parameters, and notification targets</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/images/System_Settings.png" alt="Control Center Settings" />
+      <br /><sub><b>Control Center Settings</b> — Windows startup toggle, local data retention, and full application reset</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## 🏛️ Clean Architecture & Boundary Separation
+
 
 Noria enforces strict Hexagonal Architecture principles, separating core business domains from pluggable technical infrastructure. Dependencies flow strictly inward, managed through a central registry bootstrapper (`src/config/plugins.registry.js`) acting as the composition root.
 
