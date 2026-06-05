@@ -12,6 +12,8 @@
     "format": "prettier --write \"src/**/*.js\"",
     "build": "node scripts/build.js",
     "build:exe": "node scripts/render-logo.js && python scripts/convert-ico.py && python scripts/embed-logo.py && python scripts/build_exe.py",
+    "release": "python scripts/publish_release.py",
+    "release:draft": "python scripts/publish_release.py --draft",
     "prepare": "echo 'Ready'"
   },
   "keywords": [
