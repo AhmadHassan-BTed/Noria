@@ -284,3 +284,9 @@ Ensure all local verification checks pass cleanly:
 | `npm run format:check` | Prettier Layout Verification | Compliant with project styles |
 | `npm test` | Jest Unit Tests Execution | All 223 tests passing |
 | `npm run test:coverage` | Test Coverage Telemetry | Global coverage must be > 90% |
+
+---
+
+<p align="center">
+  Made with 💚 by <a href="https://github.com/AhmadHassan-BTed"><strong>Ahmad Hassan (B-Ted)</strong></a>
+</p>
