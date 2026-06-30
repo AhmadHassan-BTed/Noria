@@ -120,7 +120,7 @@ process.on('unhandledRejection', (reason) => {
       errorMsg.includes('first_party_sets.db') ||
       errorMsg.includes('session'))
   ) {
-    console.warn('[Launcher] ⚠️ Ignored non-fatal EBUSY file lock during session cleanup.');
+    console.warn('[Launcher]  [WARNING]  Ignored non-fatal EBUSY file lock during session cleanup.');
     return;
   }
 
@@ -167,7 +167,7 @@ async function launch() {
   // Set session ID for error handlers
   currentSessionId = sessionId || 'default';
 
-  console.log('[Launcher] 🚀 Launching dynamic pipeline instance...');
+  console.log('[Launcher]  [START]  Launching dynamic pipeline instance...');
   console.log(`  Template  : ${template}`);
   console.log(`  Instance  : ${instance}`);
   console.log(`  Session ID: ${currentSessionId}`);
@@ -260,7 +260,7 @@ async function launch() {
     process.exit(1);
   }
 
-  console.log(`[Launcher] 🎉 Pipeline instance ${instance} is running.`);
+  console.log(`[Launcher]  [SUCCESS]  Pipeline instance ${instance} is running.`);
   console.log('[Launcher] Waiting for WhatsApp connection...');
 }
 

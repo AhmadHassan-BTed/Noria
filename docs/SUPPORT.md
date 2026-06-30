@@ -152,4 +152,4 @@ Please see [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ---
 
-Thank you for being part of the Noria community! 🙏
+Thank you for being part of the Noria community! 

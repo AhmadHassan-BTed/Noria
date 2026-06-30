@@ -74,4 +74,4 @@ General inquiries: See SUPPORT.md
 
 ---
 
-Thank you for helping keep Noria secure! 🔒
+Thank you for helping keep Noria secure! 

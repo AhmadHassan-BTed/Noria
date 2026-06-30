@@ -248,17 +248,17 @@ class WhatsAppListener {
     if (this.sourceMode.includes('channels')) {
       if (found.length === 0) {
         console.log(
-          '[WhatsApp] ⚠️  No subscribed channels found yet (bridge is active for late arrivals).'
+          '[WhatsApp]  [WARNING]   No subscribed channels found yet (bridge is active for late arrivals).'
         );
       } else {
-        console.log(`[WhatsApp] 📡  Subscribed channels (${found.length}):`);
+        console.log(`[WhatsApp]   Subscribed channels (${found.length}):`);
         found.forEach((ch) => console.log(`[WhatsApp]     • "${ch.name}" — ${ch.id}`));
       }
 
       if (this.allowedChannels.length > 0) {
-        console.log(`[WhatsApp] 🔒  Whitelist: ${this.allowedChannels.join(', ')}`);
+        console.log(`[WhatsApp]  [SECURE]   Whitelist: ${this.allowedChannels.join(', ')}`);
       } else {
-        console.log('[WhatsApp] 🔓  No whitelist — accepting all subscribed channels.');
+        console.log('[WhatsApp]   No whitelist — accepting all subscribed channels.');
       }
     }
 
@@ -422,7 +422,7 @@ class WhatsAppListener {
       return this.allowedChannels.some((a) => a.toLowerCase() === name.toLowerCase());
     } catch (err) {
       console.warn(
-        `[WhatsApp] ⚠️  Cannot resolve channel name for ${channelId} — skipped. ` +
+        `[WhatsApp]  [WARNING]   Cannot resolve channel name for ${channelId} — skipped. ` +
           `Reason: ${err.message}`
       );
       return false;
@@ -444,7 +444,7 @@ class WhatsAppListener {
       return this.allowedGroups.some((g) => g.toLowerCase() === name.toLowerCase());
     } catch (err) {
       console.warn(
-        `[WhatsApp] ⚠️  Cannot resolve group name for ${groupId} — skipped. ` +
+        `[WhatsApp]  [WARNING]   Cannot resolve group name for ${groupId} — skipped. ` +
           `Reason: ${err.message}`
       );
       return false;
@@ -467,7 +467,7 @@ class WhatsAppListener {
       return this.allowedChats.some((c) => c.toLowerCase() === name.toLowerCase());
     } catch (err) {
       console.warn(
-        `[WhatsApp] ⚠️  Cannot resolve chat name for ${chatId} — skipped. ` +
+        `[WhatsApp]  [WARNING]   Cannot resolve chat name for ${chatId} — skipped. ` +
           `Reason: ${err.message}`
       );
       return false;
@@ -608,7 +608,7 @@ class WhatsAppListener {
       if (msg && msg.fromMe) {
         const isBotSent = global.botSentMessageIds && global.botSentMessageIds.has(msgId);
         const isNoriaNotify =
-          msg.body && msg.body.includes('MATCH |') && msg.body.includes('⚡ Verdict:');
+          msg.body && msg.body.includes('MATCH |') && msg.body.includes(' [FAST]  Verdict:');
         if (isBotSent || isNoriaNotify) {
           this.logger.debug('MESSAGE', 'Ignored outgoing bot notification', { messageId: msgId });
           return;
@@ -677,7 +677,7 @@ class WhatsAppListener {
       // ── Emit ─────────────────────────────────────────────────────────────
       const source = msgSource;
       const label = channelName ? ` "${channelName}"` : '';
-      console.log(`[WhatsApp] 🔗  URL from ${source}${label}: ${validatedUrl}`);
+      console.log(`[WhatsApp]   URL from ${source}${label}: ${validatedUrl}`);
 
       this.logger.info('URL_EXTRACTED', `URL from ${source}${label}`, {
         messageId: msgId,
@@ -712,7 +712,7 @@ class WhatsAppListener {
     return new Promise((resolve, reject) => {
       // ── QR ──────────────────────────────────────────────────────────────
       this.client.on('qr', (qr) => {
-        console.log('[WhatsApp] 📲  Scan the QR code below:');
+        console.log('[WhatsApp]   Scan the QR code below:');
         qrcode.generate(qr, { small: true });
         this.logger.info('CONNECTION', 'QR code generated');
         this._writeData(`qr-${this.sessionId}.txt`, qr);
@@ -723,7 +723,7 @@ class WhatsAppListener {
       this.client.on('ready', async () => {
         if (this._isReady) {
           console.log(
-            '[WhatsApp INFO] [Ready Event] 🔄 Client re-connected (ignoring duplicate ready event).'
+            '[WhatsApp INFO] [Ready Event]  Client re-connected (ignoring duplicate ready event).'
           );
           this.logger.info('CONNECTION', 'Duplicate ready event ignored');
           return;
@@ -732,7 +732,7 @@ class WhatsAppListener {
 
         console.log('[WhatsApp INFO] [Ready Event] ✅ Client ready.');
         console.log(
-          `[WhatsApp INFO] [Ready Event] ⚙️ Source mode: ${this.sourceMode.join(',').toUpperCase()}`
+          `[WhatsApp INFO] [Ready Event]  Source mode: ${this.sourceMode.join(',').toUpperCase()}`
         );
         this.logger.info('CONNECTION', 'Client ready', { sourceMode: this.sourceMode });
 
@@ -748,7 +748,7 @@ class WhatsAppListener {
 
         if (isLinker) {
           console.log(
-            '[WhatsApp INFO] [Ready Event] 🚀 [LINKER SEQUENCE] Starting instant linker sequence...'
+            '[WhatsApp INFO] [Ready Event]  [START]  [LINKER SEQUENCE] Starting instant linker sequence...'
           );
 
           // 1. Get phone number and WID immediately
@@ -879,7 +879,7 @@ class WhatsAppListener {
           }
         } catch (err) {
           console.warn(
-            '[WhatsApp WARN] [Ready Event] ⚠️ Could not retrieve phone number:',
+            '[WhatsApp WARN] [Ready Event]  [WARNING]  Could not retrieve phone number:',
             err.message
           );
         }
@@ -910,7 +910,7 @@ class WhatsAppListener {
           })
           .catch((err) => {
             console.warn(
-              '[WhatsApp WARN] [Background Fetch] ⚠️ Background channel fetch error:',
+              '[WhatsApp WARN] [Background Fetch]  [WARNING]  Background channel fetch error:',
               err.message
             );
           });
@@ -932,7 +932,7 @@ class WhatsAppListener {
 
       // ── Disconnected ─────────────────────────────────────────────────────
       this.client.on('disconnected', (reason) => {
-        console.warn('[WhatsApp] ⚠️   Disconnected:', reason);
+        console.warn('[WhatsApp]  [WARNING]    Disconnected:', reason);
         this.logger.warn('CONNECTION', 'Disconnected', { reason });
         this._writeData(`status-${this.sessionId}.json`, {
           status: 'DISCONNECTED',
@@ -1093,7 +1093,7 @@ class WhatsAppListener {
     this._channelFetcher?.stopPolling();
     if (this.client) {
       await this.client.destroy();
-      console.log('[WhatsApp] 🛑  Client closed.');
+      console.log('[WhatsApp]  [STOP]   Client closed.');
     }
   }
 

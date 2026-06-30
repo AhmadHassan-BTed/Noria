@@ -614,7 +614,7 @@ describe('WhatsAppListener', () => {
         id: { _serialized: 'bot-msg-123' },
         from: '923001234567@c.us',
         fromMe: true,
-        body: 'MATCH | Some Scholarship\n⚡ Verdict: Yes\n🔗 Apply: https://example.com'
+        body: 'MATCH | Some Scholarship\n [FAST]  Verdict: Yes\n Apply: https://example.com'
       };
       const emitSpy = jest.spyOn(listener, '_emit');
       await listener._handleMessage(msg);

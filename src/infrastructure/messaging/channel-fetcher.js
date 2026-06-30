@@ -142,7 +142,7 @@ class ChannelFetcher extends EventEmitter {
     const totalSteps = this.maxAttempts * strategies.length;
 
     for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
-      this._log(`[ChannelFetcher] 🔍  Fetch attempt ${attempt}/${this.maxAttempts}...`);
+      this._log(`[ChannelFetcher]   Fetch attempt ${attempt}/${this.maxAttempts}...`);
 
       let strategyIndex = 0;
       for (const strategy of strategies) {
@@ -164,7 +164,7 @@ class ChannelFetcher extends EventEmitter {
             );
           }
         } catch (err) {
-          this._log(`[ChannelFetcher] ⚠️  Strategy "${strategy.label}" error: ${err.message}`);
+          this._log(`[ChannelFetcher]  [WARNING]   Strategy "${strategy.label}" error: ${err.message}`);
         }
         strategyIndex++;
       }
@@ -200,7 +200,7 @@ class ChannelFetcher extends EventEmitter {
     }
 
     this._log(
-      `[ChannelFetcher] ⚠️  No channels discovered after ${this.maxAttempts} attempts.\n` +
+      `[ChannelFetcher]  [WARNING]   No channels discovered after ${this.maxAttempts} attempts.\n` +
         '[ChannelFetcher]    Possible reasons:\n' +
         '[ChannelFetcher]    • This WhatsApp account has no channel subscriptions.\n' +
         '[ChannelFetcher]    • Channel sync is still in progress — bridge will catch them.\n' +
@@ -225,19 +225,19 @@ class ChannelFetcher extends EventEmitter {
     this.stopPolling();
     const ms = intervalMs ?? this.pollMs;
     this._pollTimer = setInterval(async () => {
-      this._log('[ChannelFetcher] 🔄  Background poll...');
+      this._log('[ChannelFetcher]   Background poll...');
       await this.fetchWithRetry().catch((err) =>
         this._log(`[ChannelFetcher] Poll error: ${err.message}`)
       );
     }, ms);
-    this._log(`[ChannelFetcher] 🔁  Background polling started (every ${ms / 1000}s).`);
+    this._log(`[ChannelFetcher]   Background polling started (every ${ms / 1000}s).`);
   }
 
   stopPolling() {
     if (this._pollTimer) {
       clearInterval(this._pollTimer);
       this._pollTimer = null;
-      this._log('[ChannelFetcher] ⏹️  Background polling stopped.');
+      this._log('[ChannelFetcher] ⏹  Background polling stopped.');
     }
   }
 
@@ -262,7 +262,7 @@ class ChannelFetcher extends EventEmitter {
 
     const pupPage = this.client.pupPage;
     if (!pupPage) {
-      this._log('[ChannelFetcher] ⚠️  pupPage not available — bridge skipped.');
+      this._log('[ChannelFetcher]  [WARNING]   pupPage not available — bridge skipped.');
       return;
     }
 
@@ -272,14 +272,14 @@ class ChannelFetcher extends EventEmitter {
         this._handleRawChannelData(rawData);
       });
       this._bridgeReady = true;
-      this._log(`[ChannelFetcher] 🌉  Page bridge "${BRIDGE_FN_NAME}" exposed.`);
+      this._log(`[ChannelFetcher]   Page bridge "${BRIDGE_FN_NAME}" exposed.`);
     } catch (err) {
       // exposeFunction throws 'already exists' on reconnect — that's fine
       if (err.message?.toLowerCase().includes('already')) {
         this._bridgeReady = true;
-        this._log('[ChannelFetcher] 🌉  Page bridge already active (reconnect).');
+        this._log('[ChannelFetcher]   Page bridge already active (reconnect).');
       } else {
-        this._log(`[ChannelFetcher] ⚠️  Could not expose bridge: ${err.message}`);
+        this._log(`[ChannelFetcher]  [WARNING]   Could not expose bridge: ${err.message}`);
         return;
       }
     }
@@ -404,7 +404,7 @@ class ChannelFetcher extends EventEmitter {
 
       this._log('[ChannelFetcher] ✅  Backbone listeners installed inside WA page.');
     } catch (err) {
-      this._log(`[ChannelFetcher] ⚠️  Could not install page listeners: ${err.message}`);
+      this._log(`[ChannelFetcher]  [WARNING]   Could not install page listeners: ${err.message}`);
     }
   }
 
@@ -594,10 +594,10 @@ class ChannelFetcher extends EventEmitter {
     this._channels.set(info.id, info);
 
     if (isNew) {
-      this._log(`[ChannelFetcher] 📡  Channel discovered: "${info.name}" (${info.id})`);
+      this._log(`[ChannelFetcher]   Channel discovered: "${info.name}" (${info.id})`);
       this.emit('channel:discovered', info);
     } else if (nameChanged) {
-      this._log(`[ChannelFetcher] 🔄  Channel renamed: "${info.name}" (${info.id})`);
+      this._log(`[ChannelFetcher]   Channel renamed: "${info.name}" (${info.id})`);
       this.emit('channel:updated', info);
     }
   }

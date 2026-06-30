@@ -14,7 +14,7 @@ from ui.state import (
 )
 from ui.components.device_card import render_device_linker_fragment, render_linked_devices_fragment
 
-@st.dialog("🚀 Connect Your Local Noria Agent")
+@st.dialog(" [START]  Connect Your Local Noria Agent")
 def show_local_agent_download_modal():
     st.markdown("""
     ### Noria is a Private, On-Device Agent
@@ -30,14 +30,14 @@ def show_local_agent_download_modal():
        Link your device and watch it work!
     """)
     st.link_button(
-        "⬇️ Download Noria for Windows (Noria.exe)",
+        "⬇ Download Noria for Windows (Noria.exe)",
         url="https://github.com/AhmadHassan-BTed/Noria/releases/latest/download/Noria.exe",
         use_container_width=True,
         type="primary"
     )
 
 def render_profiles_view(profiles, running_instances):
-    st.title("👤 Applicant Profiles Directory")
+    st.title(" Applicant Profiles Directory")
     st.caption("Manage profiles, API keys, WhatsApp channels, and opportunity scans.")
 
     # Directory View Header
@@ -45,7 +45,7 @@ def render_profiles_view(profiles, running_instances):
     with cols[0]:
         st.caption(f"Registered Profiles: **{len(profiles)}**")
     with cols[1]:
-        if st.button("➕ Add Profile", use_container_width=True):
+        if st.button(" Add Profile", use_container_width=True):
             st.session_state.editing_profile = "new"
             st.rerun()
 
@@ -54,10 +54,10 @@ def render_profiles_view(profiles, running_instances):
     else:
         # Display all profiles as dynamic native cards
         for p_id, p_info in sorted(profiles.items()):
-            with st.expander(f"👤 {p_info['name']}", expanded=True):
+            with st.expander(f" {p_info['name']}", expanded=True):
                 card_header_cols = st.columns([6, 1, 1, 1])
                 with card_header_cols[1]:
-                    if st.button("🧹 Cache", key=f"clear_cache_profile_{p_id}", use_container_width=True):
+                    if st.button(" Cache", key=f"clear_cache_profile_{p_id}", use_container_width=True):
                         profile_scans = [
                             name for name, info in running_instances.items()
                             if info.get("profileId") == p_id
@@ -71,11 +71,11 @@ def render_profiles_view(profiles, running_instances):
                                 pass
                         st.toast(f"Cache clear requested for {len(profile_scans)} active scan(s).")
                 with card_header_cols[2]:
-                    if st.button("✏️ Edit", key=f"edit_btn_{p_id}", use_container_width=True):
+                    if st.button(" Edit", key=f"edit_btn_{p_id}", use_container_width=True):
                         st.session_state.editing_profile = p_id
                         st.rerun()
                 with card_header_cols[3]:
-                    if st.button("🗑️ Delete", key=f"delete_btn_{p_id}", use_container_width=True):
+                    if st.button(" Delete", key=f"delete_btn_{p_id}", use_container_width=True):
                         if p_id == "default":
                             st.error("The Default Profile cannot be deleted.")
                         else:
@@ -105,7 +105,7 @@ def render_profiles_view(profiles, running_instances):
                         """)
                         
                     with status_col:
-                        st.markdown("#### 📡 WhatsApp Devices")
+                        st.markdown("####  WhatsApp Devices")
                         
                         linking_active = (st.session_state.linking_profile == p_id)
                         
@@ -123,13 +123,13 @@ def render_profiles_view(profiles, running_instances):
                                     curr_status = status_info.get("status", "UNKNOWN")
                                     reason = status_info.get("reason", "")
                                     if curr_status in ["SCAN_QR", "auth_failure"]:
-                                        st.markdown(f"⚠️ **Device Disconnected (Re-link required):** `+{d_phone}`")
+                                        st.markdown(f" [WARNING]  **Device Disconnected (Re-link required):** `+{d_phone}`")
                                     elif curr_status == "DISCONNECTED" and not ("Stopped" in reason or "user" in reason.lower()):
-                                        st.markdown(f"⚠️ **Device Offline:** `+{d_phone}`")
+                                        st.markdown(f" [WARNING]  **Device Offline:** `+{d_phone}`")
                                     else:
                                         st.markdown(f"✅ **Device Active:** `+{d_phone}`")
                             
-                            if st.button("🔗 Link WhatsApp Device", key=f"link_device_btn_{p_id}", use_container_width=True, type="primary"):
+                            if st.button(" Link WhatsApp Device", key=f"link_device_btn_{p_id}", use_container_width=True, type="primary"):
                                 if is_demo_mode():
                                     show_local_agent_download_modal()
                                 else:
@@ -215,10 +215,10 @@ def render_profiles_view(profiles, running_instances):
                 devices = p_info.get("devices", {})
                 
                 if not user_configured_scans:
-                    st.info("No configured scans available. Click '➕ Add Scan' below to create a new scan pill.")
+                    st.info("No configured scans available. Click ' Add Scan' below to create a new scan pill.")
                     
                     # Single Add Scan trigger pill
-                    if st.button("➕ Add Scan", key=f"plus_empty_{p_id}", type="primary"):
+                    if st.button(" Add Scan", key=f"plus_empty_{p_id}", type="primary"):
                         st.session_state.show_add_scan[p_id] = True
                         st.session_state.focused_scan[p_id] = None
                         st.rerun()
@@ -232,7 +232,7 @@ def render_profiles_view(profiles, running_instances):
                         with tag_cols[col_idx]:
                             is_focused = (active_focus == scan_name)
                             if st.button(
-                                f"🏷️ {scan_name}", 
+                                f" {scan_name}", 
                                 key=f"tag_{p_id}_{scan_name}", 
                                 type="primary" if is_focused else "secondary",
                                 use_container_width=True
@@ -248,7 +248,7 @@ def render_profiles_view(profiles, running_instances):
                     plus_col_idx = len(user_configured_scans) % min(tag_col_count, 6)
                     with tag_cols[plus_col_idx]:
                         if st.button(
-                            "➕ Add Scan", 
+                            " Add Scan", 
                             key=f"plus_{p_id}", 
                             type="primary" if add_scan_open else "secondary",
                             use_container_width=True
@@ -263,7 +263,7 @@ def render_profiles_view(profiles, running_instances):
                     
 
                     with st.container(border=True):
-                        st.markdown(f"#### 🏷️ Configure & Activate Scan: `{active_focus}`")
+                        st.markdown(f"####  Configure & Activate Scan: `{active_focus}`")
                         det_cols = st.columns([3, 1])
                         with det_cols[0]:
                             source_mode_disp = scan_cfg.get("sourceMode", "individual,groups,channels")
@@ -305,7 +305,7 @@ def render_profiles_view(profiles, running_instances):
                         if not matching_instances:
 
                             if not p_info.get("llm_api_key") and not p_info.get("gemini_key"):
-                                st.error("⚠️ **LLM API Key is missing!** You must configure an API key for this profile before you can activate a scan. Please click **Edit** at the top of the card to configure your API keys.")
+                                st.error(" [WARNING]  **LLM API Key is missing!** You must configure an API key for this profile before you can activate a scan. Please click **Edit** at the top of the card to configure your API keys.")
                             elif not devices:
                                 st.warning("You must link a WhatsApp device to this profile first before you can activate this scan.")
                             else:
@@ -314,12 +314,12 @@ def render_profiles_view(profiles, running_instances):
                                     selected_device_phone = st.selectbox(
                                         "Select Device to Activate Scan On",
                                         options=list(devices.keys()),
-                                        format_func=lambda x: f"📱 +{x} ({len(devices[x].get('channels', []))} channels)",
+                                        format_func=lambda x: f" +{x} ({len(devices[x].get('channels', []))} channels)",
                                         key=f"activate_device_{p_id}_{active_focus}"
                                     )
                                 with activation_col2:
                                     st.write(" ")
-                                    if st.button("🚀 Activate Scan", key=f"btn_activate_{p_id}_{active_focus}", type="primary", use_container_width=True):
+                                    if st.button(" [START]  Activate Scan", key=f"btn_activate_{p_id}_{active_focus}", type="primary", use_container_width=True):
                                         if is_demo_mode():
                                             show_local_agent_download_modal()
                                         else:
@@ -429,7 +429,7 @@ def render_profiles_view(profiles, running_instances):
                 # Render Inline Add Scan Configurator Form if open
                 if add_scan_open:
                     with st.container(border=True):
-                        st.markdown("#### 🚀 Create Scan Pill")
+                        st.markdown("####  [START]  Create Scan Pill")
                         
                         # Aggregate verified channels, groups, and chats across all linked devices
                         combined_verified_channels = []
@@ -491,11 +491,11 @@ def render_profiles_view(profiles, running_instances):
                                 help="A unique name to identify this scan instance."
                             ).strip().replace(" ", "_")
                             
-                            st.markdown("##### ⚙️ Configure Message Sources")
+                            st.markdown("#####  Configure Message Sources")
                             src_col1, src_col2, src_col3 = st.columns(3)
                             with src_col1:
                                 chat_mode = st.selectbox(
-                                    "💬 Individual Chats",
+                                    " Individual Chats",
                                     ["All", "Selected Only", "Disabled"],
                                     index=0,
                                     key=f"chat_mode_{p_id}",
@@ -503,7 +503,7 @@ def render_profiles_view(profiles, running_instances):
                                 )
                             with src_col2:
                                 group_mode = st.selectbox(
-                                    "👥 Groups",
+                                    " Groups",
                                     ["All", "Selected Only", "Disabled"],
                                     index=0,
                                     key=f"group_mode_{p_id}",
@@ -511,7 +511,7 @@ def render_profiles_view(profiles, running_instances):
                                 )
                             with src_col3:
                                 channel_mode = st.selectbox(
-                                    "📡 Channels",
+                                    " Channels",
                                     ["All", "Selected Only", "Disabled"],
                                     index=0,
                                     key=f"channel_mode_{p_id}",

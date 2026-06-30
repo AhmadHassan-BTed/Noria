@@ -1,4 +1,4 @@
-# Noria v1.0.0 — First Public Release 🎉
+# Noria v1.0.0 — First Public Release 
 
 **Tag:** `v1.0.0`  
 **Release Date:** 2026-06-05  
@@ -6,7 +6,7 @@
 
 ---
 
-## 🚀 What's New in v1.0.0
+##  What's New in v1.0.0
 
 This is the **first stable, public release** of Noria — a private, on-device agentic system for automated opportunity extraction, AI evaluation, and WhatsApp notification delivery.
 
@@ -23,7 +23,7 @@ This is the **first stable, public release** of Noria — a private, on-device a
 
 ---
 
-## 📦 Release Assets
+##  Release Assets
 
 | Asset | Description |
 |:---|:---|
@@ -39,7 +39,7 @@ This is the **first stable, public release** of Noria — a private, on-device a
 
 ---
 
-## ✨ Features
+##  Features
 
 ### Core Engine
 - Event-driven pipeline orchestrator (`src/core/pipeline.js`)
@@ -65,7 +65,7 @@ This is the **first stable, public release** of Noria — a private, on-device a
 
 ---
 
-## 🛠 Technical Changes (since pre-release)
+##  Technical Changes (since pre-release)
 
 - Rewrote `scripts/launcher.cs` to resolve paths relative to the executable's own directory — eliminates `run_noria.bat was not found` error
 - Launcher now invokes `python -m streamlit run` directly, removing bat-file dependency entirely
@@ -75,7 +75,7 @@ This is the **first stable, public release** of Noria — a private, on-device a
 
 ---
 
-## 📋 Requirements
+##  Requirements
 
 | Requirement | Version |
 |:---|:---|
@@ -87,7 +87,7 @@ This is the **first stable, public release** of Noria — a private, on-device a
 
 ---
 
-## ⚙️ Configuration
+##  Configuration
 
 Copy `.env.example` to `.env`. The minimum required keys are:
 
@@ -112,7 +112,7 @@ LLM_CHAIN=[{"provider":"gemini","apiKey":"key1","model":"Auto"},{"provider":"gro
 
 ---
 
-## 📚 Documentation
+##  Documentation
 
 - [README](../README.md) — Setup and quickstart guide
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Hexagonal design patterns and system boundaries
@@ -121,7 +121,7 @@ LLM_CHAIN=[{"provider":"gemini","apiKey":"key1","model":"Auto"},{"provider":"gro
 
 ---
 
-## 🙏 Credits
+##  Credits
 
 Designed and engineered by [Ahmad Hassan (B-Ted)](https://github.com/AhmadHassan-BTed).
 

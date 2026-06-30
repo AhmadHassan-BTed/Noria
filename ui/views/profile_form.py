@@ -27,7 +27,7 @@ def render_profile_form_view(editing_profile, profiles):
                 ]
 
     if is_new:
-        st.markdown("## ➕ Create New Applicant Profile")
+        st.markdown("##  Create New Applicant Profile")
         default_name = ""
         default_jina = ""
         default_app_name = ""
@@ -37,7 +37,7 @@ def render_profile_form_view(editing_profile, profiles):
         default_app_focus = ""
     else:
         p_info = profiles[editing_profile]
-        st.markdown(f"## ✏️ Edit Profile: {p_info['name']}")
+        st.markdown(f"##  Edit Profile: {p_info['name']}")
         default_name = p_info["name"]
         default_jina = p_info.get("jina_key", "")
         default_app_name = p_info["applicant_name"]
@@ -57,10 +57,10 @@ def render_profile_form_view(editing_profile, profiles):
         form_col1, form_col2 = st.columns([1, 1])
         
         with form_col1:
-            st.markdown("##### 🔑 LLM Provider Chain (Fallbacks)")
+            st.markdown("#####  [KEY]  LLM Provider Chain (Fallbacks)")
             st.markdown(
                 "<div style='font-size: 14.5px; margin-bottom: 8px; color: #8E9297 !important;'>"
-                "ℹ️ Need API Keys? "
+                " [INFO]  Need API Keys? "
                 "<a href='https://aistudio.google.com/' target='_blank' style='color: #25D366 !important; font-weight: 600;'>Get Gemini Key</a> | "
                 "<a href='https://console.groq.com/' target='_blank' style='color: #25D366 !important; font-weight: 600;'>Get Groq Key</a>"
                 "</div>",
@@ -130,7 +130,7 @@ def render_profile_form_view(editing_profile, profiles):
                         )
                     with col_del:
                         st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-                        if st.button("🗑️", key=f"llm_del_{idx}", help="Remove this LLM from chain", use_container_width=True):
+                        if st.button("", key=f"llm_del_{idx}", help="Remove this LLM from chain", use_container_width=True):
                             st.session_state.editing_llms.pop(idx)
                             st.rerun()
                     
@@ -144,7 +144,7 @@ def render_profile_form_view(editing_profile, profiles):
 
             col_add_space, col_add_btn = st.columns([4, 1.5])
             with col_add_btn:
-                if st.button("➕ Add LLM", use_container_width=True):
+                if st.button(" Add LLM", use_container_width=True):
                     st.session_state.editing_llms.append({
                         "provider": "Gemini",
                         "api_key": "",
@@ -155,7 +155,7 @@ def render_profile_form_view(editing_profile, profiles):
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
             st.markdown(
                 "<div style='font-size: 14.5px; margin-bottom: 8px; color: #8E9297 !important;'>"
-                "ℹ️ Need Jina Key? "
+                " [INFO]  Need Jina Key? "
                 "<a href='https://jina.ai/reader/' target='_blank' style='color: #25D366 !important; font-weight: 600;'>Get Jina Reader Key</a>"
                 "</div>",
                 unsafe_allow_html=True
@@ -176,7 +176,7 @@ def render_profile_form_view(editing_profile, profiles):
                 help=jina_help
             )
             
-            st.markdown("##### 🔔 Notification Settings")
+            st.markdown("#####  Notification Settings")
             # Parse country code and number from target_phone
             default_cc = "+92"
             default_phone_num = ""
@@ -267,7 +267,7 @@ def render_profile_form_view(editing_profile, profiles):
             target_phone = f"{country_code}{phone_input}".replace(" ", "").replace("-", "")
             
         with form_col2:
-            st.markdown("##### 🧑‍💼 Applicant Parameters")
+            st.markdown("#####  Applicant Parameters")
             app_name = st.text_input("Full Name", value=default_app_name)
             app_nationality = st.text_input("Nationality", value=default_app_nationality)
             app_degree = st.text_input("Degree Tier & Grades", value=default_app_degree)

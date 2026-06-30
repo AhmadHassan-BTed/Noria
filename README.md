@@ -21,13 +21,13 @@
 
 ---
 
-## 🌟 The Vision
+##  The Vision
 
 Opportunities define careers, yet discovery remains a chaotic manual process. Noria was created to bridge this gap. Noria connects humans to life-changing possibilities by crawling raw web pages, executing rigorous AI evaluations against human profiles, and sending real-time alerts. Whether helping students secure fully funded academic scholarships or matching developers with remote job postings, Noria converts raw internet noise into structured opportunities.
 
 ---
 
-## 📸 Screenshots
+##  Screenshots
 
 <table>
   <tr>
@@ -54,7 +54,7 @@ Opportunities define careers, yet discovery remains a chaotic manual process. No
 
 ---
 
-## 🏛️ Clean Architecture & Boundary Separation
+##  Clean Architecture & Boundary Separation
 
 
 Noria enforces strict Hexagonal Architecture principles, separating core business domains from pluggable technical infrastructure. Dependencies flow strictly inward, managed through a central registry bootstrapper (`src/config/plugins.registry.js`) acting as the composition root.
@@ -106,7 +106,7 @@ graph TD
 
 ---
 
-## 🔄 System Lifecycle & Request Flow
+##  System Lifecycle & Request Flow
 
 Noria processes raw internet inputs and coordinates executions dynamically through standard domain events:
 
@@ -148,12 +148,12 @@ sequenceDiagram
 
 ---
 
-## ⚙️ Registry Validation
+##  Registry Validation
 
 Dynamic verification occurs at boot-time inside the Registry ([registry.js](file:///p:/noria/src/core/registry.js)), which is bootstrapped and wired up by the Composition Root ([plugins.registry.js](file:///p:/noria/src/config/plugins.registry.js)). Registered modules are validated functionally:
 
 <details>
-<summary><b>🔍 View Enforced Interface Constraints (Collapsible)</b></summary>
+<summary><b> View Enforced Interface Constraints (Collapsible)</b></summary>
 
 | Registry Category | Target Registration | Mandatory Signature / Keys |
 | :--- | :--- | :--- |
@@ -167,7 +167,7 @@ Dynamic verification occurs at boot-time inside the Registry ([registry.js](file
 
 ---
 
-## 📁 Repository Structure
+##  Repository Structure
 
 ```
 noria/
@@ -204,7 +204,7 @@ noria/
 
 ---
 
-## 🚀 Installation & Quickstart
+##  Installation & Quickstart
 
 ### 1. Requirements
 - **Node.js**: `>=22.12.0` (LTS highly recommended)
@@ -260,10 +260,10 @@ The executable is fully self-contained:
 - Opens the Control Center as a **standalone app window** (not a browser tab) via Chrome or Edge `--app` mode
 - No `run_noria.bat` or manual setup required
 
-#### 🛠 Windows - Developer Launcher
+####  Windows - Developer Launcher
 If running from source, use **[run_noria.bat](run_noria.bat)** from the repo root.
 
-#### 🐧 macOS / Linux - Shell Launcher
+####  macOS / Linux - Shell Launcher
 Run **[run_noria.sh](run_noria.sh)** in your terminal:
 ```bash
 chmod +x run_noria.sh && ./run_noria.sh
@@ -274,7 +274,7 @@ From the dashboard you can create applicant profiles, link your WhatsApp by scan
 
 ---
 
-## 🧪 Developer Workflow & Commands
+##  Developer Workflow & Commands
 
 Ensure all local verification checks pass cleanly:
 
@@ -288,5 +288,5 @@ Ensure all local verification checks pass cleanly:
 ---
 
 <p align="center">
-  Made with 💚 by <a href="https://github.com/AhmadHassan-BTed"><strong>Ahmad Hassan (B-Ted)</strong></a>
+  Made with  by <a href="https://github.com/AhmadHassan-BTed"><strong>Ahmad Hassan (B-Ted)</strong></a>
 </p>

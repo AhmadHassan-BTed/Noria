@@ -90,9 +90,9 @@ describe('Jobs Domain Module', () => {
 
       const formatted = jobsDomain.buildTemplate(matchResult);
 
-      expect(formatted).toContain('🔥 *FULL STACK ENGINEER* at *STARK INDUSTRIES* [95% MATCH]');
-      expect(formatted).toContain('📍 Remote');
-      expect(formatted).toContain('💰 $100,000 - $120,000');
+      expect(formatted).toContain(' [HOT]  *FULL STACK ENGINEER* at *STARK INDUSTRIES* [95% MATCH]');
+      expect(formatted).toContain(' Remote');
+      expect(formatted).toContain(' $100,000 - $120,000');
       expect(formatted).toContain('Remote: ✅');
       expect(formatted).toContain('Sponsorship: ✅');
       expect(formatted).toContain('React Node Javascript');

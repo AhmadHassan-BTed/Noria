@@ -86,17 +86,17 @@ ${content}
 // Step 3: Create the job-specific notifier
 class JobNotifier extends BaseNotifier {
   format(data) {
-    return `💼 *${data.company_name}* — ${data.job_title}
+    return ` *${data.company_name}* — ${data.job_title}
 Score: ${data.match_score}%
 
-📍 ${data.location} ${data.remote_friendly ? '(Remote ✈️)' : ''}
-💰 ${data.salary_range || 'Not specified'}
+ ${data.location} ${data.remote_friendly ? '(Remote )' : ''}
+ ${data.salary_range || 'Not specified'}
 ⏰ ${data.job_type}
 
-🛠️ Tech Stack: ${data.tech_stack}
-📚 Experience: ${data.experience_required}
+ [SETUP]  Tech Stack: ${data.tech_stack}
+ Experience: ${data.experience_required}
 
-📝 ${data.verdict}
+ [NOTE]  ${data.verdict}
 
 Apply: ${data.apply_link}`;
   }

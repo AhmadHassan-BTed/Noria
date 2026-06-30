@@ -1,4 +1,4 @@
-name: 🎯 Feature Request
+name:  Feature Request
 description: Propose a new feature, opportunity category, or plugin for Noria
 body:
   - type: markdown

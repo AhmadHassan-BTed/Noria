@@ -107,11 +107,11 @@ def reset_application_data():
     return stopped_count
 
 def render_settings_view():
-    st.title("⚙️ Control Center Settings")
+    st.title(" Control Center Settings")
     st.caption("Configure local system integrations, manage data persistence, and clear system cache.")
 
     # 1. Startup settings
-    st.markdown("#### 🚀 System Boot & Startup")
+    st.markdown("####  [START]  System Boot & Startup")
     with st.container(border=True):
         st.markdown("""
         **Run Noria on Windows Startup**  
@@ -138,7 +138,7 @@ def render_settings_view():
                     st.rerun()
 
     # 2. Data management
-    st.markdown("#### 💾 Local Data Retention & Clean Reset")
+    st.markdown("####  Local Data Retention & Clean Reset")
     with st.container(border=True):
         st.markdown("""
         **Reset Application Data**  
@@ -149,9 +149,9 @@ def render_settings_view():
         * Wipes all historical **Opportunity Evaluation Feeds** and daemon log files.
         """)
         
-        st.warning("⚠️ **Warning:** This action is irreversible. All your local data will be permanently wiped.")
+        st.warning(" [WARNING]  **Warning:** This action is irreversible. All your local data will be permanently wiped.")
         
-        if st.button("🗑️ Clear All Application Data", type="primary", use_container_width=True):
+        if st.button(" Clear All Application Data", type="primary", use_container_width=True):
             with st.spinner("Stopping active daemons and wiping local storage..."):
                 stopped_instances = reset_application_data()
                 st.success(f"Successfully stopped {stopped_instances} active scan(s) and reset all data files.")

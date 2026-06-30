@@ -27,15 +27,15 @@ def render_sidebar_navigation():
 """, unsafe_allow_html=True)
 
             # Navigation Buttons
-            if st.button("👤 Applicant Profiles", use_container_width=True, type="primary" if current_page == "Profiles" else "secondary"):
+            if st.button(" Applicant Profiles", use_container_width=True, type="primary" if current_page == "Profiles" else "secondary"):
                 st.session_state.current_page = "Profiles"
                 st.rerun()
 
-            if st.button("📡 Opportunity Scans", use_container_width=True, type="primary" if current_page == "Scans" else "secondary"):
+            if st.button(" Opportunity Scans", use_container_width=True, type="primary" if current_page == "Scans" else "secondary"):
                 st.session_state.current_page = "Scans"
                 st.rerun()
 
-            if st.button("⚙️ System Settings", use_container_width=True, type="primary" if current_page == "Settings" else "secondary"):
+            if st.button(" System Settings", use_container_width=True, type="primary" if current_page == "Settings" else "secondary"):
                 st.session_state.current_page = "Settings"
                 st.rerun()
 

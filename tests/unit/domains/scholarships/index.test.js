@@ -113,8 +113,8 @@ describe('Scholarships Domain Module', () => {
       const formatted = scholarshipsDomain.buildTemplate(matchResult);
 
       expect(formatted).toContain('🟢 95% MATCH | DAAD Scholarship');
-      expect(formatted).toContain('📍 Germany');
-      expect(formatted).toContain('⚡ Verdict: Excellent match.');
+      expect(formatted).toContain(' Germany');
+      expect(formatted).toContain(' [FAST]  Verdict: Excellent match.');
       expect(formatted).toContain('Pakistan Accepted');
       expect(formatted).toContain('🆓 No App Fee');
       expect(formatted).toContain('Fully Funded');

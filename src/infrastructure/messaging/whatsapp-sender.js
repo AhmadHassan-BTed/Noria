@@ -151,7 +151,7 @@ async function sendMessage(client, target, message, options = {}) {
 
   // ── Send with retry ─────────────────────────────────────────────────────
   const masked = maskChatId(chatId);
-  console.log(`[WhatsAppSender] 📤  Sending to ${masked}...`);
+  console.log(`[WhatsAppSender]   Sending to ${masked}...`);
   metrics.recordWhatsAppSend?.();
 
   let sentMsg = null;
@@ -165,7 +165,7 @@ async function sendMessage(client, target, message, options = {}) {
         baseDelayMs,
         onRetry: ({ attempt, delay }) => {
           console.warn(
-            `[WhatsAppSender] ↩️   Retry ${attempt}/${maxRetries} ` +
+            `[WhatsAppSender] ↩   Retry ${attempt}/${maxRetries} ` +
               `for ${masked} after ${delay}ms`
           );
           metrics.recordWhatsAppRetry?.();

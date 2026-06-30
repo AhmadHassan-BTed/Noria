@@ -7,11 +7,11 @@ from ui.state import PREDEFINED_SCANS, get_session_status, save_running_processe
 from ui.views.profiles import show_local_agent_download_modal
 
 def render_scans_view(running_instances, profiles):
-    st.title("📡 Active Scanning Operations")
+    st.title(" Active Scanning Operations")
     st.caption("Monitor live extraction pipelines, review diagnostics, and manage active scans.")
     
     # 1. Master List of Active Scans
-    st.markdown("#### 📡 Active Scans")
+    st.markdown("####  Active Scans")
     
     # Filter out linkers to only show scanning operations in the scans view
     scanning_instances = {name: info for name, info in running_instances.items() if info.get("category") != "Linker"}
@@ -34,7 +34,7 @@ def render_scans_view(running_instances, profiles):
                         if disc_status == "DISCOVERING":
                             disc_progress = status_info.get("discoveryProgress", 0)
                             disc_msg = status_info.get("discoveryMessage", "Discovering channels...")
-                            st.warning(f"🔍 Discovery: {disc_progress}%")
+                            st.warning(f" Discovery: {disc_progress}%")
                             st.progress(disc_progress / 100.0)
                             st.caption(f"_{disc_msg}_")
                         else:
@@ -62,7 +62,7 @@ def render_scans_view(running_instances, profiles):
                         except Exception as e:
                             st.error(f"Failed to terminate process: {e}")
 
-    st.markdown("#### 🚀 Launch New Scan")
+    st.markdown("####  [START]  Launch New Scan")
     
     if not profiles:
         st.warning("You must create an Applicant Profile first before you can launch an opportunity scan.")
@@ -230,7 +230,7 @@ def render_scans_view(running_instances, profiles):
                         st.error(f"Failed to launch scan process: {e}")
 
     # 3. Scanned Opportunities History Feed
-    st.markdown("#### 📋 Scanned Opportunities Feed")
+    st.markdown("####  Scanned Opportunities Feed")
     st.caption("Real-time feed of scraped URLs, qualification status, and verdicts.")
     
     # Gather all history
@@ -311,6 +311,6 @@ def render_scans_view(running_instances, profiles):
                     with header_col3:
                         st.markdown(f"**Score:** `{score}/100`")
                         
-                    st.markdown(f"🔗 **URL:** [{entry.get('url')}]({entry.get('url')})")
-                    st.markdown(f"💬 **Verdict:** {reason_text}")
-                    st.caption(f"🕒 Evaluated: {ts}")
+                    st.markdown(f" **URL:** [{entry.get('url')}]({entry.get('url')})")
+                    st.markdown(f" **Verdict:** {reason_text}")
+                    st.caption(f" Evaluated: {ts}")

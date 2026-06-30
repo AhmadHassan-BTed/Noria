@@ -4,7 +4,7 @@ This document details the architectural design patterns, dynamic validation boun
 
 ---
 
-## 📐 Hexagonal Architecture & Boundary Separation
+##  Hexagonal Architecture & Boundary Separation
 
 Noria separates core business domains from pluggable communication protocols, enforcing absolute isolation (0 coupling, 100% cohesion).
 
@@ -52,7 +52,7 @@ Interchangeable driver adapters satisfying the domain interfaces. Grouped strict
 
 ---
 
-## 🔄 Lifecycle Event Loop
+##  Lifecycle Event Loop
 
 Noria's execution stages are coordinated completely dynamically through decoupled events emitted via the global `broker`:
 
@@ -98,7 +98,7 @@ Noria's execution stages are coordinated completely dynamically through decouple
 
 ---
 
-## 🛡️ Resilient Gating, Scraping & Model Fallbacks
+##  Resilient Gating, Scraping & Model Fallbacks
 
 Noria incorporates advanced resilience features to handle rate limits, network synchronization, and scraping blocks:
 
@@ -125,7 +125,7 @@ To allow users to force re-evaluation of URLs, a multi-level cache clearing syst
 
 ---
 
-## 🔍 Dynamic Interface Validation & Registry
+##  Dynamic Interface Validation & Registry
 
 To keep the application robust while supporting plug-and-play extensions, the central Registry ([registry.js](file:///p:/noria/src/core/registry.js)) bootstrapped by the Composition Root ([plugins.registry.js](file:///p:/noria/src/config/plugins.registry.js)) performs strict verification check blocks:
 
@@ -150,7 +150,7 @@ Because connection listeners retain active listener hooks and WS handles, the re
 
 ---
 
-## 🖥️ Control Center UI & Standalone Launcher (v1.0.0)
+##  Control Center UI & Standalone Launcher (v1.0.0)
 
 Noria ships a Streamlit-based visual Control Center alongside the core pipeline engine. Starting from v1.0.0, this is delivered as a fully standalone Windows executable.
 
@@ -194,7 +194,7 @@ Noria ships a Streamlit-based visual Control Center alongside the core pipeline 
 
 ---
 
-## 🚀 Guidelines for Adding Upcoming Opportunity Categories (e.g., Real Estate)
+##  Guidelines for Adding Upcoming Opportunity Categories (e.g., Real Estate)
 
 1. Create a self-contained domain folder under `src/domains/realestate/`.
 2. Define `promptBuilder.js`, `templateBuilder.js`, `schema.js`, and `config.js` with your specific opportunity prompt scoring parameters.

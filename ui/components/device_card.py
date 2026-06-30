@@ -152,13 +152,13 @@ def render_device_linker_fragment(p_id, p_info, profiles, running_instances):
                 st.session_state.linker_progress = curr_progress
 
             if curr_progress <= 30:
-                step_msg = "🚀 Launching Chrome headless engine..."
+                step_msg = " [START]  Launching Chrome headless engine..."
             elif curr_progress <= 50:
-                step_msg = "🔌 Initializing WhatsApp connection..."
+                step_msg = " Initializing WhatsApp connection..."
             elif curr_progress <= 70:
-                step_msg = "🔑 Synchronizing authentication keys..."
+                step_msg = " [KEY]  Synchronizing authentication keys..."
             else:
-                step_msg = "📱 Preparing QR code..."
+                step_msg = " Preparing QR code..."
 
             st.info(step_msg)
             st.progress(curr_progress / 100.0)
@@ -175,7 +175,7 @@ def render_device_linker_fragment(p_id, p_info, profiles, running_instances):
         
         log_lines = read_session_logs(linker_sess_id, max_lines=20)
         if log_lines:
-            with st.expander("📋 View Error Logs", expanded=False):
+            with st.expander(" View Error Logs", expanded=False):
                 st.code("\n".join(log_lines[-10:]), language="text")
         
         if st.button("Try Again", key=f"retry_link_{p_id}", type="primary", use_container_width=True):
@@ -198,7 +198,7 @@ def render_device_linker_fragment(p_id, p_info, profiles, running_instances):
         timeout_seconds = 90
         
         if elapsed > timeout_seconds:
-            st.error(f"⏱️ Connection timed out after {int(elapsed)} seconds.")
+            st.error(f"⏱ Connection timed out after {int(elapsed)} seconds.")
             
             if linker_sess_id in running_instances:
                 del running_instances[linker_sess_id]
@@ -219,13 +219,13 @@ def render_device_linker_fragment(p_id, p_info, profiles, running_instances):
             st.session_state.linker_progress = curr_progress
 
         if curr_progress <= 20:
-            step_msg = "🚀 Launching Chrome headless engine..."
+            step_msg = " [START]  Launching Chrome headless engine..."
         elif curr_progress <= 40:
-            step_msg = "🔌 Initializing WhatsApp connection..."
+            step_msg = " Initializing WhatsApp connection..."
         elif curr_progress <= 60:
-            step_msg = "🔑 Synchronizing authentication keys..."
+            step_msg = " [KEY]  Synchronizing authentication keys..."
         elif curr_progress <= 80:
-            step_msg = "📱 Generating QR code for pairing..."
+            step_msg = " Generating QR code for pairing..."
         else:
             step_msg = f"⏳ Waiting for WhatsApp response... ({int(elapsed)}s)"
 
@@ -234,7 +234,7 @@ def render_device_linker_fragment(p_id, p_info, profiles, running_instances):
         st.caption(f"Elapsed: {int(elapsed)}s — Please wait while we connect to WhatsApp...")
         
         if elapsed > 30:
-            st.caption("💡 Taking longer than expected? Make sure Chrome is installed and accessible.")
+            st.caption(" [TIP]  Taking longer than expected? Make sure Chrome is installed and accessible.")
         
     if st.button("Cancel Pairing", key=f"cancel_pair_{p_id}", use_container_width=True):
         linker_proc_info = running_instances.get(linker_sess_id)
@@ -262,7 +262,7 @@ def render_device_linker_fragment(p_id, p_info, profiles, running_instances):
         st.session_state.linker_sess_id = None
         st.rerun()
 
-@st.dialog("🔍 Matches History", width="large")
+@st.dialog(" Matches History", width="large")
 def show_matches_dialog(matches):
     if not matches:
         st.info("No matches found yet.")
@@ -273,11 +273,11 @@ def show_matches_dialog(matches):
         with st.container(border=True):
             col_ts, col_score = st.columns([3, 1])
             with col_ts:
-                st.caption(f"🕒 Detected: {match.get('timestamp', 'Unknown')}")
+                st.caption(f" Detected: {match.get('timestamp', 'Unknown')}")
             with col_score:
-                st.markdown(f"🏆 Score: **{match.get('score', 0)}/100**")
+                st.markdown(f" Score: **{match.get('score', 0)}/100**")
             
-            st.markdown(f"🔗 **Source URL:** [{match.get('url')}]({match.get('url')})")
+            st.markdown(f" **Source URL:** [{match.get('url')}]({match.get('url')})")
             
             st.markdown("**Original Message:**")
             st.code(match.get("originalMessage", ""), language="text")
@@ -299,11 +299,11 @@ def show_rejects_dialog(rejects):
         with st.container(border=True):
             col_ts, col_score = st.columns([3, 1])
             with col_ts:
-                st.caption(f"🕒 Evaluated: {reject.get('timestamp', 'Unknown')}")
+                st.caption(f" Evaluated: {reject.get('timestamp', 'Unknown')}")
             with col_score:
-                st.markdown(f"📉 Score: **{reject.get('score', 0)}/100**")
+                st.markdown(f" Score: **{reject.get('score', 0)}/100**")
             
-            st.markdown(f"🔗 **Source URL:** [{reject.get('url')}]({reject.get('url')})")
+            st.markdown(f" **Source URL:** [{reject.get('url')}]({reject.get('url')})")
             
             st.markdown("**Original Message:**")
             st.code(reject.get("originalMessage", ""), language="text")
@@ -311,7 +311,7 @@ def show_rejects_dialog(rejects):
             st.markdown("**Rejection Reason:**")
             st.info(reject.get("reason") or "No detailed explanation provided.")
 
-@st.dialog("📡 All Scans History", width="large")
+@st.dialog(" All Scans History", width="large")
 def show_scans_dialog(history_entries):
     if not history_entries:
         st.info("No scans have run or generated history yet.")
@@ -322,16 +322,16 @@ def show_scans_dialog(history_entries):
         with st.container(border=True):
             col_ts, col_status, col_score = st.columns([2, 1, 1])
             with col_ts:
-                st.caption(f"🕒 Time: {entry.get('timestamp', 'Unknown')}")
+                st.caption(f" Time: {entry.get('timestamp', 'Unknown')}")
             with col_status:
                 is_match = entry.get("type") == "match"
                 badge_color = "var(--whatsapp-green)" if is_match else "#ff4b4b"
                 status_lbl = "🟢 Passed" if is_match else "🔴 Rejected"
                 st.markdown(f"<span style='color: {badge_color}; font-weight: bold;'>{status_lbl}</span>", unsafe_allow_html=True)
             with col_score:
-                st.markdown(f"🏆 Score: **{entry.get('score', 0)}/100**")
+                st.markdown(f" Score: **{entry.get('score', 0)}/100**")
                 
-            st.markdown(f"🔗 **Source URL:** [{entry.get('url')}]({entry.get('url')})")
+            st.markdown(f" **Source URL:** [{entry.get('url')}]({entry.get('url')})")
             
             st.markdown("**Original Message:**")
             st.code(entry.get("originalMessage", ""), language="text")
@@ -347,7 +347,7 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
     profiles = load_profiles()
     p_info = profiles.get(p_id, p_info)
 
-    st.markdown("#### 📱 Linked Devices")
+    st.markdown("####  Linked Devices")
     devices = p_info.get("devices", {})
     if not devices:
         st.info("No active devices linked to this profile. Pair a device upfront using the button above.")
@@ -362,7 +362,7 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                 
                 is_dev_expanded = st.session_state[dev_expanded_key]
                 arrow = "▼" if is_dev_expanded else "▶"
-                if st.button(f"{arrow} 📱 +{dev_phone}", key=f"dev_hdr_btn_{p_id}_{dev_phone}", use_container_width=True):
+                if st.button(f"{arrow}  +{dev_phone}", key=f"dev_hdr_btn_{p_id}_{dev_phone}", use_container_width=True):
                     st.session_state[dev_expanded_key] = not is_dev_expanded
                 
                 if is_dev_expanded:
@@ -375,12 +375,12 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                         reason = status_info.get("reason", "")
                         
                         if curr_status in ["SCAN_QR", "auth_failure"]:
-                            st.error("⚠️ Authentication Expired - Re-link required")
+                            st.error(" [WARNING]  Authentication Expired - Re-link required")
                         elif curr_status == "DISCONNECTED":
                             if "Stopped" in reason or "user" in reason.lower():
-                                st.info("💤 Inactive (Standby)")
+                                st.info(" Inactive (Standby)")
                             else:
-                                st.warning("⚠️ Offline")
+                                st.warning(" [WARNING]  Offline")
                             
                         # Scans running on this device
                         device_scans = [
@@ -442,10 +442,10 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
 
                         metric_col1, metric_col2, metric_col3 = st.columns([1, 1, 1])
                         with metric_col1:
-                            if st.button(f"📡 Scans: {scans_count}", key=f"btn_scans_lbl_{p_id}_{dev_phone}", use_container_width=True):
+                            if st.button(f" Scans: {scans_count}", key=f"btn_scans_lbl_{p_id}_{dev_phone}", use_container_width=True):
                                 show_scans_dialog(history_entries)
                         with metric_col2:
-                            if st.button(f"🔍 Matches: {matches_count}", key=f"btn_matches_{p_id}_{dev_phone}", use_container_width=True):
+                            if st.button(f" Matches: {matches_count}", key=f"btn_matches_{p_id}_{dev_phone}", use_container_width=True):
                                 show_matches_dialog(matches)
                         with metric_col3:
                             if st.button(f"❌ Rejects: {rejects_count}", key=f"btn_rejects_{p_id}_{dev_phone}", use_container_width=True):
@@ -461,7 +461,7 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                             st.markdown("**Running Scans:**")
                             for scan_name in device_scans:
                                 scan_info = running_instances[scan_name]
-                                st.markdown(f"🔸 `{scan_name}` (`{scan_info['category']}`)")
+                                st.markdown(f" `{scan_name}` (`{scan_info['category']}`)")
                                 
                                 status_info = get_session_status(scan_info["sessionId"])
                                 scan_status = status_info.get("status", "UNKNOWN")
@@ -470,7 +470,7 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                                 if scan_status == "CONNECTED" and disc_status == "DISCOVERING":
                                     disc_progress = status_info.get("discoveryProgress", 0)
                                     disc_msg = status_info.get("discoveryMessage", "Discovering channels...")
-                                    st.warning(f"🔍 Discovery: {disc_progress}%")
+                                    st.warning(f" Discovery: {disc_progress}%")
                                     st.progress(disc_progress / 100.0)
                                     st.caption(f"_{disc_msg}_")
                                     
@@ -516,14 +516,14 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                         
                         # ── Device Log Viewer ──────────────────────────────────
                         device_sess_id = f"session_{p_id}_dev_{dev_phone}"
-                        show_logs = st.toggle(f"📋 Show Device Logs — +{dev_phone}", value=False, key=f"toggle_logs_{p_id}_{dev_phone}")
+                        show_logs = st.toggle(f" Show Device Logs — +{dev_phone}", value=False, key=f"toggle_logs_{p_id}_{dev_phone}")
                         if show_logs:
                             with st.container(border=True):
                                 log_col1, log_col2 = st.columns([3, 1])
                                 with log_col1:
                                     st.caption(f"Session ID: `{device_sess_id}`")
                                 with log_col2:
-                                    if st.button("🗑️ Clear Logs", key=f"clear_logs_{p_id}_{dev_phone}", use_container_width=True):
+                                    if st.button(" Clear Logs", key=f"clear_logs_{p_id}_{dev_phone}", use_container_width=True):
                                         if clear_session_logs(device_sess_id):
                                             st.toast("Logs cleared successfully.")
                                         else:
@@ -552,7 +552,7 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                                             gap: 6px;
                                             transition: background-color 0.2s;
                                         " onclick="copyLogs()">
-                                            📋 Copy Logs
+                                             Copy Logs
                                         </button>
                                         <textarea id="logText" style="display:none;"></textarea>
                                     </div>
@@ -569,7 +569,7 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                                             btn.innerHTML = "✅ Copied!";
                                             btn.style.backgroundColor = "#1b4d3e";
                                             setTimeout(() => {{
-                                                btn.innerHTML = "📋 Copy Logs";
+                                                btn.innerHTML = " Copy Logs";
                                                 btn.style.backgroundColor = "#2b2b36";
                                             }}, 2000);
                                         }} catch (err) {{
@@ -587,7 +587,7 @@ def render_linked_devices_fragment(p_id, p_info, profiles, running_instances):
                         
                         col_cache, col_unlink = st.columns([1, 1])
                         with col_cache:
-                            if st.button("🧹 Clear Cache", key=f"clear_cache_dev_{p_id}_{dev_phone}", use_container_width=True):
+                            if st.button(" Clear Cache", key=f"clear_cache_dev_{p_id}_{dev_phone}", use_container_width=True):
                                 for scan_name in device_scans:
                                     flag_path = f"data/clear-cache-{scan_name}.flag"
                                     try:
