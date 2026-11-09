@@ -120,7 +120,9 @@ process.on('unhandledRejection', (reason) => {
       errorMsg.includes('first_party_sets.db') ||
       errorMsg.includes('session'))
   ) {
-    console.warn('[Launcher]  [WARNING]  Ignored non-fatal EBUSY file lock during session cleanup.');
+    console.warn(
+      '[Launcher]  [WARNING]  Ignored non-fatal EBUSY file lock during session cleanup.'
+    );
     return;
   }
 

@@ -164,7 +164,9 @@ class ChannelFetcher extends EventEmitter {
             );
           }
         } catch (err) {
-          this._log(`[ChannelFetcher]  [WARNING]   Strategy "${strategy.label}" error: ${err.message}`);
+          this._log(
+            `[ChannelFetcher]  [WARNING]   Strategy "${strategy.label}" error: ${err.message}`
+          );
         }
         strategyIndex++;
       }
